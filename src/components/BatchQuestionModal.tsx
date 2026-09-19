@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Sparkles, Play, Pause, CheckCircle2, AlertCircle, X, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Sparkles, Play, Pause, RotateCcw, CheckCircle2, AlertCircle, X, HelpCircle, Lightbulb, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BatchQuestionModalProps {
@@ -11,52 +11,65 @@ interface BatchQuestionModalProps {
 }
 
 export default function BatchQuestionModal({ isOpen, onClose, onFinished }: BatchQuestionModalProps) {
-  const [isRunning, setIsRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(1000);
-  const [lastQuestion, setLastQuestion] = useState<string>('');
-  const [lastAnswer, setLastAnswer] = useState<string>('');
+  const [progress, setProgress] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  const [lastQuestion, setLastQuestion] = useState('');
+  const [lastAnswer, setLastAnswer] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const isRunningRef = useRef(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      fetchProgress();
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
+  const fetchProgress = async () => {
+    try {
+      const res = await fetch('/api/questions/batch-answer');
+      const data = await res.json();
+      if (data.success) {
+        setTotalQuestions(data.total || 0);
+        setCurrentIndex(data.currentIndex || 0);
+        setProgress(data.progress || 0);
+        setIsDone(data.completed || false);
+      }
+    } catch (err) {
+      console.error('Failed to fetch batch progress:', err);
+    }
+  };
+
   const startBatchProcess = async () => {
+    if (isRunning) return;
     setIsRunning(true);
     isRunningRef.current = true;
     setErrorMsg(null);
-    setIsDone(false);
 
-    let nextIdx = currentIndex >= totalQuestions ? 0 : currentIndex;
-    const batchSize = 15;
+    let nextIdx = currentIndex;
 
     try {
       while (isRunningRef.current) {
         const res = await fetch('/api/questions/batch-answer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            startIndex: nextIdx,
-            batchSize,
-          }),
+          body: JSON.stringify({ startIndex: nextIdx, chunkSize: 15 }),
         });
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `Server HTTP ${res.status}`);
-        }
-
         const data = await res.json();
+
         if (!data.success) {
-          throw new Error(data.error || 'Gagal memproses batch');
+          throw new Error(data.error || 'Terjadi kesalahan saat memproses pertanyaan');
         }
 
-        setTotalQuestions(data.total || 1000);
         setCurrentIndex(data.nextIndex);
-        setProgress(data.progressPercent || Math.round((data.nextIndex / (data.total || 1000)) * 100));
+        setProgress(data.progress);
+        setTotalQuestions(data.total);
 
         if (data.currentSampleQuestion) {
           setLastQuestion(data.currentSampleQuestion);
@@ -67,7 +80,7 @@ export default function BatchQuestionModal({ isOpen, onClose, onFinished }: Batc
           setIsDone(true);
           setIsRunning(false);
           isRunningRef.current = false;
-          toast.success('🎉 Seluruh 1.000 pertanyaan berhasil dipersonalisasi dengan profil Anda!');
+          toast.success('Seluruh 1.000 pertanyaan berhasil dipersonalisasi dengan profil Anda!');
           if (onFinished) onFinished();
           break;
         }
@@ -164,9 +177,10 @@ export default function BatchQuestionModal({ isOpen, onClose, onFinished }: Batc
 
             {lastQuestion ? (
               <div className="space-y-1.5 animate-in fade-in duration-150">
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-2">
-                  ❓ &ldquo;{lastQuestion}&rdquo;
-                </p>
+                <div className="flex items-start gap-1.5 text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-2">
+                  <HelpCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <span>&ldquo;{lastQuestion}&rdquo;</span>
+                </div>
                 <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-500" />
                   <span className="line-clamp-2">Jawaban Anda: {lastAnswer || 'Dipilih opsi terdekat'}</span>
@@ -184,7 +198,8 @@ export default function BatchQuestionModal({ isOpen, onClose, onFinished }: Batc
           {/* Info Card */}
           <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 text-xs text-blue-800 dark:text-blue-300 space-y-1 leading-relaxed">
             <p className="font-semibold flex items-center gap-1.5">
-              💡 Keuntungan Pre-Answer:
+              <Lightbulb className="w-4 h-4 text-blue-500 shrink-0" />
+              <span>Keuntungan Pre-Answer:</span>
             </p>
             <p>
               Begitu bank soal selesai dijawab, bot saat melamar di <strong>Glints, LinkedIn, JobStreet, & Indeed</strong> akan merespons dalam <strong>0 detik</strong> tanpa jeda panggilan AI live!

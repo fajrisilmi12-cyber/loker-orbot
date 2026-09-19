@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ExternalLink, Building2, MapPin, Calendar, Briefcase, FileText, Banknote } from 'lucide-react';
+import { ExternalLink, Building2, MapPin, Calendar, Briefcase, FileText, Banknote, Check, X, Clock, Minus } from 'lucide-react';
 
 export interface QuestionAnswerItem {
   question: string;
@@ -29,12 +29,12 @@ const PLATFORM_STYLES: Record<string, { bg: string; text: string; dot: string }>
   jobstreet:  { bg: 'bg-orange-500/15 border-orange-500/30', text: 'text-orange-400', dot: 'bg-orange-400' },
 };
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  applied:    { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: '✓ Dilamar' },
-  success:    { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: '✓ Dilamar' },
-  failed:     { bg: 'bg-rose-500/15',    text: 'text-rose-400',    label: '✗ Gagal' },
-  skipped:    { bg: 'bg-slate-500/15',   text: 'text-slate-400',   label: '— Dilewati' },
-  pending:    { bg: 'bg-amber-500/15',   text: 'text-amber-400',   label: '⏳ Pending' },
+const STATUS_STYLES: Record<string, { bg: string; text: string; label: string; icon: any }> = {
+  applied:    { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: 'Dilamar',  icon: Check },
+  success:    { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: 'Dilamar',  icon: Check },
+  failed:     { bg: 'bg-rose-500/15',    text: 'text-rose-400',    label: 'Gagal',    icon: X },
+  skipped:    { bg: 'bg-slate-500/15',   text: 'text-slate-400',   label: 'Dilewati', icon: Minus },
+  pending:    { bg: 'bg-amber-500/15',   text: 'text-amber-400',   label: 'Pending',  icon: Clock },
 };
 
 export function formatJobDate(dateStr: string): string {
@@ -127,8 +127,9 @@ export default function JobCard({ job, index, onViewDetail }: JobCardProps) {
 
       {/* Footer: Status + Q&A Button + Link */}
       <div className="flex items-center justify-between pt-2 border-t border-subtle-theme mt-auto gap-1.5">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold ${statusStyle.bg} ${statusStyle.text}`}>
-          {statusStyle.label}
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold ${statusStyle.bg} ${statusStyle.text}`}>
+          {React.createElement(statusStyle.icon, { className: 'w-2.5 h-2.5 shrink-0' })}
+          <span>{statusStyle.label}</span>
         </span>
 
         <div className="flex items-center gap-1.5 ml-auto">

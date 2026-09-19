@@ -47,7 +47,9 @@ import {
   Briefcase,
   Filter,
   MapPin,
-  Tag
+  Tag,
+  Info,
+  Lightbulb
 } from 'lucide-react';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import BatchQuestionModal from '@/components/BatchQuestionModal';
@@ -1806,7 +1808,7 @@ export default function Home() {
                         title="Otomatis isi form domisili, skill, dan upload CV ke akun Glints"
                       >
                         <Sparkles className="w-3 h-3" />
-                        <span>⚡ Auto-Fill Profil</span>
+                        <span>Auto-Fill Profil</span>
                       </button>
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
@@ -2159,7 +2161,7 @@ export default function Home() {
                           title="Otomatis sinkronkan nama, domisili, skill, dan file CV ke profil akun Glints kamu"
                         >
                           <Sparkles className={`w-3.5 h-3.5 ${isSyncingProfile ? 'animate-spin' : ''}`} />
-                          <span>{isSyncingProfile ? 'Menyinkronkan ke Glints...' : '⚡ Auto-Fill Profil Glints'}</span>
+                          <span>{isSyncingProfile ? 'Menyinkronkan ke Glints...' : 'Auto-Fill Profil Glints'}</span>
                         </button>
                       </div>
                     </div>
@@ -2793,8 +2795,9 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <p className="text-[10px] text-muted-theme">
-                        💡 Data ini digunakan oleh bot untuk menjawab pertanyaan skrining otomatis di <b className="text-main-theme">LinkedIn Easy Apply</b> dan <b className="text-main-theme">Indeed</b>.
+                      <p className="text-[10px] text-muted-theme flex items-center gap-1.5">
+                        <Info className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                        <span>Data ini digunakan oleh bot untuk menjawab pertanyaan skrining otomatis di <b className="text-main-theme">LinkedIn Easy Apply</b> dan <b className="text-main-theme">Indeed</b>.</span>
                       </p>
                     </div>
                   </div>
@@ -3281,8 +3284,9 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <p className="text-[10px] text-muted-theme pt-1">
-                        💡 Filter ini berlaku untuk <b className="text-main-theme">LinkedIn, Indeed, Glints, dan Jobstreet</b>. Tidak semua filter tersedia di setiap platform.
+                      <p className="text-[10px] text-muted-theme pt-1 flex items-center gap-1.5">
+                        <Info className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                        <span>Filter ini berlaku untuk <b className="text-main-theme">LinkedIn, Indeed, Glints, dan Jobstreet</b>. Tidak semua filter tersedia di setiap platform.</span>
                       </p>
                     </div>
 
@@ -5414,7 +5418,9 @@ export default function Home() {
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="bg-slate-500/10 border-b border-subtle-theme text-[11px] font-semibold text-muted-theme uppercase tracking-wider">
-                            <th className="p-3 w-8 text-center">✓</th>
+                            <th className="p-3 w-8 text-center">
+                              <Check className="w-3.5 h-3.5 mx-auto text-emerald-500" />
+                            </th>
                             <th className="p-3">Nama Kolom</th>
                             <th className="p-3 w-1/3">Nilai Saat Ini di Formulir</th>
                             <th className="p-3 w-1/3">Nilai Baru dari CV</th>
@@ -5633,8 +5639,9 @@ export default function Home() {
                 placeholder={`Paste cookie ${cookieTargetPlatform} di sini (format JSON array [...] atau string li_at=...)...`}
                 className="w-full text-xs font-mono p-3 rounded-xl border border-subtle-theme input-theme focus:outline-none focus:border-sky-500"
               />
-              <p className="text-[11px] text-muted-theme leading-relaxed">
-                💡 <b>Cara Cepat:</b> Buka {cookieTargetPlatform} di Chrome biasa Anda &gt; Buka ekstensi <i>Cookie-Editor</i> &gt; Klik <i>Export (JSON)</i> &gt; Tempel (Paste) di atas lalu klik Simpan.
+              <p className="text-[11px] text-muted-theme leading-relaxed flex items-start gap-1.5">
+                <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <span><b>Cara Cepat:</b> Buka {cookieTargetPlatform} di Chrome biasa Anda &gt; Buka ekstensi <i>Cookie-Editor</i> &gt; Klik <i>Export (JSON)</i> &gt; Tempel (Paste) di atas lalu klik Simpan.</span>
               </p>
             </div>
 

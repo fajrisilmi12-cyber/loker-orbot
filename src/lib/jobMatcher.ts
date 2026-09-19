@@ -1,7 +1,12 @@
 /**
- * Job Matcher & Qualification Filter Module
- * Inspects job titles and job descriptions against dealbreakers, negative keywords,
- * and calculates a match percentage score before clicking Apply.
+ * Job Matcher & Qualification Filter Module (SaaS Agnostic)
+ * Evaluates job compatibility dynamically based strictly on user-defined:
+ * - targetKeywords (e.g. "Full Stack Developer", "Digital Marketing", "Financial Auditor", "Civil Engineer")
+ * - candidateSkills (e.g. "React, Node.js" or "SEO, Copywriting, Google Ads" or "SAP, IFRS, Tax")
+ * - negativeKeywords (user's custom dealbreakers / blacklist)
+ * - minScoreThreshold (0-100%)
+ *
+ * NO HARDCODED INDUSTRY TERMS - Works universally for any profession/niche.
  */
 
 export interface MatchEvaluationResult {
@@ -22,28 +27,36 @@ export interface JobMatcherOptions {
   candidateSkills?: string;
 }
 
+const COMMON_STOP_WORDS = new Set([
+  'dan', 'atau', 'di', 'ke', 'dari', 'untuk', 'pada', 'dengan', 'yang', 'ini', 'itu',
+  'and', 'or', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'the', 'a', 'an', 'of',
+  'pt', 'cv', 'tbk', 'ltd', 'inc', 'corp', 'co'
+]);
+
 export function evaluateJobMatch(options: JobMatcherOptions): MatchEvaluationResult {
   const {
-    jobTitle,
-    company,
+    jobTitle = '',
+    company = '',
     jobDescription = '',
     targetKeywords = '',
     negativeKeywords = '',
-    minScoreThreshold = 60,
+    minScoreThreshold = 50,
     candidateSkills = ''
   } = options;
 
-  const fullText = `${jobTitle} ${company} ${jobDescription}`.toLowerCase();
+  const normalizedTitle = jobTitle.toLowerCase();
+  const normalizedDesc = jobDescription.toLowerCase();
+  const fullText = `${normalizedTitle} ${company.toLowerCase()} ${normalizedDesc}`;
 
-  // 1. FAST DEALBREAKER / NEGATIVE KEYWORDS CHECK
+  // 1. FAST DEALBREAKER / NEGATIVE KEYWORDS CHECK (Custom User Blacklist)
   if (negativeKeywords) {
     const blacklisted = negativeKeywords
       .split(/[,;\n]+/)
       .map(k => k.trim().toLowerCase())
-      .filter(Boolean);
+      .filter(k => k.length >= 2);
 
     for (const badWord of blacklisted) {
-      if (badWord.length > 2 && fullText.includes(badWord)) {
+      if (fullText.includes(badWord)) {
         return {
           shouldApply: false,
           score: 0,
@@ -55,60 +68,104 @@ export function evaluateJobMatch(options: JobMatcherOptions): MatchEvaluationRes
     }
   }
 
-  // 2. KEYWORD RELEVANCE & SCORING
-  let score = 50; // Base score for reaching the search results
+  // 2. DYNAMIC TARGET KEYWORDS SCORING (Max 55 Points)
+  // Evaluates how well the Job Title & Description match what the user is searching for.
+  const targetPhrases = targetKeywords
+    .split(/[,;\n]+/)
+    .map(k => k.trim().toLowerCase())
+    .filter(k => k.length >= 2);
+
   const matched: string[] = [];
+  let titleScore = 0;
+  let descScore = 0;
 
-  // Parse positive search keywords
-  const positiveList = targetKeywords
-    .split(/[,;\n]+/)
-    .map(k => k.trim().toLowerCase())
-    .filter(Boolean);
+  if (targetPhrases.length > 0) {
+    let exactTitleMatch = false;
+    let partialTitleHits = 0;
+    let targetTokensCount = 0;
 
-  for (const pos of positiveList) {
-    if (jobTitle.toLowerCase().includes(pos)) {
-      score += 25;
-      matched.push(pos);
-    } else if (jobDescription.toLowerCase().includes(pos)) {
-      score += 10;
-      matched.push(pos);
+    for (const phrase of targetPhrases) {
+      // Exact full phrase in title (e.g., "Full Stack Developer" in "Senior Full Stack Developer")
+      if (normalizedTitle.includes(phrase)) {
+        exactTitleMatch = true;
+        if (!matched.includes(phrase)) matched.push(phrase);
+      } else if (normalizedDesc.includes(phrase)) {
+        descScore += 10;
+        if (!matched.includes(phrase)) matched.push(phrase);
+      }
+
+      // Individual keyword token matching (e.g. "Full", "Stack", "Developer")
+      const words = phrase
+        .split(/\s+/)
+        .map(w => w.replace(/[^a-z0-9+#.-]/g, '').trim())
+        .filter(w => w.length >= 2 && !COMMON_STOP_WORDS.has(w));
+
+      targetTokensCount += words.length;
+      for (const word of words) {
+        if (normalizedTitle.includes(word)) {
+          partialTitleHits++;
+          if (!matched.includes(word)) matched.push(word);
+        }
+      }
     }
-  }
 
-  // Parse candidate skills
-  const skillsList = candidateSkills
-    .split(/[,;\n]+/)
-    .map(k => k.trim().toLowerCase())
-    .filter(Boolean);
-
-  let skillsHit = 0;
-  for (const skill of skillsList) {
-    if (skill.length > 2 && fullText.includes(skill)) {
-      skillsHit++;
-      if (!matched.includes(skill)) matched.push(skill);
+    if (exactTitleMatch) {
+      titleScore = 50;
+    } else if (targetTokensCount > 0 && partialTitleHits > 0) {
+      const tokenRatio = Math.min(1, partialTitleHits / targetTokensCount);
+      titleScore = Math.round(tokenRatio * 40);
     }
+  } else {
+    // If user provided no target keywords, default neutral baseline for title
+    titleScore = 25;
   }
 
-  // Boost by skills overlap (up to +25)
-  score += Math.min(25, skillsHit * 5);
+  // 3. CANDIDATE SKILLS OVERLAP (Max 35 Points)
+  // Evaluates how many of the candidate's skills appear in the job requirements / title
+  const skillTokens = candidateSkills
+    .split(/[,;\n/]+/)
+    .map(s => s.trim().toLowerCase())
+    .filter(s => s.length >= 2);
 
-  // Experience level heuristics
-  if (/(intern|internship|magang|junior|fresh graduate|entry level)/i.test(jobTitle)) {
-    score += 5;
-  }
-  if (/(lead|head of|vp|director|manager|principal)/i.test(jobTitle) && !/(senior|lead)/i.test(candidateSkills)) {
-    score -= 20;
+  let skillsHitCount = 0;
+  if (skillTokens.length > 0) {
+    for (const skill of skillTokens) {
+      // Match skill in full text
+      if (fullText.includes(skill)) {
+        skillsHitCount++;
+        if (!matched.includes(skill)) matched.push(skill);
+      }
+    }
+    // Proportional skill points: each hit gives up to 7 points (capped at 35)
+    const skillScore = Math.min(35, skillsHitCount * 7);
+    descScore += skillScore;
+  } else {
+    // If user has not filled skills, give neutral baseline
+    descScore += 15;
   }
 
-  const finalScore = Math.max(0, Math.min(100, score));
-  const passes = finalScore >= minScoreThreshold;
+  // 4. EXPERIENCE / SENIORITY RELEVANCE (Max 10 Points adjustment)
+  let seniorityAdjustment = 0;
+  const isSeniorJob = /\b(lead|head|vp|director|manager|principal|chief|senior|sr\.?)\b/i.test(normalizedTitle);
+  const isCandidateSenior = /\b(senior|lead|head|manager|principal)\b/i.test(candidateSkills.toLowerCase()) ||
+                            /\b(senior|lead|head|manager|principal)\b/i.test(targetKeywords.toLowerCase());
+
+  if (isSeniorJob && !isCandidateSenior) {
+    seniorityAdjustment -= 15; // Penalty for applying to high management when candidate isn't targeted for it
+  } else if (!isSeniorJob && /\b(intern|internship|magang|junior|fresh|entry)\b/i.test(normalizedTitle)) {
+    seniorityAdjustment += 10;
+  }
+
+  // Calculate Total Dynamic Score (0 - 100)
+  const totalScore = Math.max(0, Math.min(100, titleScore + descScore + seniorityAdjustment));
+  const passes = totalScore >= minScoreThreshold;
 
   return {
     shouldApply: passes,
-    score: finalScore,
-    reason: passes 
-      ? `Skor kecocokan memenuhi syarat (${finalScore}% >= ${minScoreThreshold}%)` 
-      : `Skor kecocokan di bawah batas minimal (${finalScore}% < ${minScoreThreshold}%)`,
+    score: totalScore,
+    reason: passes
+      ? `Skor kecocokan memenuhi syarat (${totalScore}% >= ${minScoreThreshold}%)`
+      : `Skor kecocokan di bawah batas minimal (${totalScore}% < ${minScoreThreshold}%)`,
     matchedKeywords: matched
   };
 }
