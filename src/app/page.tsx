@@ -43,10 +43,15 @@ import {
   X,
   RotateCcw,
   Sliders,
-  Settings2
+  Settings2,
+  Briefcase,
+  Filter,
+  MapPin,
+  Tag
 } from 'lucide-react';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import BatchQuestionModal from '@/components/BatchQuestionModal';
+import JobsTab from '@/components/JobsTab';
 
 export interface BrowserProfileAccount {
   id: string;
@@ -130,6 +135,16 @@ interface AppConfig {
     glints?: string;
     jobstreet?: string;
   };
+  // Search Filters
+  datePosted?: '' | '24h' | 'week' | 'month';
+  jobType?: string[];        // 'full_time' | 'part_time' | 'contract' | 'internship' | 'freelance'
+  workMode?: string[];       // 'onsite' | 'hybrid' | 'remote'
+  experienceLevel?: string[]; // 'fresh' | '1-3' | '3-5' | '5+'
+  // EEO / Work Authorization
+  citizenshipStatus?: string;
+  visaRequired?: boolean;
+  disabilityStatus?: 'yes' | 'no' | 'prefer_not_to_say';
+  veteranStatus?: 'yes' | 'no' | 'prefer_not_to_say';
 }
 
 interface AppliedJob {
@@ -139,6 +154,13 @@ interface AppliedJob {
   jobUrl: string;
   date: string;
   status: string;
+  salary?: string;
+  location?: string;
+  questionsAndAnswers?: Array<{
+    question: string;
+    answer: string;
+    type?: string;
+  }>;
 }
 
 interface QuestionItem {
@@ -159,7 +181,7 @@ interface ConfigPreset {
 const DRAFT_KEY = 'cv-blaster-draft';
 const PRESETS_KEY = 'cv-blaster-presets';
 
-type NavTab = 'wizard' | 'questions' | 'logs' | 'history';
+type NavTab = 'wizard' | 'questions' | 'logs' | 'history' | 'jobs';
 type WizardStep = 1 | 2 | 3;
 
 export default function Home() {
@@ -243,6 +265,14 @@ export default function Home() {
         createdAt: '2026-09-19',
       },
     ],
+    datePosted: '',
+    jobType: [],
+    workMode: [],
+    experienceLevel: [],
+    citizenshipStatus: 'WNI',
+    visaRequired: false,
+    disabilityStatus: 'prefer_not_to_say',
+    veteranStatus: 'prefer_not_to_say',
   });
 
   const [activeTab, setActiveTab] = useState<NavTab>('wizard');
@@ -250,8 +280,10 @@ export default function Home() {
 
   const [logs, setLogs] = useState<string[]>([]);
   const [isBotRunning, setIsBotRunning] = useState(false);
+  const [isSyncingProfile, setIsSyncingProfile] = useState(false);
   const [isSetupBrowserRunning, setIsSetupBrowserRunning] = useState(false);
   const [appliedJobs, setAppliedJobs] = useState<AppliedJob[]>([]);
+  const [selectedJobDetail, setSelectedJobDetail] = useState<AppliedJob | null>(null);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   // Question CSV state
@@ -905,6 +937,33 @@ export default function Home() {
     toast.warning('Bot telah dihentikan secara manual');
   };
 
+  const handleSyncProfileGlints = () => {
+    if (isSyncingProfile || isBotRunning) return;
+
+    setLogs([`[${new Date().toLocaleTimeString()}] 🚀 Memulai sinkronisasi profil akun Glints...`]);
+    setIsSyncingProfile(true);
+    setActiveTab('logs');
+    toast.info('Memulai sinkronisasi profil Glints secara otomatis...');
+
+    const eventSource = new EventSource('/api/sync-profile');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setLogs((prev) => [...prev, `[${new Date(data.timestamp).toLocaleTimeString()}] ${data.message}`]);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    eventSource.onerror = () => {
+      setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Selesai sinkronisasi profil.`]);
+      setIsSyncingProfile(false);
+      eventSource.close();
+      toast.success('Sinkronisasi profil Glints selesai!');
+    };
+  };
+
   const handleSaveQuestionsList = async (updatedList: QuestionItem[]) => {
     try {
       const res = await fetch('/api/questions', {
@@ -1432,6 +1491,26 @@ export default function Home() {
               </span>
             </button>
 
+            <button
+              onClick={() => {
+                setActiveTab('jobs');
+                fetchAppliedHistory();
+              }}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                activeTab === 'jobs'
+                  ? 'sidebar-nav-active'
+                  : 'sidebar-nav-idle'
+              }`}
+            >
+              <Briefcase className="w-4 h-4 text-teal-500" />
+              <span>Kartu Lowongan</span>
+              {appliedJobs.length > 0 && (
+                <span className="ml-auto text-[10px] text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-md border border-teal-500/20">
+                  {appliedJobs.length}
+                </span>
+              )}
+            </button>
+
             {/* Preset Konfigurasi */}
             <button
               onClick={() => setIsPresetsModalOpen(true)}
@@ -1750,12 +1829,24 @@ export default function Home() {
                 {/* STEP 1: CANDIDATE PROFILE */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
-                    <div className="border-b border-subtle-theme pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="border-b border-subtle-theme pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <h2 className="text-base font-semibold text-main-theme">Profil Pelamar &amp; Analisis CV</h2>
                         <p className="text-xs text-muted-theme mt-0.5">
                           Data ini digunakan oleh bot dan AI saat mengisi formulir lowongan kerja secara otomatis.
                         </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSyncProfileGlints}
+                          disabled={isSyncingProfile || isBotRunning}
+                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center gap-2 shadow-sm transition disabled:opacity-50"
+                          title="Otomatis sinkronkan nama, domisili, skill, dan file CV ke profil akun Glints kamu"
+                        >
+                          <Sparkles className={`w-3.5 h-3.5 ${isSyncingProfile ? 'animate-spin' : ''}`} />
+                          <span>{isSyncingProfile ? 'Menyinkronkan ke Glints...' : '⚡ Auto-Fill Profil Glints'}</span>
+                        </button>
                       </div>
                     </div>
 
@@ -2315,6 +2406,83 @@ export default function Home() {
                         placeholder="React, TypeScript, Next.js, Node.js, Express, PostgreSQL, Git"
                       />
                     </div>
+
+                    {/* EEO & Otorisasi Kerja */}
+                    <div className="p-5 rounded-2xl border border-subtle-theme card-subtle-theme space-y-4">
+                      <div className="flex items-center gap-2 border-b border-subtle-theme pb-3">
+                        <ShieldCheck className="w-4 h-4 text-sky-500" />
+                        <div>
+                          <div className="text-xs font-semibold text-main-theme">Otorisasi Kerja &amp; EEO</div>
+                          <p className="text-[11px] text-muted-theme">Pertanyaan standar yang sering muncul di form lamaran LinkedIn/Indeed.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Citizenship */}
+                        <div>
+                          <label className="block text-[11px] font-medium text-main-theme mb-1.5">Status Kewarganegaraan</label>
+                          <select
+                            value={config.citizenshipStatus || 'WNI'}
+                            onChange={(e) => setConfig({...config, citizenshipStatus: e.target.value})}
+                            className="w-full input-theme border border-subtle-theme rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500 transition"
+                          >
+                            <option value="WNI">WNI (Warga Negara Indonesia)</option>
+                            <option value="permanent_resident">Penduduk Tetap / PR</option>
+                            <option value="work_visa">Visa Kerja Aktif</option>
+                            <option value="other">Lainnya</option>
+                          </select>
+                        </div>
+
+                        {/* Visa Required */}
+                        <div>
+                          <label className="block text-[11px] font-medium text-main-theme mb-1.5">Butuh Sponsor Visa?</label>
+                          <div className="flex items-center gap-3 p-2.5 rounded-xl border border-subtle-theme card-theme">
+                            <input
+                              type="checkbox"
+                              id="visaRequired"
+                              checked={config.visaRequired ?? false}
+                              onChange={(e) => setConfig({...config, visaRequired: e.target.checked})}
+                              className="w-4 h-4 rounded text-orange-600 cursor-pointer"
+                            />
+                            <label htmlFor="visaRequired" className="text-xs text-muted-theme cursor-pointer">
+                              Ya, saya membutuhkan sponsorship visa
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Disability */}
+                        <div>
+                          <label className="block text-[11px] font-medium text-main-theme mb-1.5">Status Disabilitas</label>
+                          <select
+                            value={config.disabilityStatus || 'prefer_not_to_say'}
+                            onChange={(e) => setConfig({...config, disabilityStatus: e.target.value as any})}
+                            className="w-full input-theme border border-subtle-theme rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500 transition"
+                          >
+                            <option value="prefer_not_to_say">Tidak Ingin Menjawab</option>
+                            <option value="no">Tidak memiliki disabilitas</option>
+                            <option value="yes">Memiliki disabilitas</option>
+                          </select>
+                        </div>
+
+                        {/* Veteran */}
+                        <div>
+                          <label className="block text-[11px] font-medium text-main-theme mb-1.5">Status Veteran</label>
+                          <select
+                            value={config.veteranStatus || 'prefer_not_to_say'}
+                            onChange={(e) => setConfig({...config, veteranStatus: e.target.value as any})}
+                            className="w-full input-theme border border-subtle-theme rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500 transition"
+                          >
+                            <option value="prefer_not_to_say">Tidak Ingin Menjawab</option>
+                            <option value="no">Bukan Veteran</option>
+                            <option value="yes">Veteran / TNI/Polri Purnawirawan</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-muted-theme">
+                        💡 Data ini digunakan oleh bot untuk menjawab pertanyaan skrining otomatis di <b className="text-main-theme">LinkedIn Easy Apply</b> dan <b className="text-main-theme">Indeed</b>.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -2678,6 +2846,130 @@ export default function Home() {
                           </div>
                         )}
                       </div>
+                    </div>
+
+                    {/* FILTER PENCARIAN LANJUTAN */}
+                    <div className="p-5 sm:p-6 rounded-2xl border border-subtle-theme card-subtle-theme space-y-5">
+                      <div className="flex items-center gap-2.5 border-b border-subtle-theme pb-4">
+                        <div className="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-500 flex items-center justify-center">
+                          <Filter className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-main-theme">Filter Pencarian Lanjutan</div>
+                          <p className="text-[11px] text-muted-theme mt-0.5">
+                            Menyaring hasil pencarian di setiap platform agar lebih relevan dan sesuai target.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                        {/* Tanggal Posting */}
+                        <div className="space-y-2">
+                          <label className="block text-[11px] font-semibold text-muted-theme uppercase tracking-wider">Tanggal Diposting</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[{v:'',l:'Semua'},{v:'24h',l:'24 Jam'},{v:'week',l:'7 Hari'},{v:'month',l:'30 Hari'}].map(opt => (
+                              <button
+                                key={opt.v}
+                                type="button"
+                                onClick={() => setConfig({...config, datePosted: opt.v as any})}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition ${
+                                  (config.datePosted ?? '') === opt.v
+                                    ? 'bg-teal-500 text-white border-teal-500 shadow-sm'
+                                    : 'card-subtle-theme border-subtle-theme text-muted-theme hover:text-main-theme'
+                                }`}
+                              >
+                                {opt.l}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Tipe Pekerjaan */}
+                        <div className="space-y-2">
+                          <label className="block text-[11px] font-semibold text-muted-theme uppercase tracking-wider">Tipe Pekerjaan</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[{v:'full_time',l:'Full-time'},{v:'part_time',l:'Part-time'},{v:'contract',l:'Kontrak'},{v:'internship',l:'Magang'},{v:'freelance',l:'Freelance'}].map(opt => {
+                              const active = (config.jobType || []).includes(opt.v);
+                              return (
+                                <button
+                                  key={opt.v}
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = config.jobType || [];
+                                    setConfig({...config, jobType: active ? cur.filter(x=>x!==opt.v) : [...cur, opt.v]});
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition ${
+                                    active
+                                      ? 'bg-teal-500 text-white border-teal-500 shadow-sm'
+                                      : 'card-subtle-theme border-subtle-theme text-muted-theme hover:text-main-theme'
+                                  }`}
+                                >
+                                  {opt.l}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Mode Kerja */}
+                        <div className="space-y-2">
+                          <label className="block text-[11px] font-semibold text-muted-theme uppercase tracking-wider">Mode Kerja</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[{v:'onsite',l:'On-site'},{v:'hybrid',l:'Hybrid'},{v:'remote',l:'Remote'}].map(opt => {
+                              const active = (config.workMode || []).includes(opt.v);
+                              return (
+                                <button
+                                  key={opt.v}
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = config.workMode || [];
+                                    setConfig({...config, workMode: active ? cur.filter(x=>x!==opt.v) : [...cur, opt.v]});
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition ${
+                                    active
+                                      ? 'bg-blue-500 text-white border-blue-500 shadow-sm'
+                                      : 'card-subtle-theme border-subtle-theme text-muted-theme hover:text-main-theme'
+                                  }`}
+                                >
+                                  {opt.l}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Level Pengalaman */}
+                        <div className="space-y-2">
+                          <label className="block text-[11px] font-semibold text-muted-theme uppercase tracking-wider">Level Pengalaman</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[{v:'fresh',l:'Fresh Grad'},{v:'1-3',l:'1–3 Tahun'},{v:'3-5',l:'3–5 Tahun'},{v:'5+',l:'5+ Tahun'}].map(opt => {
+                              const active = (config.experienceLevel || []).includes(opt.v);
+                              return (
+                                <button
+                                  key={opt.v}
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = config.experienceLevel || [];
+                                    setConfig({...config, experienceLevel: active ? cur.filter(x=>x!==opt.v) : [...cur, opt.v]});
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition ${
+                                    active
+                                      ? 'bg-purple-500 text-white border-purple-500 shadow-sm'
+                                      : 'card-subtle-theme border-subtle-theme text-muted-theme hover:text-main-theme'
+                                  }`}
+                                >
+                                  {opt.l}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-muted-theme pt-1">
+                        💡 Filter ini berlaku untuk <b className="text-main-theme">LinkedIn, Indeed, Glints, dan Jobstreet</b>. Tidak semua filter tersedia di setiap platform.
+                      </p>
                     </div>
 
                     {/* MULTI-AKUN & KESIAPAN SESI LOGIN PORTAL KERJA */}
@@ -3955,6 +4247,29 @@ export default function Home() {
             </div>
           )}
 
+          {/* TAB 5: KARTU LOWONGAN */}
+          {activeTab === 'jobs' && (
+            <div className="rounded-3xl card-theme border shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-subtle-theme">
+                <div className="flex items-center gap-2.5">
+                  <Briefcase className="w-4 h-4 text-teal-500" />
+                  <h2 className="text-base font-semibold text-main-theme">Kartu Lowongan</h2>
+                  <span className="text-[10px] font-medium bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 px-2 py-0.5 rounded-full">
+                    Visual Mode
+                  </span>
+                </div>
+                <p className="text-xs text-muted-theme hidden sm:block">
+                  Tampilan kartu dari semua lowongan yang sudah dilamar bot.
+                </p>
+              </div>
+              <JobsTab
+                jobs={appliedJobs}
+                onRefresh={fetchAppliedHistory}
+                onExportCsv={handleExportCsv}
+              />
+            </div>
+          )}
+
           {/* TAB 4: APPLICATION HISTORY */}
           {activeTab === 'history' && (
             <div className="p-6 md:p-8 rounded-3xl card-theme border shadow-sm space-y-6">
@@ -4012,12 +4327,13 @@ export default function Home() {
                       <th className="p-3.5">Tanggal</th>
                       <th className="p-3.5">Status</th>
                       <th className="p-3.5">Tautan</th>
+                      <th className="p-3.5 text-center">Detail / Q&A</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y border-subtle-theme">
                     {appliedJobs.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-muted-theme italic">
+                        <td colSpan={7} className="p-8 text-center text-muted-theme italic">
                           Belum ada data lamaran yang tercatat.
                         </td>
                       </tr>
@@ -4060,6 +4376,15 @@ export default function Home() {
                               '-'
                             )}
                           </td>
+                          <td className="p-3.5 text-center">
+                            <button
+                              onClick={() => setSelectedJobDetail(job)}
+                              className="px-2.5 py-1 rounded-lg card-subtle-theme border border-subtle-theme text-main-theme hover:bg-orange-500/10 hover:text-orange-600 dark:hover:text-orange-400 font-medium text-[11px] transition inline-flex items-center gap-1"
+                            >
+                              <FileText className="w-3 h-3" />
+                              <span>Lihat Q&A</span>
+                            </button>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -4070,6 +4395,106 @@ export default function Home() {
           )}
         </main>
       </div>
+
+      {/* MODAL: DETAIL LAMARAN & RIWAYAT PERTANYAAN */}
+      {selectedJobDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="card-theme border border-subtle-theme rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="p-5 border-b border-subtle-theme flex items-center justify-between card-subtle-theme">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 uppercase">
+                    {selectedJobDetail.platform}
+                  </span>
+                  <span className="text-xs text-muted-theme">{selectedJobDetail.date}</span>
+                </div>
+                <h3 className="text-base font-bold text-main-theme mt-1">{selectedJobDetail.title}</h3>
+                <p className="text-xs text-muted-theme">{selectedJobDetail.company}</p>
+              </div>
+              <button
+                onClick={() => setSelectedJobDetail(null)}
+                className="p-1.5 rounded-lg hover:card-subtle-theme text-muted-theme hover:text-main-theme transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              {/* Meta Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <div className="card-subtle-theme border border-subtle-theme p-3 rounded-xl">
+                  <span className="text-[10px] text-muted-theme block">Status Lamaran</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 block">{selectedJobDetail.status}</span>
+                </div>
+                <div className="card-subtle-theme border border-subtle-theme p-3 rounded-xl">
+                  <span className="text-[10px] text-muted-theme block">Gaji Ditampilkan</span>
+                  <span className="font-semibold text-main-theme mt-0.5 block">{selectedJobDetail.salary || 'Tidak Dicantumkan'}</span>
+                </div>
+                <div className="card-subtle-theme border border-subtle-theme p-3 rounded-xl col-span-2 sm:col-span-1">
+                  <span className="text-[10px] text-muted-theme block">Lokasi Kerja</span>
+                  <span className="font-semibold text-main-theme mt-0.5 block truncate">{selectedJobDetail.location || '-'}</span>
+                </div>
+              </div>
+
+              {/* Questions & Answers Section */}
+              <div>
+                <h4 className="font-semibold text-main-theme mb-2.5 flex items-center gap-1.5 text-xs">
+                  <FileText className="w-3.5 h-3.5 text-orange-500" />
+                  <span>Pertanyaan & Jawaban yang Dikirim ke HRD:</span>
+                </h4>
+
+                {selectedJobDetail.questionsAndAnswers && selectedJobDetail.questionsAndAnswers.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedJobDetail.questionsAndAnswers.map((qa, i) => (
+                      <div key={i} className="card-subtle-theme border border-subtle-theme p-3 rounded-xl space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-medium text-main-theme text-[11px]">{i + 1}. {qa.question}</p>
+                          {qa.type && (
+                            <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-500 border border-orange-500/20 shrink-0">
+                              {qa.type}
+                            </span>
+                          )}
+                        </div>
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 p-2 rounded-lg text-[11px]">
+                          <span className="font-semibold text-[10px] uppercase text-emerald-600 dark:text-emerald-400 block mb-0.5">Jawaban Bot:</span>
+                          <p className="whitespace-pre-wrap">{qa.answer}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="card-subtle-theme border border-subtle-theme p-4 rounded-xl text-center text-muted-theme italic">
+                    Lamaran ini menggunakan format formulir standar (Profil & CV default). Tidak ada kuesioner kustom tambahan yang perlu diisi.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-subtle-theme flex items-center justify-between card-subtle-theme">
+              {selectedJobDetail.jobUrl ? (
+                <a
+                  href={selectedJobDetail.jobUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs flex items-center gap-1.5 transition shadow-sm"
+                >
+                  <span>Buka Halaman Loker</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              ) : <div />}
+              <button
+                onClick={() => setSelectedJobDetail(null)}
+                className="px-4 py-2 rounded-xl card-subtle-theme border border-subtle-theme text-main-theme hover:opacity-90 font-medium text-xs transition"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL: BATCH AI PERSONALISASI */}
       <BatchQuestionModal

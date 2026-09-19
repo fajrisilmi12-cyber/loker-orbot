@@ -27,28 +27,44 @@ export async function runJobstreetBot(
   let alreadyAppliedCount = 0;
   let errorCount = 0;
 
-  onLog('🌐 Navigating to Jobstreet Homepage...');
+  onLog('🌐 Membuka Beranda Jobstreet (https://id.jobstreet.com)...');
 
   // Injeksi cookies jika tersedia di konfigurasi
   if (config.portalCookies?.jobstreet) {
-    const cookies = parseCookiesInput(config.portalCookies.jobstreet, '.jobstreet.co.id');
+    const cookies = parseCookiesInput(config.portalCookies.jobstreet, '.jobstreet.com');
     if (cookies.length > 0) {
       const injectedCount = await injectCookiesIntoPage(page, cookies);
       onLog(`🍪 [JobStreet Cookie] Menyuntikkan ${injectedCount} cookie sesi JobStreet!`);
     }
   }
 
-  await page.goto('https://www.jobstreet.co.id/', { waitUntil: 'networkidle2', timeout: 60000 });
+  await page.goto('https://id.jobstreet.com/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await sleep(3000);
 
-  const isLoggedIn = await page.evaluate(() => {
-    return !!document.querySelector('[data-automation="user-menu"], a[href*="/profile"], button[aria-label*="Profile"]');
+  let isLoggedIn = await page.evaluate(() => {
+    return !!document.querySelector('[data-automation="user-menu"], a[href*="/profile"], button[aria-label*="Profile"], [data-automation="user-account-nav"], a[href*="/candidate/"]');
   });
 
   if (!isLoggedIn) {
-    onLog('⚠️ Jobstreet: Not logged in! Please click "Buka Browser (Login Setup)" to login first.');
+    onLog('⚠️ Jobstreet: Sesi login belum aktif. Menunggu 30 detik jika Anda ingin login langsung di browser...');
+    for (let waitSec = 0; waitSec < 6; waitSec++) {
+      await sleep(5000);
+      isLoggedIn = await page.evaluate(() => {
+        return !!document.querySelector('[data-automation="user-menu"], a[href*="/profile"], button[aria-label*="Profile"], [data-automation="user-account-nav"], a[href*="/candidate/"]');
+      });
+      if (isLoggedIn) {
+        onLog('✅ Sesi login Jobstreet terdeteksi aktif!');
+        break;
+      }
+      onLog(`⏳ Menunggu login Jobstreet... (${(waitSec + 1) * 5}s/30s)`);
+    }
+  }
+
+  if (!isLoggedIn) {
+    onLog('⚠️ Jobstreet: Belum login! Silakan login melalui "Buka Browser (Login Setup)" di Dashboard.');
     return { successCount, alreadyAppliedCount, errorCount };
   }
-  onLog('✅ Jobstreet: Logged in successfully.');
+  onLog('✅ Jobstreet: Sesi login terverifikasi aktif.');
 
   const formattedKeywords = config.searchKeywords.trim().toLowerCase().replace(/\s+/g, '-');
   const formattedLocation = (config.location || '').trim().toLowerCase().replace(/\s+/g, '-');
@@ -127,8 +143,8 @@ export async function runJobstreetBot(
       onLog(`👷 Worker ${workerId + 1} started to process ${chunkUrls.length} jobs.`);
 
       const workerPage = await browser.newPage();
-      await workerPage.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-      await workerPage.setViewport({ width: 1280, height: 800 });
+      const { applyStealthToPage } = require('../stealthHelper');
+      await applyStealthToPage(workerPage);
 
       try {
         for (const url of chunkUrls) {
@@ -273,15 +289,70 @@ export async function runJobstreetBot(
           }
 
           if (applyBtnStatus.isExternal) {
-            onLog(`[Worker ${workerId + 1}] ⏩ Jobstreet: Mengarahkan ke situs eksternal ("${applyBtnStatus.text}"). Dicatat ke Riwayat.`);
-            await addAppliedJob({ 
-              company: jobDetails.company || 'Jobstreet Company', 
-              title: jobDetails.title || 'Jobstreet Job', 
-              platform: 'Jobstreet', 
-              jobUrl: url, 
-              status: 'External Link' 
+            onLog(`[Worker ${workerId + 1}] 🌐 Jobstreet: Terdeteksi tautan eksternal ("${applyBtnStatus.text}"). Mengaktifkan Universal External Job Solver...`);
+            
+            const extPagePromise = new Promise<any>((resolve) => {
+              const listener = async (target: any) => {
+                if (target.type() === 'page' && target.opener() === workerPage.target()) {
+                  browser.off('targetcreated', listener);
+                  resolve(await target.page());
+                }
+              };
+              browser.on('targetcreated', listener);
+              setTimeout(() => {
+                browser.off('targetcreated', listener);
+                resolve(null);
+              }, 6000);
             });
-            alreadyAppliedCount++;
+
+            await workerPage.evaluate(() => {
+              const prioritySelectors = [
+                '[data-automation="job-detail-apply"]',
+                '[data-automation="apply-now"]',
+                '[data-automation="job-detail-apply-button"]',
+                '[data-testid="apply-button"]',
+                'a[href*="/apply"]'
+              ];
+              for (const sel of prioritySelectors) {
+                const el = document.querySelector(sel) as HTMLElement;
+                if (el) { el.click(); return; }
+              }
+              const candidates = Array.from(document.querySelectorAll('a, button, [role="button"]')) as HTMLElement[];
+              const externalBtn = candidates.find(el => /Lamar|Apply/i.test((el.textContent || '').trim()));
+              if (externalBtn) externalBtn.click();
+            });
+
+            const externalPage = await extPagePromise;
+            if (externalPage) {
+              const { applyStealthToPage } = require('../stealthHelper');
+              await applyStealthToPage(externalPage);
+              const { solveExternalJobApplication } = require('../externalJobSolver');
+              const res = await solveExternalJobApplication(
+                externalPage,
+                config,
+                {
+                  title: jobDetails.title || 'Jobstreet Job',
+                  company: jobDetails.company || 'Jobstreet Company',
+                  platform: 'Jobstreet',
+                  originalJobUrl: url
+                },
+                (msg: string) => onLog(`[Jobstreet-External] ${msg}`)
+              );
+              if (res.success) {
+                successCount++;
+                if (sharedLimiter) sharedLimiter.onJobSuccess();
+              }
+              try { await externalPage.close(); } catch {}
+            } else {
+              await addAppliedJob({ 
+                company: jobDetails.company || 'Jobstreet Company', 
+                title: jobDetails.title || 'Jobstreet Job', 
+                platform: 'Jobstreet', 
+                jobUrl: url, 
+                status: 'External Link' 
+              });
+              alreadyAppliedCount++;
+            }
             continue;
           }
 

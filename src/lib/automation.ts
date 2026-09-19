@@ -118,40 +118,48 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
       }
     };
 
+    const { applyStealthToPage } = require('./stealthHelper');
+
     const initialPages = await browser.pages();
     let initialPageUsed = false;
 
     const getOrNewPage = async () => {
+      let page;
       if (!initialPageUsed && initialPages.length > 0 && initialPages[0]) {
         initialPageUsed = true;
-        return initialPages[0];
+        page = initialPages[0];
+      } else {
+        page = await browser.newPage();
       }
-      return await browser.newPage();
+      await applyStealthToPage(page);
+      return page;
     };
 
-    const tasks: Promise<void>[] = [];
+    const runPlatformTasks: Array<{ name: string; run: () => Promise<void> }> = [];
 
     // ----------------------------------------------------
     // TAB 1: GLINTS AUTOMATION
     // ----------------------------------------------------
     if (config.enableGlints) {
-      tasks.push((async () => {
-        const pageGlints = await getOrNewPage();
-        await pageGlints.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-        const glintsLog = (msg: string) => onLog(`[Glints] ${msg}`);
+      runPlatformTasks.push({
+        name: 'Glints',
+        run: async () => {
+          const pageGlints = await getOrNewPage();
+          const glintsLog = (msg: string) => onLog(`[Glints] ${msg}`);
 
-        glintsLog('🔍 Memulai proses bot Glints di Tab khusus...');
-        try {
-          const metrics = await runGlintsBot(pageGlints, config, glintsLog, glintsLimiter);
-          totalAlreadyApplied += metrics.alreadyAppliedCount;
-          totalErrors += metrics.errorCount;
-        } catch (err: any) {
-          glintsLog(`❌ Error: ${err.message || err}`);
-          totalErrors++;
-        } finally {
-          try { await pageGlints.close(); } catch {}
+          glintsLog('🔍 Memulai proses bot Glints...');
+          try {
+            const metrics = await runGlintsBot(pageGlints, config, glintsLog, glintsLimiter);
+            totalAlreadyApplied += metrics.alreadyAppliedCount;
+            totalErrors += metrics.errorCount;
+          } catch (err: any) {
+            glintsLog(`❌ Error: ${err.message || err}`);
+            totalErrors++;
+          } finally {
+            try { await pageGlints.close(); } catch {}
+          }
         }
-      })());
+      });
     } else {
       onLog('⏩ Glints dinonaktifkan di pengaturan.');
     }
@@ -160,23 +168,25 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
     // TAB 2: JOBSTREET AUTOMATION
     // ----------------------------------------------------
     if (config.enableJobstreet) {
-      tasks.push((async () => {
-        const pageJobstreet = await getOrNewPage();
-        await pageJobstreet.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-        const jobstreetLog = (msg: string) => onLog(`[Jobstreet] ${msg}`);
+      runPlatformTasks.push({
+        name: 'Jobstreet',
+        run: async () => {
+          const pageJobstreet = await getOrNewPage();
+          const jobstreetLog = (msg: string) => onLog(`[Jobstreet] ${msg}`);
 
-        jobstreetLog('🔍 Memulai proses bot Jobstreet di Tab khusus...');
-        try {
-          const metrics = await runJobstreetBot(pageJobstreet, config, jobstreetLog, jobstreetLimiter);
-          totalAlreadyApplied += metrics.alreadyAppliedCount;
-          totalErrors += metrics.errorCount;
-        } catch (err: any) {
-          jobstreetLog(`❌ Error: ${err.message || err}`);
-          totalErrors++;
-        } finally {
-          try { await pageJobstreet.close(); } catch {}
+          jobstreetLog('🔍 Memulai proses bot Jobstreet...');
+          try {
+            const metrics = await runJobstreetBot(pageJobstreet, config, jobstreetLog, jobstreetLimiter);
+            totalAlreadyApplied += metrics.alreadyAppliedCount;
+            totalErrors += metrics.errorCount;
+          } catch (err: any) {
+            jobstreetLog(`❌ Error: ${err.message || err}`);
+            totalErrors++;
+          } finally {
+            try { await pageJobstreet.close(); } catch {}
+          }
         }
-      })());
+      });
     } else {
       onLog('⏩ Jobstreet dinonaktifkan di pengaturan.');
     }
@@ -185,23 +195,25 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
     // TAB 3: LINKEDIN AUTOMATION
     // ----------------------------------------------------
     if (config.enableLinkedin) {
-      tasks.push((async () => {
-        const pageLinkedin = await getOrNewPage();
-        await pageLinkedin.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-        const linkedinLog = (msg: string) => onLog(`[LinkedIn] ${msg}`);
+      runPlatformTasks.push({
+        name: 'LinkedIn',
+        run: async () => {
+          const pageLinkedin = await getOrNewPage();
+          const linkedinLog = (msg: string) => onLog(`[LinkedIn] ${msg}`);
 
-        linkedinLog('🔍 Memulai proses bot LinkedIn di Tab khusus...');
-        try {
-          const metrics = await runLinkedinBot(pageLinkedin, config, linkedinLog, linkedinLimiter);
-          totalAlreadyApplied += metrics.alreadyAppliedCount;
-          totalErrors += metrics.errorCount;
-        } catch (err: any) {
-          linkedinLog(`❌ Error: ${err.message || err}`);
-          totalErrors++;
-        } finally {
-          try { await pageLinkedin.close(); } catch {}
+          linkedinLog('🔍 Memulai proses bot LinkedIn...');
+          try {
+            const metrics = await runLinkedinBot(pageLinkedin, config, linkedinLog, linkedinLimiter);
+            totalAlreadyApplied += metrics.alreadyAppliedCount;
+            totalErrors += metrics.errorCount;
+          } catch (err: any) {
+            linkedinLog(`❌ Error: ${err.message || err}`);
+            totalErrors++;
+          } finally {
+            try { await pageLinkedin.close(); } catch {}
+          }
         }
-      })());
+      });
     } else {
       onLog('⏩ LinkedIn dinonaktifkan di pengaturan.');
     }
@@ -210,31 +222,38 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
     // TAB 4: INDEED AUTOMATION
     // ----------------------------------------------------
     if (config.enableIndeed) {
-      tasks.push((async () => {
-        const pageIndeed = await getOrNewPage();
-        await pageIndeed.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-        const indeedLog = (msg: string) => onLog(`[Indeed] ${msg}`);
+      runPlatformTasks.push({
+        name: 'Indeed',
+        run: async () => {
+          const pageIndeed = await getOrNewPage();
+          const indeedLog = (msg: string) => onLog(`[Indeed] ${msg}`);
 
-        indeedLog('🔍 Memulai proses bot Indeed di Tab khusus...');
-        try {
-          const metrics = await runIndeedBot(pageIndeed, config, indeedLog, indeedLimiter);
-          totalAlreadyApplied += metrics.alreadyAppliedCount;
-          totalErrors += metrics.errorCount;
-        } catch (err: any) {
-          indeedLog(`❌ Error: ${err.message || err}`);
-          totalErrors++;
-        } finally {
-          try { await pageIndeed.close(); } catch {}
+          indeedLog('🔍 Memulai proses bot Indeed...');
+          try {
+            const metrics = await runIndeedBot(pageIndeed, config, indeedLog, indeedLimiter);
+            totalAlreadyApplied += metrics.alreadyAppliedCount;
+            totalErrors += metrics.errorCount;
+          } catch (err: any) {
+            indeedLog(`❌ Error: ${err.message || err}`);
+            totalErrors++;
+          } finally {
+            try { await pageIndeed.close(); } catch {}
+          }
         }
-      })());
+      });
     } else {
       onLog('⏩ Indeed dinonaktifkan di pengaturan.');
     }
 
-    // Tunggu semua tab platform selesai bekerja
-    if (tasks.length > 0) {
-      onLog(`🚀 Menjalankan ${tasks.length} tab platform secara bersamaan...`);
-      await Promise.allSettled(tasks);
+    // Jalankan platform secara berurutan (sequential) untuk stabilitas & anti-deteksi maksimal
+    if (runPlatformTasks.length > 0) {
+      onLog(`🚀 Menjalankan ${runPlatformTasks.length} platform secara berurutan...`);
+      for (const task of runPlatformTasks) {
+        if (!global.isBotRunning) break;
+        onLog(`▶️ Memulai portal: ${task.name}`);
+        await task.run();
+        onLog(`⏹️ Selesai portal: ${task.name}`);
+      }
     } else {
       onLog('⚠️ Tidak ada platform yang diaktifkan (Glints, Jobstreet, LinkedIn & Indeed semuanya nonaktif).');
     }

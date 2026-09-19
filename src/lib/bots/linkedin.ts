@@ -41,8 +41,41 @@ export async function runLinkedinBot(
     searchParams.set('origin', 'JOB_SEARCH_PAGE_SEARCH_BUTTON');
     searchParams.set('refresh', 'true');
 
+    // Filter Pencarian Lanjutan (dari config)
+    const datePostedMap: Record<string, string> = {
+      '24h': 'r86400', 'week': 'r604800', 'month': 'r2592000',
+    };
+    if (config.datePosted && datePostedMap[config.datePosted]) {
+      searchParams.set('f_TPR', datePostedMap[config.datePosted]);
+    }
+
+    const jobTypeMap: Record<string, string> = {
+      'full_time': 'F', 'part_time': 'P', 'contract': 'C', 'internship': 'I', 'freelance': 'T',
+    };
+    const jobTypeValues = (config.jobType || []).map((t: string) => jobTypeMap[t]).filter(Boolean);
+    if (jobTypeValues.length > 0) {
+      searchParams.set('f_JT', jobTypeValues.join(','));
+    }
+
+    const workModeMap: Record<string, string> = {
+      'onsite': '1', 'remote': '2', 'hybrid': '3',
+    };
+    const workModeValues = (config.workMode || []).map((m: string) => workModeMap[m]).filter(Boolean);
+    if (workModeValues.length > 0) {
+      searchParams.set('f_WT', workModeValues.join(','));
+    }
+
+    const expLevelMap: Record<string, string> = {
+      'fresh': '1', '1-3': '2', '3-5': '3', '5+': '4',
+    };
+    const expValues = (config.experienceLevel || []).map((e: string) => expLevelMap[e]).filter(Boolean);
+    if (expValues.length > 0) {
+      searchParams.set('f_E', expValues.join(','));
+    }
+
     const searchUrl = `https://www.linkedin.com/jobs/search/?${searchParams.toString()}`;
     onLog(`🌐 Membuka URL Pencarian LinkedIn: ${searchUrl}`);
+
 
     // Injeksi cookies jika tersedia di konfigurasi
     if (config.portalCookies?.linkedin) {
@@ -53,20 +86,62 @@ export async function runLinkedinBot(
       }
     }
 
+    // Spoofing User-Agent agar lebih mirip browser manusia
+    await page.setExtraHTTPHeaders({
+      'sec-ch-ua': '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"',
+      'sec-ch-ua-platform': '"Windows"',
+      'sec-ch-ua-mobile': '?0',
+    });
+
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await sleep(3000);
 
+    // Cek apakah LinkedIn redirect ke security challenge
+    let currentUrlAfterNav = page.url();
+    if (
+      currentUrlAfterNav.includes('/checkpoint/') ||
+      currentUrlAfterNav.includes('/security-verification') ||
+      currentUrlAfterNav.includes('/challenge/')
+    ) {
+      onLog('⚠️ [LinkedIn] Terdeteksi Security Challenge / Verifikasi LinkedIn! Menunggu 30 detik untuk Anda menyelesaikannya di browser...');
+      for (let scWait = 0; scWait < 6; scWait++) {
+        await sleep(5000);
+        currentUrlAfterNav = page.url();
+        if (!currentUrlAfterNav.includes('/checkpoint/') && !currentUrlAfterNav.includes('/security-verification') && !currentUrlAfterNav.includes('/challenge/')) {
+          onLog('✅ Verifikasi keamanan LinkedIn berhasil diselesaikan!');
+          break;
+        }
+        onLog(`⏳ Menunggu verifikasi LinkedIn... (${(scWait + 1) * 5}s/30s)`);
+      }
+    }
+
     // 1. Pengecekan status login
-    const isLoggedIn = await page.evaluate(() => {
+    let isLoggedIn = await page.evaluate(() => {
       const hasNav = !!document.querySelector('.global-nav, .global-nav__me, #global-nav, [data-control-name="nav.settings"], img.global-nav__me-photo, button.global-nav__primary-link-me-menu-trigger');
       const hasSignIn = !!document.querySelector('a[href*="/login"], a[href*="/signup"], .join-form, #login-email, input#username');
       return hasNav || (!hasSignIn && !window.location.href.includes('/login') && !window.location.href.includes('/signup') && !window.location.href.includes('/checkpoint'));
     });
 
-    const currentUrl = page.url();
+    let currentUrl = page.url();
     if (currentUrl.includes('/login') || currentUrl.includes('/signup') || currentUrl.includes('/checkpoint') || !isLoggedIn) {
-      onLog('⚠️ LinkedIn: Sesi login belum terdeteksi aktif.');
-      onLog('💡 Saran: Gunakan tombol "Buka Browser (Login Setup)" di Dashboard, selesaikan login & verifikasi/captcha LinkedIn di tab yang terbuka sampai halaman beranda feed muncul, lalu jalankan bot kembali.');
+      onLog('⚠️ LinkedIn: Sesi login belum terdeteksi. Menunggu 30 detik untuk Anda login langsung di tab browser ini...');
+      for (let logWait = 0; logWait < 6; logWait++) {
+        await sleep(5000);
+        isLoggedIn = await page.evaluate(() => {
+          const hasNav = !!document.querySelector('.global-nav, .global-nav__me, #global-nav, [data-control-name="nav.settings"], img.global-nav__me-photo, button.global-nav__primary-link-me-menu-trigger');
+          const hasSignIn = !!document.querySelector('a[href*="/login"], a[href*="/signup"], .join-form, #login-email, input#username');
+          return hasNav || (!hasSignIn && !window.location.href.includes('/login') && !window.location.href.includes('/signup') && !window.location.href.includes('/checkpoint'));
+        });
+        if (isLoggedIn) {
+          onLog('✅ Login LinkedIn berhasil!');
+          break;
+        }
+        onLog(`⏳ Menunggu login LinkedIn... (${(logWait + 1) * 5}s/30s)`);
+      }
+    }
+
+    if (!isLoggedIn) {
+      onLog('⚠️ LinkedIn: Sesi login belum aktif. Silakan login melalui "Buka Browser (Login Setup)" di Dashboard.');
       return { successCount, alreadyAppliedCount, errorCount };
     }
 
@@ -97,23 +172,29 @@ export async function runLinkedinBot(
       onLog('==================================================');
       onLog(`📄 Memproses Halaman Pencarian LinkedIn ke-${currentPage}...`);
 
-      // 4. Scan seluruh daftar Job ID yang ada di dalam <ul> panel kiri
+      // 4. Scan seluruh daftar Job ID yang ada di dalam panel kiri
       const jobIdsOnPage = await page.evaluate(() => {
         const listItems = Array.from(document.querySelectorAll(
-          'ul.mMSLLoaspsoJNCBFVKxApWEWnMtxcoYvskkg > li[data-occludable-job-id], .jobs-search-results-list li[data-occludable-job-id], li.scaffold-layout__list-item[data-occludable-job-id]'
+          'li[data-occludable-job-id], .jobs-search-results-list li, li.scaffold-layout__list-item, [data-job-id], div.job-card-container'
         ));
-        return listItems.map((li) => li.getAttribute('data-occludable-job-id')).filter(Boolean) as string[];
+        const ids = listItems.map((li) => {
+          return li.getAttribute('data-occludable-job-id') || 
+                 li.getAttribute('data-job-id') || 
+                 li.querySelector('[data-job-id]')?.getAttribute('data-job-id') ||
+                 li.querySelector('a[href*="/jobs/view/"]')?.getAttribute('href')?.match(/\/jobs\/view\/(\d+)/)?.[1];
+        }).filter(Boolean) as string[];
+        return Array.from(new Set(ids));
       });
 
       const totalJobs = jobIdsOnPage.length;
-      onLog(`📊 Panel Kiri: Terdeteksi ${totalJobs} lowongan kerja pada daftar <ul> halaman ini.`);
+      onLog(`📊 Panel Kiri: Terdeteksi ${totalJobs} lowongan kerja pada daftar halaman ini.`);
 
       if (totalJobs === 0) {
         onLog('⚠️ Tidak ditemukan kartu loker di panel kiri. Mencoba menyelesaikan.');
         break;
       }
 
-      // 5. Iterasi satu per satu secara berurutan berdasarkan Job ID dari <ul>
+      // 5. Iterasi satu per satu secara berurutan berdasarkan Job ID dari panel kiri
       let lastProcessedTitle = '';
       let lastProcessedCompany = '';
 
@@ -146,12 +227,12 @@ export async function runLinkedinBot(
           continue;
         }
 
-        // 2. Scroll container hasil pencarian panel kiri agar elemen <li> target benar-benar ter-hydrate dari placeholder <!---->
+        // 2. Scroll container hasil pencarian panel kiri agar elemen target ter-render
         await page.evaluate((jobId: string) => {
           const listContainer = document.querySelector(
-            '.jobs-search-results-list, .scaffold-layout__list, ul.mMSLLoaspsoJNCBFVKxApWEWnMtxcoYvskkg'
+            '.jobs-search-results-list, .scaffold-layout__list, ul.scaffold-layout__list-container'
           ) as HTMLElement;
-          const cardLi = document.querySelector(`li[data-occludable-job-id="${jobId}"]`) as HTMLElement;
+          const cardLi = document.querySelector(`li[data-occludable-job-id="${jobId}"], [data-job-id="${jobId}"]`) as HTMLElement;
           if (cardLi) {
             if (listContainer) {
               const topOffset = cardLi.offsetTop - listContainer.offsetTop;
@@ -362,6 +443,16 @@ export async function runLinkedinBot(
           continue;
         }
 
+        // Siapkan listener untuk mendeteksi pembukaan tab eksternal
+        const browser = page.browser();
+        let externalTargetCreated: any = null;
+        const targetListener = (target: any) => {
+          if (target.type() === 'page') {
+            externalTargetCreated = target;
+          }
+        };
+        browser.on('targetcreated', targetListener);
+
         onLog(`🔘 Mengklik tombol Apply di panel kanan ("${rightPaneDetail.btnText}")...`);
         if (config.enableHumanStealth) {
           await humanClick(page, 'button.jobs-apply-button, button#jobs-apply-button-id, .jobs-s-apply button');
@@ -374,12 +465,47 @@ export async function runLinkedinBot(
           });
         }
 
-        // Tunggu modal Easy Apply muncul
+        await sleep(3000);
+        browser.off('targetcreated', targetListener);
+
+        // Jika membuka tab eksternal baru
+        if (externalTargetCreated) {
+          onLog(`🌐 Terdeteksi pembukaan tab eksternal baru untuk "${activeTitle}". Mengaktifkan Universal External Job Solver...`);
+          try {
+            const externalPage = await externalTargetCreated.page();
+            if (externalPage) {
+              const { applyStealthToPage } = require('../stealthHelper');
+              await applyStealthToPage(externalPage);
+              const { solveExternalJobApplication } = require('../externalJobSolver');
+              const res = await solveExternalJobApplication(
+                externalPage,
+                config,
+                {
+                  title: activeTitle,
+                  company: activeCompany,
+                  platform: 'LinkedIn',
+                  originalJobUrl: targetJobUrl
+                },
+                (msg: string) => onLog(`[External] ${msg}`)
+              );
+              if (res.success) {
+                successCount++;
+                if (sharedLimiter) sharedLimiter.onJobSuccess();
+              }
+              try { await externalPage.close(); } catch {}
+            }
+          } catch (extErr: any) {
+            onLog(`⚠️ Gagal memproses halaman eksternal: ${extErr.message || extErr}`);
+          }
+          continue;
+        }
+
+        // Tunggu modal Easy Apply muncul jika bukan external tab
         try {
-          await page.waitForSelector('.artdeco-modal.jobs-easy-apply-modal, .jobs-easy-apply-modal', { visible: true, timeout: 8000 });
+          await page.waitForSelector('.artdeco-modal.jobs-easy-apply-modal, .jobs-easy-apply-modal', { visible: true, timeout: 6000 });
           onLog('🎉 Modal Easy Apply LinkedIn terbuka!');
         } catch {
-          onLog(`⏩ Modal Easy Apply tidak terbuka (kemungkinan external apply). Melewati "${activeTitle}"...`);
+          onLog(`⏩ Modal Easy Apply tidak terbuka. Melewati "${activeTitle}"...`);
           continue;
         }
 

@@ -45,9 +45,32 @@ export async function runIndeedBot(
       if (location) searchParams.set('l', location);
       searchParams.set('radius', '25');
       searchParams.set('from', 'searchOnDesktopSerp');
+
+      // Filter Lanjutan
+      const datePostedMap: Record<string, string> = {
+        '24h': '1', 'week': '7', 'month': '30',
+      };
+      if (config.datePosted && datePostedMap[config.datePosted]) {
+        searchParams.set('fromage', datePostedMap[config.datePosted]);
+      }
+
+      const jobTypeMap: Record<string, string> = {
+        'full_time': 'fulltime', 'part_time': 'parttime', 'contract': 'contract',
+        'internship': 'internship', 'freelance': 'temporary',
+      };
+      const jtValues = (config.jobType || []).map((t: string) => jobTypeMap[t]).filter(Boolean);
+      if (jtValues.length > 0) {
+        searchParams.set('jt', jtValues[0]); // Indeed only supports single job type
+      }
+
+      if ((config.workMode || []).includes('remote')) {
+        searchParams.set('remotejob', '1');
+      }
+
       searchUrl = `https://id.indeed.com/jobs?${searchParams.toString()}`;
       onLog(`🌐 Membuka URL Pencarian Indeed: ${searchUrl}`);
     }
+
 
     // Injeksi cookies jika tersedia di konfigurasi
     if (config.portalCookies?.indeed) {
@@ -61,16 +84,64 @@ export async function runIndeedBot(
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await sleep(3500);
 
+    // 1b. Deteksi Cloudflare Challenge (Additional Verification Required)
+    const checkCloudflare = async (): Promise<boolean> => {
+      const isCF = await page.evaluate(() => {
+        const bodyText = document.body?.innerText || '';
+        return (
+          bodyText.includes('Additional Verification Required') ||
+          bodyText.includes('Verify you are human') ||
+          document.title.includes('Just a moment') ||
+          !!document.querySelector('.cf-error-code, #challenge-form, [data-ray-id]')
+        );
+      });
+      return isCF;
+    };
+
+    if (await checkCloudflare()) {
+      onLog('⚠️ [Indeed] Terdeteksi Cloudflare Challenge! Menunggu 20 detik untuk auto-resolve...');
+      // Coba tunggu auto-resolve Cloudflare
+      for (let cfWait = 0; cfWait < 4; cfWait++) {
+        await sleep(5000);
+        if (!(await checkCloudflare())) {
+          onLog('✅ [Indeed] Cloudflare berhasil di-bypass! Melanjutkan...');
+          break;
+        }
+        if (cfWait === 3) {
+          onLog('❌ [Indeed] Cloudflare masih aktif setelah 20 detik.');
+          onLog('💡 Saran: Buka browser login (klik "Buka Browser Login" di Dashboard), selesaikan verifikasi Cloudflare di Indeed secara manual, lalu jalankan bot kembali.');
+          return { successCount, alreadyAppliedCount, errorCount };
+        }
+      }
+    }
+
     // 2. Pengecekan status login
-    const isLoggedIn = await page.evaluate(() => {
+    let isLoggedIn = await page.evaluate(() => {
       const navAccount = document.querySelector('[data-gnav-element-name="AccountMenu"], #gnav-account-container, .gnav-AccountMenu, a[href*="/account"], button[aria-label*="Account"], button[aria-label*="Akun"]');
       const signInBtn = document.querySelector('a[href*="/account/login"], a[href*="secure.indeed.com/auth"]');
       return !!navAccount || !signInBtn;
     });
 
-    const currentUrl = page.url();
+    let currentUrl = page.url();
     if (currentUrl.includes('/account/login') || currentUrl.includes('/auth') || !isLoggedIn) {
-      onLog('⚠️ Indeed: Belum login! Silakan klik tombol "Buka Browser (Login Setup)" di Dashboard untuk login Indeed terlebih dahulu.');
+      onLog('⚠️ Indeed: Sesi login belum aktif. Menunggu 30 detik untuk Anda login langsung di browser...');
+      for (let waitSec = 0; waitSec < 6; waitSec++) {
+        await sleep(5000);
+        isLoggedIn = await page.evaluate(() => {
+          const navAccount = document.querySelector('[data-gnav-element-name="AccountMenu"], #gnav-account-container, .gnav-AccountMenu, a[href*="/account"], button[aria-label*="Account"], button[aria-label*="Akun"]');
+          const signInBtn = document.querySelector('a[href*="/account/login"], a[href*="secure.indeed.com/auth"]');
+          return !!navAccount || !signInBtn;
+        });
+        if (isLoggedIn) {
+          onLog('✅ Sesi login Indeed terdeteksi aktif!');
+          break;
+        }
+        onLog(`⏳ Menunggu login Indeed... (${(waitSec + 1) * 5}s/30s)`);
+      }
+    }
+
+    if (!isLoggedIn) {
+      onLog('⚠️ Indeed: Belum login! Silakan login melalui "Buka Browser (Login Setup)" di Dashboard.');
       return { successCount, alreadyAppliedCount, errorCount };
     }
 
@@ -249,14 +320,59 @@ export async function runIndeedBot(
 
         if (!detailInfo || !detailInfo.hasIndeedApply) {
           if (detailInfo?.isExternal) {
-            onLog(`⏩ Melewati "${activeTitle}" - Memerlukan redirect ke situs eksternal perusahaan.`);
-            await addAppliedJob({
-              company: activeCompany,
-              title: activeTitle,
-              platform: 'Indeed',
-              jobUrl: targetJobUrl,
-              status: 'External Link'
+            onLog(`🌐 Terdeteksi tautan eksternal untuk "${activeTitle}". Mencoba membuka dan menyelesaikan dengan Universal External Job Solver...`);
+            let extPagePromise = new Promise<any>((resolve) => {
+              const handler = async (target: any) => {
+                if (target.type() === 'page') {
+                  const p = await target.page();
+                  browser.off('targetcreated', handler);
+                  resolve(p);
+                }
+              };
+              browser.on('targetcreated', handler);
+              setTimeout(() => {
+                browser.off('targetcreated', handler);
+                resolve(null);
+              }, 6000);
             });
+
+            await page.evaluate(() => {
+              const externalBtn = document.querySelector(
+                'button[aria-label*="Lamar di situs web"], button[aria-label*="Apply on company site"], a[aria-label*="Apply on company site"], a[href*="rc/clk"]'
+              ) as HTMLElement;
+              if (externalBtn) externalBtn.click();
+            });
+
+            const externalPage = await extPagePromise;
+            if (externalPage) {
+              const { applyStealthToPage } = require('../stealthHelper');
+              await applyStealthToPage(externalPage);
+              const { solveExternalJobApplication } = require('../externalJobSolver');
+              const res = await solveExternalJobApplication(
+                externalPage,
+                config,
+                {
+                  title: activeTitle,
+                  company: activeCompany,
+                  platform: 'Indeed',
+                  originalJobUrl: targetJobUrl
+                },
+                (msg: string) => onLog(`[External] ${msg}`)
+              );
+              if (res.success) {
+                successCount++;
+                if (sharedLimiter) sharedLimiter.onJobSuccess();
+              }
+              try { await externalPage.close(); } catch {}
+            } else {
+              await addAppliedJob({
+                company: activeCompany,
+                title: activeTitle,
+                platform: 'Indeed',
+                jobUrl: targetJobUrl,
+                status: 'External Link'
+              });
+            }
           } else {
             onLog(`⏩ Melewati "${activeTitle}" - Tombol 'Lamar dengan Indeed / Apply now' tidak tersedia.`);
           }
@@ -272,8 +388,8 @@ export async function runIndeedBot(
           if (detailInfo.applyHref && detailInfo.applyHref.includes('smartapply.indeed.com')) {
             onLog(`🌐 Membuka halaman Smart Apply Indeed: ${detailInfo.applyHref.slice(0, 70)}...`);
             applyPage = await browser.newPage();
-            await applyPage.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-            await applyPage.setViewport({ width: 1280, height: 800 });
+            const { applyStealthToPage } = require('../stealthHelper');
+            await applyStealthToPage(applyPage);
             await applyPage.goto(detailInfo.applyHref, { waitUntil: 'domcontentloaded', timeout: 45000 });
           } else {
             // Pasang listener tab baru sebelum klik apply
@@ -305,6 +421,8 @@ export async function runIndeedBot(
 
             if (newlyOpenedPage && !newlyOpenedPage.isClosed()) {
               applyPage = newlyOpenedPage;
+              const { applyStealthToPage } = require('../stealthHelper');
+              await applyStealthToPage(applyPage);
             } else {
               const allPages = await browser.pages();
               const smartApplyPage = allPages.find((p: any) => p.url().includes('smartapply') || p.url().includes('indeed.com/apply'));

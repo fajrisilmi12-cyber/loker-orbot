@@ -29,218 +29,51 @@ export async function runGlintsBot(
   let alreadyAppliedCount = 0;
   let errorCount = 0;
 
-  const targetUrl = 'https://glints.com/id/opportunities/jobs/explore?country=ID&locationName=All%20Cities%2FProvinces';
-  onLog(`🌐 Membuka URL Glints: ${targetUrl}`);
-
-  // Injeksi cookies jika tersedia di konfigurasi
-  if (config.portalCookies?.glints) {
-    const cookies = parseCookiesInput(config.portalCookies.glints, '.glints.com');
-    if (cookies.length > 0) {
-      const injectedCount = await injectCookiesIntoPage(page, cookies);
-      onLog(`🍪 [Glints Cookie] Menyuntikkan ${injectedCount} cookie sesi Glints!`);
-    }
-  }
-
   try {
-    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-    await sleep(3000);
+    const keyword = (config.searchKeywords || '').trim();
+    const location = (config.location || '').trim();
+    const primaryCity = location ? location.split(/[,/]/)[0].trim() : '';
+
+    const searchParams = new URLSearchParams();
+    searchParams.set('country', 'ID');
+    if (keyword) searchParams.set('keyword', keyword);
+    if (primaryCity && primaryCity.toLowerCase() !== 'all') {
+      searchParams.set('locationName', primaryCity);
+    } else {
+      searchParams.set('locationName', 'All Cities/Provinces');
+    }
+
+    if (config.jobType && config.jobType.length > 0) {
+      const glintsJobTypeMap: Record<string, string> = {
+        'full_time': 'FULL_TIME',
+        'part_time': 'PART_TIME',
+        'contract': 'CONTRACT',
+        'internship': 'INTERNSHIP',
+        'freelance': 'FREELANCE'
+      };
+      const jt = config.jobType.map((t: string) => glintsJobTypeMap[t]).filter(Boolean);
+      if (jt.length > 0) searchParams.set('jobTypes', jt.join(','));
+    }
+
+    const targetUrl = `https://glints.com/id/opportunities/jobs/explore?${searchParams.toString()}`;
+    onLog(`🌐 Membuka URL Pencarian Glints: ${targetUrl}`);
+
+    // Injeksi cookies jika tersedia di konfigurasi
+    if (config.portalCookies?.glints) {
+      const cookies = parseCookiesInput(config.portalCookies.glints, '.glints.com');
+      if (cookies.length > 0) {
+        const injectedCount = await injectCookiesIntoPage(page, cookies);
+        onLog(`🍪 [Glints Cookie] Menyuntikkan ${injectedCount} cookie sesi Glints!`);
+      }
+    }
+
+    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await sleep(4000);
 
     const currentUrl = page.url();
     const pageTitle = await page.title();
     onLog(`📍 Halaman saat ini: "${pageTitle}"`);
     onLog(`🔗 URL saat ini: ${currentUrl}`);
-
-    // Analisa elemen input di halaman
-    onLog('🔍 Memeriksa elemen input pencarian...');
-    const inputAnalysis = await page.evaluate(() => {
-      // 1. Cek spesifik input pencarian keyword/posisi
-      const keywordInputByPlaceholder = document.querySelector('input[placeholder*="Cari Nama Pekerjaan"], input[placeholder*="Job title, skill"], input[aria-label*="Cari Nama Pekerjaan"]');
-      
-      // 2. Cek spesifik input lokasi/kota
-      const cityInputByDataCy = document.querySelector('input[data-cy="search_bar_city"]');
-      const cityInputByPlaceholder = document.querySelector('input[placeholder*="Semua Kota"], input[placeholder*="All Cities"], input[aria-label*="Semua Kota"]');
-
-      // 3. Scan semua elemen input text
-      const allInputs = Array.from(document.querySelectorAll('input')).map(input => ({
-        type: input.type,
-        placeholder: input.placeholder || '',
-        ariaLabel: input.getAttribute('aria-label') || '',
-        dataCy: input.getAttribute('data-cy') || '',
-        name: input.name || '',
-        id: input.id || '',
-        className: input.className || '',
-        value: input.value || ''
-      }));
-
-      // 4. Cek tombol submit / cari
-      const buttons = Array.from(document.querySelectorAll('button')).map(btn => ({
-        text: (btn.textContent || '').trim(),
-        type: btn.type,
-        dataCy: btn.getAttribute('data-cy') || '',
-        className: btn.className || ''
-      })).filter(b => /Cari|Search/i.test(b.text) || b.dataCy.includes('search'));
-
-      return {
-        keywordInputFound: !!keywordInputByPlaceholder,
-        keywordInputDetails: keywordInputByPlaceholder ? {
-          placeholder: (keywordInputByPlaceholder as HTMLInputElement).placeholder,
-          ariaLabel: keywordInputByPlaceholder.getAttribute('aria-label'),
-          className: keywordInputByPlaceholder.className,
-          value: (keywordInputByPlaceholder as HTMLInputElement).value
-        } : null,
-        cityInputFound: !!(cityInputByDataCy || cityInputByPlaceholder),
-        cityInputDetails: (cityInputByDataCy || cityInputByPlaceholder) ? {
-          placeholder: ((cityInputByDataCy || cityInputByPlaceholder) as HTMLInputElement).placeholder,
-          ariaLabel: (cityInputByDataCy || cityInputByPlaceholder)?.getAttribute('aria-label'),
-          dataCy: (cityInputByDataCy || cityInputByPlaceholder)?.getAttribute('data-cy'),
-          className: (cityInputByDataCy || cityInputByPlaceholder)?.className,
-          value: ((cityInputByDataCy || cityInputByPlaceholder) as HTMLInputElement).value
-        } : null,
-        allInputsSummary: allInputs,
-        searchButtons: buttons
-      };
-    });
-
-    // 1. Ketik Keyword / Nama Pekerjaan dari Dashboard
-    const keyword = config.searchKeywords || '';
-    const location = (config.location || '').trim();
-
-    if (keyword) {
-      onLog(`✍️ Mengisi kata kunci pekerjaan: "${keyword}"...`);
-      const keywordSelector = 'input[data-cy="search_bar_job_title"]';
-      try {
-        await page.waitForSelector(keywordSelector, { timeout: 10000 });
-
-        // Gunakan React Native Value Setter agar state React Glints langsung ter-update
-        const resultValue = await page.evaluate((sel: string, val: string) => {
-          const el = document.querySelector(sel) as HTMLInputElement;
-          if (!el) return null;
-          
-          el.scrollIntoView({ block: 'center' });
-          el.focus();
-          el.click();
-
-          // Pemicu React controlled component
-          const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-          if (nativeSetter) {
-            nativeSetter.call(el, val);
-          } else {
-            el.value = val;
-          }
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-          return el.value;
-        }, keywordSelector, keyword);
-
-        await sleep(300);
-
-        // Tambahan: Tekan spasi lalu backspace untuk memastikan event trigger aktif di browser
-        await page.keyboard.press('Space');
-        await sleep(100);
-        await page.keyboard.press('Backspace');
-        await sleep(300);
-
-        // Verifikasi nilai di DOM
-        const domValue = await page.$eval(keywordSelector, (el: any) => el.value);
-        onLog(`✅ Kata kunci berhasil diisi! (Nilai di input: "${domValue}")`);
-      } catch (err: any) {
-        onLog(`⚠️ Gagal mengisi input kata kunci: ${err.message || err}`);
-      }
-    }
-
-    // 2. Ketik Lokasi dari Dashboard
-    if (location) {
-      // Glints dropdown mengharapkan nama 1 kota bersih (misal: "Surabaya", bukan "Surabaya, remote")
-      const primaryCity = location.split(/[,/]/)[0].trim();
-      onLog(`✍️ Mengisi lokasi: "${primaryCity}" (dari konfigurasi "${location}")...`);
-      const citySelector = 'input[data-cy="search_bar_city"], input[placeholder*="Semua Kota"], input[aria-label*="Semua Kota"]';
-      try {
-        const cityInput = await page.$(citySelector);
-        if (cityInput) {
-          await page.click(citySelector, { clickCount: 3 });
-          await sleep(300);
-          await page.keyboard.press('Backspace');
-          await page.type(citySelector, primaryCity, { delay: 100 });
-          // Menunggu kontainer SuggestionDropdown muncul
-          try {
-            await page.waitForSelector('[class*="SuggestionDropdown"], [class*="SearchFieldsc__SuggestionDropdown"]', { visible: true, timeout: 5000 });
-          } catch (e) {}
-
-          // Klik opsi dropdown PALING ATAS
-          const selected = await page.evaluate(() => {
-            const dropdown = document.querySelector('[class*="SuggestionDropdown"], [class*="SearchFieldsc__SuggestionDropdown"]');
-            if (dropdown) {
-              // Cari elemen anak di dalam dropdown
-              const items = Array.from(dropdown.querySelectorAll('div, li, p, span, a')) as HTMLElement[];
-              // Filter elemen yang memiliki teks dan bisa diklik
-              const clickableOptions = items.filter(el => {
-                const text = (el.textContent || '').trim();
-                const rect = el.getBoundingClientRect();
-                return text.length > 0 && rect.width > 0 && rect.height > 0 && el.children.length === 0;
-              });
-
-              if (clickableOptions.length > 0) {
-                const topItem = clickableOptions[0];
-                const itemText = (topItem.textContent || '').trim();
-                topItem.click();
-                return { success: true, text: itemText };
-              }
-
-              // Jika tidak ada leaf element, klik anak pertama langsung
-              if (dropdown.firstElementChild) {
-                const firstChild = dropdown.firstElementChild as HTMLElement;
-                const text = (firstChild.textContent || '').trim();
-                firstChild.click();
-                return { success: true, text };
-              }
-            }
-
-            return { success: false, text: null };
-          });
-
-          if (selected.success) {
-            onLog(`📍 Berhasil memilih opsi dropdown paling atas: "${selected.text}"`);
-          } else {
-            onLog('⚠️ Mencoba memilih opsi pertama dengan tombol keyboard (ArrowDown + Enter)...');
-            await page.keyboard.press('ArrowDown');
-            await sleep(300);
-            await page.keyboard.press('Enter');
-          }
-
-          await sleep(1000);
-          onLog(`✅ Lokasi "${location}" selesai diproses.`);
-        }
-      } catch (err: any) {
-        onLog(`⚠️ Gagal mengisi input lokasi: ${err.message || err}`);
-      }
-    }
-
-    // 3. Tekan Enter / Klik Tombol Cari untuk Eksekusi Pencarian
-    onLog('↵ Menjalankan pencarian...');
-    
-    // Coba klik tombol Cari jika ada, atau tekan Enter
-    const clickedSearchBtn = await page.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button')) as HTMLButtonElement[];
-      const searchBtn = buttons.find(b => {
-        const text = (b.textContent || '').trim();
-        const dataCy = b.getAttribute('data-cy') || '';
-        return /Cari|Search/i.test(text) || dataCy.includes('search_button') || dataCy.includes('submit');
-      });
-      if (searchBtn) {
-        searchBtn.click();
-        return true;
-      }
-      return false;
-    });
-
-    if (clickedSearchBtn) {
-      onLog('🔘 Tombol "Cari" berhasil diklik.');
-    } else {
-      onLog('↵ Menekan tombol Enter keyboard...');
-      await page.keyboard.press('Enter');
-    }
-
-    await sleep(5000);
 
     const resultUrl = page.url();
     const resultTitle = await page.title();
@@ -536,6 +369,7 @@ export async function runGlintsBot(
             let reachedFinal = false;
             let lastStepLabel = '';
             let stuckStepCount = 0;
+            const recordedQA: Array<{ question: string; answer: string; type?: string }> = [];
 
             while (currentStep <= maxSteps && !reachedFinal) {
               if (!global.isBotRunning) break;
@@ -585,6 +419,87 @@ export async function runGlintsBot(
                   radios[0].click();
                 }
               }, config.expectedSalary || 4500000);
+
+              // 0c. Auto-handle Location Search / Domisili autocomplete (contoh: "Beberapa HRD ingin tau di mana kamu tinggal saat ini")
+              try {
+                const cityInputHandle = await workerPage.$('[data-testid="modal-wrapper"] input[placeholder*="Cari Kota" i], [data-testid="modal-wrapper"] input[placeholder*="Kota / Provinsi" i], [data-testid="modal-wrapper"] input[aria-label*="Kota" i]');
+                if (cityInputHandle) {
+                  const currentCityVal = await cityInputHandle.evaluate((el: HTMLInputElement) => el.value);
+                  if (!currentCityVal) {
+                    const candidateCity = (config.location || 'Surabaya').split(/[,/]/)[0].trim() || 'Surabaya';
+                    workerLog(`📍 [Lokasi Tinggal] Memilih kota domisili: "${candidateCity}"...`);
+                    await cityInputHandle.click({ clickCount: 3 });
+                    await sleep(200);
+                    await cityInputHandle.type(candidateCity, { delay: 60 });
+                    await sleep(800);
+                    const selectedCity = await workerPage.evaluate(() => {
+                      const dropdown = document.querySelector('[class*="SuggestionDropdown"], [class*="Dropdown"], [role="listbox"], div[class*="Option"], div[class*="suggestion"]');
+                      if (dropdown) {
+                        const opt = (dropdown.querySelector('li, div[class*="option"], p, [role="option"]') || dropdown.firstElementChild) as HTMLElement;
+                        if (opt) {
+                          opt.click();
+                          return opt.textContent || 'Kota Terpilih';
+                        }
+                      }
+                      return null;
+                    });
+                    if (selectedCity) {
+                      workerLog(`✅ [Lokasi Tinggal] Opsi berhasil dipilih: "${selectedCity.trim()}"`);
+                      recordedQA.push({
+                        question: 'Di mana kamu tinggal saat ini (Lokasi / Domisili)',
+                        answer: selectedCity.trim(),
+                        type: 'text'
+                      });
+                    } else {
+                      await workerPage.keyboard.press('ArrowDown');
+                      await sleep(200);
+                      await workerPage.keyboard.press('Enter');
+                    }
+                    await sleep(800);
+                  }
+                }
+              } catch (e) {}
+
+              // 0d. Auto-handle Skill Search / Tambah skill autocomplete jika ada
+              try {
+                const skillInputHandle = await workerPage.$('[data-testid="modal-wrapper"] input[placeholder*="Cari skill" i], [data-testid="modal-wrapper"] input[placeholder*="Tambah skill" i]');
+                if (skillInputHandle) {
+                  const currentSkillVal = await skillInputHandle.evaluate((el: HTMLInputElement) => el.value);
+                  if (!currentSkillVal) {
+                    const skillList = (config.skills || 'Full Stack, JavaScript, React, Node.js, PHP').split(',');
+                    const primarySkill = skillList[0].trim() || 'JavaScript';
+                    workerLog(`🛠️ [Skill Profil] Mengisi skill tambahan: "${primarySkill}"...`);
+                    await skillInputHandle.click();
+                    await sleep(200);
+                    await skillInputHandle.type(primarySkill, { delay: 60 });
+                    await sleep(800);
+                    const selectedSkill = await workerPage.evaluate(() => {
+                      const dropdown = document.querySelector('[class*="SuggestionDropdown"], [class*="Dropdown"], [role="listbox"], div[class*="Option"]');
+                      if (dropdown) {
+                        const opt = (dropdown.querySelector('li, div[class*="option"], p, [role="option"]') || dropdown.firstElementChild) as HTMLElement;
+                        if (opt) {
+                          opt.click();
+                          return opt.textContent || 'Skill Terpilih';
+                        }
+                      }
+                      return null;
+                    });
+                    if (selectedSkill) {
+                      workerLog(`✅ [Skill Profil] Berhasil memilih skill: "${selectedSkill.trim()}"`);
+                      recordedQA.push({
+                        question: 'Skill Tambahan',
+                        answer: selectedSkill.trim(),
+                        type: 'text'
+                      });
+                    } else {
+                      await workerPage.keyboard.press('ArrowDown');
+                      await sleep(200);
+                      await workerPage.keyboard.press('Enter');
+                    }
+                    await sleep(800);
+                  }
+                }
+              } catch (e) {}
 
               // Tangani dropdown custom Glints (React-Select / Styled Select) jika ada
               try {
@@ -699,7 +614,9 @@ export async function runGlintsBot(
                 }
 
                 // Free Text & Numeric Questions (Textarea atau Text/Number Input, contoh: GPA/IPK, Expected Salary, Link Portofolio)
-                const textareas = Array.from(modal.querySelectorAll('textarea, input[type="text"]:not([data-cy*="search"]), input[type="number"], input[inputmode="numeric"]')) as (HTMLTextAreaElement | HTMLInputElement)[];
+                const textareas = Array.from(modal.querySelectorAll(
+                  'textarea, input[type="text"]:not([data-cy*="search"]):not([placeholder*="Cari" i]):not([placeholder*="Kota" i]):not([placeholder*="skill" i]), input[type="number"], input[inputmode="numeric"]'
+                )) as (HTMLTextAreaElement | HTMLInputElement)[];
                 if (textareas.length > 0) {
                   for (const txtArea of textareas) {
                     const formContainer = txtArea.closest('div[class*="CustomPlainTextQuestionForm"], div[class*="FormContainer"], [class*="ModalContent"]');
@@ -788,7 +705,8 @@ export async function runGlintsBot(
                   const targetMaxSalary = Math.round(targetSalary * 1.25);
 
                   // Helper untuk memilih opsi dalam popover yang sedang terbuka
-                  const pickOptionFromPopover = (targetNum: number) => {
+                  // + trigger React synthetic events agar form state terupdate
+                  const pickOptionFromPopover = (targetNum: number): boolean => {
                     const popovers = Array.from(document.querySelectorAll('[id^="popover-"], [role="listbox"], [class*="Popover"], [class*="SelectDropdown"], [class*="MenuList"]'));
                     const activePopover = popovers[popovers.length - 1]; // Popover terbaru
                     if (!activePopover) return false;
@@ -807,33 +725,65 @@ export async function runGlintsBot(
                       };
                     }).filter(item => item.num > 0);
 
+                    let targetEl: HTMLElement | null = null;
                     if (scored.length > 0) {
                       // Cari yang paling mendekati targetNum
                       scored.sort((a, b) => Math.abs(a.num - targetNum) - Math.abs(b.num - targetNum));
-                      scored[0].el.click();
-                      return true;
+                      targetEl = scored[0].el;
                     } else if (options.length > 2) {
                       // Fallback: pilih opsi tengah
-                      options[Math.floor(options.length / 2)].click();
-                      return true;
+                      targetEl = options[Math.floor(options.length / 2)];
                     }
-                    return false;
+
+                    if (!targetEl) return false;
+
+                    // Fire full pointer + mouse + click event chain to trigger React
+                    const fireEvents = (el: HTMLElement) => {
+                      ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(evtName => {
+                        el.dispatchEvent(new MouseEvent(evtName, { bubbles: true, cancelable: true, view: window }));
+                      });
+                    };
+
+                    targetEl.scrollIntoView({ block: 'nearest' });
+                    fireEvents(targetEl);
+
+                    // Jika ada input tersembunyi di dalam popover, paksa set value-nya
+                    const hiddenInput = activePopover.querySelector('input') as HTMLInputElement | null;
+                    if (hiddenInput) {
+                      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                      const val = targetEl.getAttribute('data-value') || targetEl.textContent?.replace(/[^\d]/g, '') || '';
+                      if (nativeSetter && val) {
+                        nativeSetter.call(hiddenInput, val);
+                        hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                      }
+                    }
+
+                    return true;
                   };
 
-                  // A. Klik dan pilih Min Salary
+                  // A. Klik dan pilih Min Salary (via Puppeteer-level click untuk trigger React)
                   if (minBtn && (minBtn.textContent || '').includes('Min.')) {
+                    // Beri data-ai-pick-target agar mudah di-query
+                    minBtn.setAttribute('data-salary-role', 'min');
                     minBtn.click();
-                    await new Promise(r => setTimeout(r, 400));
+                    await new Promise(r => setTimeout(r, 600)); // tunggu popover render
                     pickOptionFromPopover(targetSalary);
-                    await new Promise(r => setTimeout(r, 400));
+                    await new Promise(r => setTimeout(r, 600)); // tunggu React update state
+                    // Tutup popover dengan click di luar jika masih terbuka
+                    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+                    await new Promise(r => setTimeout(r, 200));
                   }
 
                   // B. Klik dan pilih Max Salary
                   if (maxBtn && (maxBtn.textContent || '').includes('Max.')) {
+                    maxBtn.setAttribute('data-salary-role', 'max');
                     maxBtn.click();
-                    await new Promise(r => setTimeout(r, 400));
+                    await new Promise(r => setTimeout(r, 600));
                     pickOptionFromPopover(targetMaxSalary);
-                    await new Promise(r => setTimeout(r, 400));
+                    await new Promise(r => setTimeout(r, 600));
+                    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+                    await new Promise(r => setTimeout(r, 200));
                   }
 
                   return true;
@@ -841,7 +791,7 @@ export async function runGlintsBot(
 
                 if (salaryHandled) {
                   workerLog(`💰 [Ekspektasi Gaji] Dropdown Min & Max gaji Glints berhasil dipilih sesuai profil (Rp ${config.expectedSalary || 4500000})!`);
-                  await sleep(800);
+                  await sleep(1000); // beri waktu lebih untuk React re-render dan validasi form
                 }
               } catch (salaryErr: any) {
                 // abaikan jika gagal
@@ -971,6 +921,11 @@ export async function runGlintsBot(
 
                   workerLog(`🤖 Keputusan Jawaban: [${chosenAnswers.join(' | ')}]`);
                   appendQuestionToCsv(qItem.question, qItem.type as any, qItem.options, chosenAnswers);
+                  recordedQA.push({
+                    question: qItem.question,
+                    answer: chosenAnswers.join(', '),
+                    type: qItem.type
+                  });
 
                   // Terapkan pilihan ke DOM Glints
                   await workerPage.evaluate((targetQ: any, answers: string[]) => {
@@ -1066,10 +1021,13 @@ export async function runGlintsBot(
                     title: activeJobTitle,
                     platform: 'Glints',
                     jobUrl: targetJob.url,
-                    status: 'Dry-run Sim'
+                    status: 'Dry-run Sim',
+                    salary: targetJob.salary,
+                    location: targetJob.location,
+                    questionsAndAnswers: recordedQA
                   });
 
-                  workerLog(`📝 [Dry-run Sim] Data simulasi "${activeCompanyName}" (${activeJobTitle}) dicatat ke Google Sheets!`);
+                  workerLog(`📝 [Dry-run Sim] Data simulasi "${activeCompanyName}" (${activeJobTitle}) dicatat ke database!`);
                   successCount++;
                   if (sharedLimiter) sharedLimiter.onJobSuccess();
                   reachedFinal = true;
@@ -1088,10 +1046,13 @@ export async function runGlintsBot(
                     title: activeJobTitle,
                     platform: 'Glints',
                     jobUrl: targetJob.url,
-                    status: 'Applied'
+                    status: 'Applied',
+                    salary: targetJob.salary,
+                    location: targetJob.location,
+                    questionsAndAnswers: recordedQA
                   });
 
-                  workerLog(`🎉 Lamaran ke "${activeCompanyName}" (${activeJobTitle}) berhasil dikirim & disimpan ke Google Sheets!`);
+                  workerLog(`🎉 Lamaran ke "${activeCompanyName}" (${activeJobTitle}) berhasil dikirim & disimpan ke database!`);
                   successCount++;
                   if (sharedLimiter) sharedLimiter.onJobSuccess();
                   reachedFinal = true;

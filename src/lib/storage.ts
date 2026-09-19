@@ -10,6 +10,13 @@ export interface AppliedJob {
   jobUrl: string;
   date: string;
   status: string;
+  salary?: string;
+  location?: string;
+  questionsAndAnswers?: Array<{
+    question: string;
+    answer: string;
+    type?: string;
+  }>;
 }
 
 export type StorageType = 'sqlite' | 'json' | 'sheets';
@@ -56,6 +63,9 @@ function getSqliteDb() {
         jobUrl TEXT UNIQUE,
         date TEXT,
         status TEXT,
+        salary TEXT,
+        location TEXT,
+        details TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
       CREATE INDEX IF NOT EXISTS idx_applied_jobs_url ON applied_jobs(jobUrl);
@@ -122,8 +132,19 @@ export async function getAppliedJobs(forceRefresh = false): Promise<AppliedJob[]
     const db = getSqliteDb();
     if (db) {
       try {
-        const query = db.prepare('SELECT company, title, platform, jobUrl, date, status FROM applied_jobs ORDER BY id DESC');
-        jobs = query.all() as AppliedJob[];
+        const query = db.prepare('SELECT company, title, platform, jobUrl, date, status, salary, location, details FROM applied_jobs ORDER BY id DESC');
+        const rows = query.all() as any[];
+        jobs = rows.map(r => ({
+          company: r.company,
+          title: r.title,
+          platform: r.platform,
+          jobUrl: r.jobUrl,
+          date: r.date,
+          status: r.status,
+          salary: r.salary || undefined,
+          location: r.location || undefined,
+          questionsAndAnswers: r.details ? JSON.parse(r.details) : undefined,
+        }));
       } catch (err: any) {
         jobs = readFromJsonFile();
       }
@@ -162,6 +183,13 @@ export async function addAppliedJob(job: {
   platform: string;
   jobUrl: string;
   status: string;
+  salary?: string;
+  location?: string;
+  questionsAndAnswers?: Array<{
+    question: string;
+    answer: string;
+    type?: string;
+  }>;
 }): Promise<void> {
   const config = getConfig();
   const storageType: StorageType = config.storageType || 'sqlite';
@@ -175,6 +203,9 @@ export async function addAppliedJob(job: {
     jobUrl: cleanedUrl,
     date: dateStr,
     status: job.status || 'Success',
+    salary: job.salary,
+    location: job.location,
+    questionsAndAnswers: job.questionsAndAnswers,
   };
 
   // 1. Immediately update in-memory cache
@@ -189,10 +220,20 @@ export async function addAppliedJob(job: {
     if (db) {
       try {
         const stmt = db.prepare(`
-          INSERT OR REPLACE INTO applied_jobs (company, title, platform, jobUrl, date, status)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT OR REPLACE INTO applied_jobs (company, title, platform, jobUrl, date, status, salary, location, details)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
-        stmt.run(record.company, record.title, record.platform, record.jobUrl, record.date, record.status);
+        stmt.run(
+          record.company,
+          record.title,
+          record.platform,
+          record.jobUrl,
+          record.date,
+          record.status,
+          record.salary || '',
+          record.location || '',
+          record.questionsAndAnswers ? JSON.stringify(record.questionsAndAnswers) : ''
+        );
       } catch (err: any) {
         saveToJsonFile(record);
       }
