@@ -49,7 +49,8 @@ import {
   MapPin,
   Tag,
   Info,
-  Lightbulb
+  Lightbulb,
+  Search
 } from 'lucide-react';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import BatchQuestionModal from '@/components/BatchQuestionModal';
@@ -302,6 +303,17 @@ export default function Home() {
     options: '',
     answer: '',
   });
+
+  const filteredQuestions = useMemo(() => {
+    if (!questionSearch.trim()) return questions;
+    const term = questionSearch.toLowerCase();
+    return questions.filter((q) =>
+      q.question.toLowerCase().includes(term) ||
+      q.answer.toLowerCase().includes(term) ||
+      q.type.toLowerCase().includes(term) ||
+      (q.options && q.options.toLowerCase().includes(term))
+    );
+  }, [questions, questionSearch]);
 
   // Multi-Account & Session Status State
   const [isCheckingSessions, setIsCheckingSessions] = useState(false);
@@ -1783,8 +1795,13 @@ export default function Home() {
                           <p className="text-[10px] text-muted-theme">In-site Easy Apply</p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                        {config.enableGlints ? '🟢 Aktif' : '⚪ Nonaktif'}
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                        config.enableGlints
+                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableGlints ? 'bg-blue-500' : 'bg-slate-400'}`} />
+                        <span>{config.enableGlints ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
 
@@ -1845,8 +1862,13 @@ export default function Home() {
                           <p className="text-[10px] text-muted-theme">Easy Apply &amp; ATS</p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">
-                        {config.enableLinkedin ? '🟢 Aktif' : '⚪ Nonaktif'}
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                        config.enableLinkedin
+                          ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20'
+                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableLinkedin ? 'bg-sky-500' : 'bg-slate-400'}`} />
+                        <span>{config.enableLinkedin ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
 
@@ -1870,7 +1892,7 @@ export default function Home() {
                         title="Buka browser untuk verifikasi / login LinkedIn"
                       >
                         <KeyRound className="w-3 h-3" />
-                        <span>🔑 Cek / Login</span>
+                        <span>Cek / Login</span>
                       </button>
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
@@ -1907,8 +1929,13 @@ export default function Home() {
                           <p className="text-[10px] text-muted-theme">Seek Platform</p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20">
-                        {config.enableJobstreet ? '🟢 Aktif' : '⚪ Nonaktif'}
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                        config.enableJobstreet
+                          ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableJobstreet ? 'bg-purple-500' : 'bg-slate-400'}`} />
+                        <span>{config.enableJobstreet ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
 
@@ -1932,7 +1959,7 @@ export default function Home() {
                         title="Buka browser untuk verifikasi / login JobStreet"
                       >
                         <KeyRound className="w-3 h-3" />
-                        <span>🔑 Cek / Login</span>
+                        <span>Cek / Login</span>
                       </button>
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
@@ -1969,8 +1996,13 @@ export default function Home() {
                           <p className="text-[10px] text-muted-theme">Smart Apply &amp; Web</p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20">
-                        {config.enableIndeed ? '🟢 Aktif' : '⚪ Nonaktif'}
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                        config.enableIndeed
+                          ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
+                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableIndeed ? 'bg-orange-500' : 'bg-slate-400'}`} />
+                        <span>{config.enableIndeed ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
 
@@ -1994,7 +2026,7 @@ export default function Home() {
                         title="Buka browser untuk verifikasi / login Indeed"
                       >
                         <KeyRound className="w-3 h-3" />
-                        <span>🔑 Cek / Login</span>
+                        <span>Cek / Login</span>
                       </button>
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
@@ -2281,7 +2313,7 @@ export default function Home() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div id="tour-profile-fields" className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Nama Lengkap */}
                       <div className={`p-2 rounded-xl transition-all ${
                         updatedCvFields.includes('fullName')
@@ -3663,7 +3695,7 @@ export default function Home() {
 
                 {/* STEP 3: ENVIRONMENT & GOOGLE SHEETS */}
                 {wizardStep === 3 && (
-                  <div className="space-y-6">
+                  <div id="tour-engine-setup" className="space-y-6">
                     <div className="border-b border-subtle-theme pb-4">
                       <h2 className="text-base font-semibold text-main-theme">Browser &amp; Spreadsheet</h2>
                       <p className="text-xs text-muted-theme mt-0.5">
@@ -4293,7 +4325,7 @@ export default function Home() {
 
           {/* TAB 2: LIVE MONITOR LOGS */}
           {activeTab === 'logs' && (
-            <div className="p-6 md:p-8 rounded-3xl card-theme border shadow-sm space-y-4">
+            <div id="tour-terminal-logs" className="p-6 md:p-8 rounded-3xl card-theme border shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-subtle-theme pb-4">
                 <div className="flex items-center gap-2.5">
                   <Terminal className="w-4 h-4 text-emerald-500" />
@@ -4343,7 +4375,7 @@ export default function Home() {
 
           {/* TAB 3: QUESTIONS CSV DATABASE */}
           {activeTab === 'questions' && (
-            <div className="p-6 md:p-8 rounded-3xl card-theme border shadow-sm space-y-6">
+            <div id="tour-batch-questions" className="p-6 md:p-8 rounded-3xl card-theme border shadow-sm space-y-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-subtle-theme pb-4">
                 <div>
                   <h2 className="text-base font-semibold text-main-theme">Database Soal Kuesioner</h2>
@@ -4451,112 +4483,95 @@ export default function Home() {
                 </span>
               </div>
 
+              {/* Table or Raw View */}
               {csvViewMode === 'table' ? (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Cari pertanyaan, opsi, atau jawaban..."
-                      value={questionSearch}
-                      onChange={(e) => setQuestionSearch(e.target.value)}
-                      className="w-full input-theme border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-orange-500"
-                    />
-                    {questionSearch && (
-                      <button
-                        onClick={() => setQuestionSearch('')}
-                        className="text-xs card-subtle-theme hover:opacity-90 text-muted-theme px-3.5 py-2.5 rounded-xl border border-subtle-theme transition"
-                      >
-                        Reset
-                      </button>
-                    )}
+                  {/* Search and Filter */}
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-muted-theme absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Cari pertanyaan..."
+                        value={questionSearch}
+                        onChange={(e) => setQuestionSearch(e.target.value)}
+                        className="w-full input-theme border rounded-xl pl-9 pr-3.5 py-2 text-xs focus:outline-none focus:border-orange-500 transition"
+                      />
+                    </div>
+                    <span className="text-xs text-muted-theme shrink-0">
+                      Menampilkan {filteredQuestions.length} dari {questions.length}
+                    </span>
                   </div>
 
+                  {/* Table */}
                   <div className="overflow-x-auto rounded-2xl border border-subtle-theme">
-                    <table className="w-full text-left text-xs text-main-theme">
+                    <table className="w-full text-left text-xs">
                       <thead className="card-subtle-theme text-muted-theme font-medium border-b border-subtle-theme">
                         <tr>
-                          <th className="p-3.5 w-12 text-center">No</th>
-                          <th className="p-3.5">Pertanyaan</th>
-                          <th className="p-3.5 w-28">Tipe</th>
-                          <th className="p-3.5">Opsi Pilihan</th>
-                          <th className="p-3.5">Jawaban Bot</th>
-                          <th className="p-3.5 w-24 text-center">Aksi</th>
+                          <th className="p-3.5 w-12 text-center">#</th>
+                          <th className="p-3.5">Pertanyaan HRD</th>
+                          <th className="p-3.5 w-28">Tipe Form</th>
+                          <th className="p-3.5 w-48">Jawaban Default / AI</th>
+                          <th className="p-3.5 w-24 text-right">Aksi</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y border-subtle-theme">
-                        {(() => {
-                          const filtered = questions.filter((q) => {
-                            if (!questionSearch.trim()) return true;
-                            const term = questionSearch.toLowerCase();
-                            return (
-                              q.question.toLowerCase().includes(term) ||
-                              q.answer.toLowerCase().includes(term) ||
-                              q.type.toLowerCase().includes(term) ||
-                              q.options.toLowerCase().includes(term)
-                            );
-                          });
-
-                          if (filtered.length === 0) {
-                            return (
-                              <tr>
-                                <td colSpan={6} className="p-8 text-center text-muted-theme italic">
-                                  {questionSearch ? 'Tidak ada hasil pencarian' : 'Database pertanyaan kosong'}
-                                </td>
-                              </tr>
-                            );
-                          }
-
-                          return filtered.map((item, idx) => (
-                            <tr key={item.id} className="hover:opacity-90 card-theme transition">
-                              <td className="p-3.5 text-center text-muted-theme font-mono">{idx + 1}</td>
-                              <td className="p-3.5 font-medium text-main-theme">{item.question}</td>
+                      <tbody className="divide-y border-subtle-theme font-normal">
+                        {filteredQuestions.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="p-8 text-center text-muted-theme italic">
+                              Tidak ada pertanyaan yang cocok dengan pencarian Anda.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredQuestions.map((q, idx) => (
+                            <tr key={q.id || idx} className="hover:opacity-90 card-theme transition">
+                              <td className="p-3.5 text-center text-muted-theme">{idx + 1}</td>
+                              <td className="p-3.5 font-medium text-main-theme">{q.question}</td>
                               <td className="p-3.5">
-                                <span className="text-[11px] font-mono px-2 py-0.5 rounded-md card-subtle-theme text-main-theme border border-subtle-theme">
-                                  {item.type || 'radiobutton'}
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-medium card-subtle-theme border border-subtle-theme text-muted-theme uppercase">
+                                  {q.type}
                                 </span>
                               </td>
-                              <td className="p-3.5 text-muted-theme max-w-xs truncate" title={item.options}>
-                                {item.options || '-'}
+                              <td className="p-3.5 font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+                                {q.answer || <span className="text-muted-theme italic">(Kosong)</span>}
                               </td>
-                              <td className="p-3.5">
-                                <span className="font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                                  {item.answer}
-                                </span>
-                              </td>
-                              <td className="p-3.5 text-center">
-                                <div className="flex items-center justify-center gap-1.5">
+                              <td className="p-3.5 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
                                   <button
-                                    onClick={() => setEditingQuestion(item)}
-                                    className="p-1.5 rounded-lg card-subtle-theme text-muted-theme hover:text-main-theme transition"
+                                    onClick={() => setEditingQuestion(q)}
+                                    className="p-1.5 rounded-lg hover:bg-slate-500/10 text-muted-theme hover:text-main-theme transition"
+                                    title="Edit Jawaban"
                                   >
-                                    <Edit3 className="w-3.5 h-3.5" />
+                                    <Sliders className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteQuestion(item.id)}
-                                    className="p-1.5 rounded-lg card-subtle-theme hover:bg-rose-500/20 text-rose-500 transition"
+                                    onClick={() => handleDeleteQuestion(q.id)}
+                                    className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-theme hover:text-rose-500 transition"
+                                    title="Hapus"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
                               </td>
                             </tr>
-                          ));
-                        })()}
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <textarea
                     rows={16}
                     value={rawCsvText}
                     onChange={(e) => setRawCsvText(e.target.value)}
-                    className="w-full input-theme border rounded-2xl p-4 font-mono text-xs focus:outline-none focus:border-orange-500 leading-relaxed"
+                    className="w-full input-theme border rounded-2xl p-4 font-mono text-xs focus:outline-none focus:border-orange-500 transition"
+                    placeholder="Question,Type,Options,Answer..."
                   />
                   <button
                     onClick={handleSaveRawCsv}
-                    className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium transition shadow-sm"
+                    className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium transition shadow-sm"
                   >
                     Simpan Perubahan CSV
                   </button>
@@ -4567,7 +4582,7 @@ export default function Home() {
 
           {/* TAB 5: KARTU LOWONGAN */}
           {activeTab === 'jobs' && (
-            <div className="rounded-3xl card-theme border shadow-sm overflow-hidden">
+            <div id="tour-job-history" className="rounded-3xl card-theme border shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-subtle-theme">
                 <div className="flex items-center gap-2.5">
                   <Briefcase className="w-4 h-4 text-teal-500" />
@@ -4596,8 +4611,9 @@ export default function Home() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-base font-semibold text-main-theme">Riwayat Lamaran Terkirim</h2>
-                    <span className="text-[10px] font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded-full capitalize">
-                      {config.storageType === 'sqlite' ? '🗄️ SQLite DB' : config.storageType === 'json' ? '📄 JSON File' : '📊 Google Sheets'}
+                    <span className="text-[10px] font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded-full capitalize flex items-center gap-1">
+                      <Database className="w-3 h-3" />
+                      <span>{config.storageType === 'sqlite' ? 'SQLite DB' : config.storageType === 'json' ? 'JSON File' : 'Google Sheets'}</span>
                     </span>
                   </div>
                   <p className="text-xs text-muted-theme mt-0.5">
@@ -5888,6 +5904,82 @@ export default function Home() {
                 <span>Impor {selectedWebProfileFields.size} Kolom Terpilih ke CV Blaster</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL: TAMBAH PROFIL AKUN BROWSER BARU */}
+      {isAddAccountModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-theme border rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-subtle-theme pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-500/15 text-orange-500 flex items-center justify-center">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-main-theme">Tambah Profil Akun Browser</h3>
+                  <p className="text-[11px] text-muted-theme">Buat profil terisolasi baru untuk rotasi akun</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddAccountModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-500/10 text-muted-theme"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddNewAccount} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-medium text-main-theme mb-1">
+                  Nama Profil Akun
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  placeholder="Contoh: Akun Alternatif / Akun Kerja 2"
+                  className="w-full input-theme border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition"
+                  autoFocus
+                />
+              </div>
+
+              {newAccountName.trim() && (
+                <div className="p-3 rounded-xl card-subtle-theme border border-subtle-theme text-[11px] text-muted-theme">
+                  <span className="font-semibold text-main-theme block mb-0.5">Nama Folder Sesi:</span>
+                  <span className="font-mono text-[10px] text-orange-600 dark:text-orange-400">
+                    automation-profile-{newAccountName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-')}
+                  </span>
+                </div>
+              )}
+
+              <p className="text-[11px] text-muted-theme leading-relaxed flex items-start gap-1.5 pt-1">
+                <Info className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />
+                <span>Setiap profil akun memiliki folder penyimpanan sesi, cookies, dan cache browser Chrome mandiri yang tidak saling menimpa.</span>
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-subtle-theme">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddAccountModalOpen(false);
+                    setNewAccountName('');
+                  }}
+                  className="px-4 py-2 rounded-xl card-subtle-theme border border-subtle-theme text-muted-theme text-xs font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium shadow-sm flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Simpan &amp; Aktifkan Akun</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
