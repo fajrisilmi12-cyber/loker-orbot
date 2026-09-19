@@ -139,8 +139,11 @@ ${params.domSnippet}
 
 Tugas Anda:
 1. Identifikasi apakah ada input yang belum terisi / dropdown yang masih berupa default "Pilih..." / radio button yang belum dipilih.
-2. Tentukan tombol "Selanjutnya" / "Next" / "Kirim" / "Submit" (berdasarkan atribut label atau teks tombol).
-3. Kembalikan format JSON valid:
+2. PERHATIAN KHUSUS FORM GAJI:
+   - JANGAN PERNAH mengklik opsi "Min." atau "Max." sebagai click_option!
+   - Untuk input gaji (Min/Max/Ekspektasi), gunakan suggestedAction: "fill_text" dengan nilai angka nominal gaji (misalnya "4500000" atau nilai dari profil pelamar).
+3. Tentukan tombol "Selanjutnya" / "Next" / "Kirim" / "Submit" (berdasarkan atribut label atau teks tombol).
+4. Kembalikan format JSON valid:
 {
   "formGoal": "Tujuan form ini (misal: Ekspektasi Gaji / Pertanyaan Kualifikasi / Kontak)",
   "unfilledFields": [

@@ -7,11 +7,54 @@
 let API_BASE = 'http://localhost:3000';
 
 const PORTALS = {
-  linkedin: { domains: ['linkedin.com', '.linkedin.com', 'www.linkedin.com'], checkCookie: 'li_at' },
-  indeed: { domains: ['indeed.com', '.indeed.com', 'id.indeed.com', 'secure.indeed.com'], checkCookie: 'SURF' },
-  glints: { domains: ['glints.com', '.glints.com'], checkCookie: 'GlintsToken' },
-  jobstreet: { domains: ['jobstreet.com', '.jobstreet.com', 'id.jobstreet.com', 'jobstreet.co.id', '.jobstreet.co.id'], checkCookie: 'jobseekerSession' }
+  linkedin: { 
+    urls: ['https://www.linkedin.com', 'https://linkedin.com'],
+    domains: ['linkedin.com', '.linkedin.com', 'www.linkedin.com', '.www.linkedin.com'], 
+    checkCookie: 'li_at' 
+  },
+  indeed: { 
+    urls: ['https://id.indeed.com', 'https://secure.indeed.com', 'https://indeed.com', 'https://www.indeed.com'],
+    domains: ['indeed.com', '.indeed.com', 'id.indeed.com', '.id.indeed.com', 'secure.indeed.com'], 
+    checkCookie: 'PPID' 
+  },
+  glints: { 
+    urls: ['https://glints.com'],
+    domains: ['glints.com', '.glints.com'], 
+    checkCookie: 'session' 
+  },
+  jobstreet: { 
+    urls: ['https://id.jobstreet.com', 'https://jobstreet.co.id', 'https://jobstreet.com'],
+    domains: ['jobstreet.com', '.jobstreet.com', 'id.jobstreet.com', 'jobstreet.co.id', '.jobstreet.co.id'], 
+    checkCookie: 'JobseekerSessionId' 
+  }
 };
+
+async function getCookiesForPortal(info) {
+  let allCookies = [];
+  // 1. Fetch by URLs (crucial for Secure / Host-only cookies like li_at)
+  if (info.urls) {
+    for (const u of info.urls) {
+      try {
+        const uCookies = await chrome.cookies.getAll({ url: u });
+        allCookies = allCookies.concat(uCookies);
+      } catch {}
+    }
+  }
+  // 2. Fetch by Domains
+  if (info.domains) {
+    for (const d of info.domains) {
+      try {
+        const dCookies = await chrome.cookies.getAll({ domain: d });
+        allCookies = allCookies.concat(dCookies);
+      } catch {}
+    }
+  }
+  // Deduplicate
+  const uniqueMap = new Map();
+  allCookies.forEach(c => uniqueMap.set(`${c.name}_${c.domain}_${c.path}`, c));
+  return Array.from(uniqueMap.values());
+}
+
 
 document.addEventListener('DOMContentLoaded', async () => {
   const syncBtn = document.getElementById('btn-sync');
@@ -66,23 +109,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Check current cookie states
   for (const [key, info] of Object.entries(PORTALS)) {
     try {
-      let allCookies = [];
-      for (const d of info.domains) {
-        const cookies = await chrome.cookies.getAll({ domain: d });
-        allCookies = allCookies.concat(cookies);
-      }
-      // Deduplicate
-      const uniqueMap = new Map();
-      allCookies.forEach(c => uniqueMap.set(`${c.name}_${c.domain}_${c.path}`, c));
-      const count = uniqueMap.size;
+      const uniqueList = await getCookiesForPortal(info);
+      const count = uniqueList.length;
+      const hasAuthCookie = !info.checkCookie || uniqueList.some(c => c.name === info.checkCookie);
 
       const dot = document.getElementById(`dot-${key}`);
       const text = document.getElementById(`text-${key}`);
 
-      if (count > 0) {
+      if (count > 0 && hasAuthCookie) {
+        dot.className = 'status-dot status-active';
+        text.innerText = `${count} Cookies (Aktif)`;
+        text.style.color = '#34d399';
+      } else if (count > 0) {
         dot.className = 'status-dot status-active';
         text.innerText = `${count} Cookies`;
-        text.style.color = '#34d399';
+        text.style.color = '#fbbf24'; // Warning: cookies ada tapi token login spesifik belum ada
       } else {
         dot.className = 'status-dot status-inactive';
         text.innerText = 'Belum Ada';
@@ -106,20 +147,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       const cfgData = await cfgRes.json();
       const currentConfig = cfgData.config || {};
 
-      // 2. Extract cookies for each portal across all its domains
+      // 2. Extract cookies for each portal across URLs and domains
       const collectedCookies = {};
       let totalSynced = 0;
 
       for (const [key, info] of Object.entries(PORTALS)) {
-        let allCookies = [];
-        for (const d of info.domains) {
-          const cookies = await chrome.cookies.getAll({ domain: d });
-          allCookies = allCookies.concat(cookies);
-        }
-        const uniqueMap = new Map();
-        allCookies.forEach(c => uniqueMap.set(`${c.name}_${c.domain}_${c.path}`, c));
-        const uniqueList = Array.from(uniqueMap.values());
-
+        const uniqueList = await getCookiesForPortal(info);
         if (uniqueList.length > 0) {
           collectedCookies[key] = JSON.stringify(uniqueList);
           totalSynced += uniqueList.length;

@@ -698,8 +698,8 @@ export async function runGlintsBot(
                   }
                 }
 
-                // Free Text Questions (Textarea atau Text Input, contoh: GPA/IPK, Expected Salary, Link Portofolio)
-                const textareas = Array.from(modal.querySelectorAll('textarea, input[type="text"]:not([data-cy*="search"])')) as (HTMLTextAreaElement | HTMLInputElement)[];
+                // Free Text & Numeric Questions (Textarea atau Text/Number Input, contoh: GPA/IPK, Expected Salary, Link Portofolio)
+                const textareas = Array.from(modal.querySelectorAll('textarea, input[type="text"]:not([data-cy*="search"]), input[type="number"], input[inputmode="numeric"]')) as (HTMLTextAreaElement | HTMLInputElement)[];
                 if (textareas.length > 0) {
                   for (const txtArea of textareas) {
                     const formContainer = txtArea.closest('div[class*="CustomPlainTextQuestionForm"], div[class*="FormContainer"], [class*="ModalContent"]');
@@ -775,25 +775,175 @@ export async function runGlintsBot(
 
               workerLog(`📍 Progres Modal: Step ${stepData.stepLabel}`);
 
-              // Pastikan CV/Resume terpilih (terutama pada step 1 awal)
-              await workerPage.evaluate(() => {
+              // 1. Auto-fill Ekspektasi Gaji (Dukungan penuh untuk Button Dropdown Popover Glints)
+              try {
+                const salaryHandled = await workerPage.evaluate(async (userSalary: number) => {
+                  const modal = document.querySelector('[data-testid="modal-wrapper"]') || document.body;
+                  const minBtn = modal.querySelector('button[name="salaryExpectation"]') as HTMLButtonElement;
+                  const maxBtn = modal.querySelector('button[name="maxSalaryExpectation"]') as HTMLButtonElement;
+
+                  if (!minBtn && !maxBtn) return false;
+
+                  const targetSalary = userSalary || 4500000;
+                  const targetMaxSalary = Math.round(targetSalary * 1.25);
+
+                  // Helper untuk memilih opsi dalam popover yang sedang terbuka
+                  const pickOptionFromPopover = (targetNum: number) => {
+                    const popovers = Array.from(document.querySelectorAll('[id^="popover-"], [role="listbox"], [class*="Popover"], [class*="SelectDropdown"], [class*="MenuList"]'));
+                    const activePopover = popovers[popovers.length - 1]; // Popover terbaru
+                    if (!activePopover) return false;
+
+                    const options = Array.from(activePopover.querySelectorAll('[role="option"], li, div[tabindex], button, [class*="Option"]')) as HTMLElement[];
+                    if (options.length === 0) return false;
+
+                    // Parse angka dari teks setiap opsi
+                    const scored = options.map(opt => {
+                      const txt = (opt.textContent || '').replace(/[^\d]/g, '');
+                      const num = parseInt(txt, 10);
+                      return {
+                        el: opt,
+                        num: isNaN(num) ? 0 : num,
+                        text: opt.textContent || ''
+                      };
+                    }).filter(item => item.num > 0);
+
+                    if (scored.length > 0) {
+                      // Cari yang paling mendekati targetNum
+                      scored.sort((a, b) => Math.abs(a.num - targetNum) - Math.abs(b.num - targetNum));
+                      scored[0].el.click();
+                      return true;
+                    } else if (options.length > 2) {
+                      // Fallback: pilih opsi tengah
+                      options[Math.floor(options.length / 2)].click();
+                      return true;
+                    }
+                    return false;
+                  };
+
+                  // A. Klik dan pilih Min Salary
+                  if (minBtn && (minBtn.textContent || '').includes('Min.')) {
+                    minBtn.click();
+                    await new Promise(r => setTimeout(r, 400));
+                    pickOptionFromPopover(targetSalary);
+                    await new Promise(r => setTimeout(r, 400));
+                  }
+
+                  // B. Klik dan pilih Max Salary
+                  if (maxBtn && (maxBtn.textContent || '').includes('Max.')) {
+                    maxBtn.click();
+                    await new Promise(r => setTimeout(r, 400));
+                    pickOptionFromPopover(targetMaxSalary);
+                    await new Promise(r => setTimeout(r, 400));
+                  }
+
+                  return true;
+                }, config.expectedSalary || 4500000);
+
+                if (salaryHandled) {
+                  workerLog(`💰 [Ekspektasi Gaji] Dropdown Min & Max gaji Glints berhasil dipilih sesuai profil (Rp ${config.expectedSalary || 4500000})!`);
+                  await sleep(800);
+                }
+              } catch (salaryErr: any) {
+                // abaikan jika gagal
+              }
+
+              // Fallback input teks/numeric biasa jika bukan dropdown
+              await workerPage.evaluate((userSalary: number) => {
                 const modal = document.querySelector('[data-testid="modal-wrapper"]');
                 if (!modal) return;
-                // Cek apakah ada resume card / radio button resume di modal
-                const resumeRadios = Array.from(modal.querySelectorAll('input[type="radio"]')) as HTMLInputElement[];
-                const resumeCard = modal.querySelector('[class*="ResumeCard"], [class*="ResumeItem"], [class*="ResumeContainer"]');
-                if (resumeCard || resumeRadios.length > 0) {
-                  // Jika belum ada radio yang checked
-                  const checkedRadio = resumeRadios.find(r => r.checked);
-                  if (!checkedRadio && resumeRadios.length > 0) {
-                    const firstRadio = resumeRadios[0];
-                    const label = firstRadio.closest('label') || firstRadio.parentElement;
-                    (label || firstRadio).click();
-                    firstRadio.checked = true;
-                    firstRadio.dispatchEvent(new Event('change', { bubbles: true }));
+
+                const setVal = (el: HTMLInputElement, val: string) => {
+                  el.focus();
+                  const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                  if (nativeSetter) {
+                    nativeSetter.call(el, val);
+                  } else {
+                    el.value = val;
+                  }
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                  el.dispatchEvent(new Event('change', { bubbles: true }));
+                  el.dispatchEvent(new Event('blur', { bubbles: true }));
+                };
+
+                const salaryNum = userSalary || 4500000;
+                const minInputs = Array.from(modal.querySelectorAll('input[name*="min" i], input[placeholder*="Min" i], input[aria-label*="Min" i]')) as HTMLInputElement[];
+                const maxInputs = Array.from(modal.querySelectorAll('input[name*="max" i], input[placeholder*="Max" i], input[aria-label*="Max" i]')) as HTMLInputElement[];
+                const allNumInputs = Array.from(modal.querySelectorAll('input[type="number"], input[inputmode="numeric"]')) as HTMLInputElement[];
+                const isSalaryContext = /gaji|salary|ekspektasi/i.test(modal.textContent || '');
+
+                if (minInputs.length > 0) {
+                  minInputs.forEach(inp => { if (!inp.value) setVal(inp, String(salaryNum)); });
+                }
+                if (maxInputs.length > 0) {
+                  maxInputs.forEach(inp => { if (!inp.value) setVal(inp, String(Math.round(salaryNum * 1.25))); });
+                }
+                if (isSalaryContext && allNumInputs.length > 0) {
+                  if (allNumInputs.length === 1 && !allNumInputs[0].value) {
+                    setVal(allNumInputs[0], String(salaryNum));
+                  } else if (allNumInputs.length >= 2) {
+                    if (!allNumInputs[0].value) setVal(allNumInputs[0], String(salaryNum));
+                    if (!allNumInputs[1].value) setVal(allNumInputs[1], String(Math.round(salaryNum * 1.25)));
                   }
                 }
+              }, config.expectedSalary || 4500000);
+
+              // 2. Pastikan CV/Resume terpilih (terutama pada step 1 awal)
+              const resumeSelected = await workerPage.evaluate(() => {
+                const modal = document.querySelector('[data-testid="modal-wrapper"]');
+                if (!modal) return false;
+
+                // A. Cek radio button native
+                const resumeRadios = Array.from(modal.querySelectorAll('input[type="radio"]')) as HTMLInputElement[];
+                const checkedRadio = resumeRadios.find(r => r.checked);
+                if (checkedRadio) return true;
+
+                if (resumeRadios.length > 0) {
+                  const firstRadio = resumeRadios[0];
+                  const label = firstRadio.closest('label') || firstRadio.parentElement || firstRadio;
+                  (label as HTMLElement).click();
+                  firstRadio.checked = true;
+                  firstRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                  return true;
+                }
+
+                // B. Cek Card Resume Kustom Glints (div/button dengan aria-checked atau class selected)
+                const resumeCards = Array.from(modal.querySelectorAll(
+                  '[data-testid*="resume" i], [class*="ResumeCard" i], [class*="ResumeItem" i], [class*="ResumeContainer" i], [data-testid*="cv" i]'
+                )) as HTMLElement[];
+
+                if (resumeCards.length > 0) {
+                  const alreadyActive = resumeCards.find(c => 
+                    c.getAttribute('aria-checked') === 'true' || 
+                    c.classList.contains('active') || 
+                    c.classList.contains('selected') ||
+                    c.querySelector('[aria-checked="true"], [class*="selected"], [class*="active"]')
+                  );
+                  if (alreadyActive) return true;
+
+                  // Klik card resume pertama
+                  const targetCard = resumeCards[0];
+                  targetCard.click();
+                  return true;
+                }
+
+                // C. Cek elemen yang menampilkan nama file .pdf / nama resume
+                const pdfElements = Array.from(modal.querySelectorAll('div, p, span')).filter(el => 
+                  /\.pdf$/i.test((el.textContent || '').trim()) || /resume|curriculum vitae/i.test((el.textContent || '').trim())
+                ) as HTMLElement[];
+                if (pdfElements.length > 0) {
+                  const clickable = pdfElements[0].closest('div[role="button"], div[tabindex], label') as HTMLElement;
+                  if (clickable) {
+                    clickable.click();
+                    return true;
+                  }
+                }
+
+                return false;
               });
+
+              if (resumeSelected) {
+                workerLog('📄 [CV/Resume] Memastikan CV utama aktif dan terpilih.');
+              }
 
               // Jawab pertanyaan pada step ini
               if (stepData.questions.length > 0) {
@@ -949,18 +1099,55 @@ export async function runGlintsBot(
                 }
               }
 
-              // Klik Selanjutnya
-              workerLog(`👉 Mengklik tombol "${stepData.nextBtnText || 'Selanjutnya'}"...`);
-              await workerPage.evaluate(() => {
-                const nextBtn = (document.querySelector('button[data-testid="apply-next-step"]') ||
-                                 document.querySelector('button[data-testid="apply-submit"]')) as HTMLElement;
-                if (nextBtn) {
-                  nextBtn.removeAttribute('disabled');
-                  nextBtn.click();
+              // Klik Selanjutnya dengan deteksi validasi form
+              const clickStatus = await workerPage.evaluate(() => {
+                const modal = document.querySelector('[data-testid="modal-wrapper"]') || document.body;
+                const nextBtn = (modal.querySelector('button[data-testid="apply-next-step"]') ||
+                                 modal.querySelector('button[data-testid="apply-submit"]')) as HTMLButtonElement;
+                if (!nextBtn) return { found: false, disabled: true, text: '' };
+
+                const disabled = nextBtn.disabled || nextBtn.getAttribute('aria-disabled') === 'true';
+
+                // Jika masih disabled, coba centang checkbox atau cari input kosong yang terlewat
+                if (disabled) {
+                  // Cek apakah ada checkbox persetujuan yang belum dicentang
+                  const uncheckedBoxes = Array.from(modal.querySelectorAll('input[type="checkbox"]:not(:checked)')) as HTMLInputElement[];
+                  for (const cb of uncheckedBoxes) {
+                    const lbl = cb.closest('label') || cb.parentElement;
+                    (lbl || cb).click();
+                    cb.checked = true;
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                  }
                 }
+
+                return {
+                  found: true,
+                  disabled: nextBtn.disabled || nextBtn.getAttribute('aria-disabled') === 'true',
+                  text: (nextBtn.textContent || '').trim()
+                };
               });
 
-              await sleep(2500);
+              workerLog(`👉 Mengklik tombol "${clickStatus.text || stepData.nextBtnText || 'Selanjutnya'}" (Status: ${clickStatus.disabled ? 'Terkunci/Disabled' : 'Siap Klik'})...`);
+
+              try {
+                // Coba gunakan Puppeteer ElementHandle click agar event sintetis React terpicu sempurna
+                const nextBtnHandle = await workerPage.$('button[data-testid="apply-next-step"], button[data-testid="apply-submit"]');
+                if (nextBtnHandle) {
+                  await nextBtnHandle.click();
+                } else {
+                  await workerPage.evaluate(() => {
+                    const btn = document.querySelector('button[data-testid="apply-next-step"], button[data-testid="apply-submit"]') as HTMLElement;
+                    if (btn) btn.click();
+                  });
+                }
+              } catch (e) {
+                await workerPage.evaluate(() => {
+                  const btn = document.querySelector('button[data-testid="apply-next-step"], button[data-testid="apply-submit"]') as HTMLElement;
+                  if (btn) btn.click();
+                });
+              }
+
+              await sleep(3000);
               currentStep++;
             }
 

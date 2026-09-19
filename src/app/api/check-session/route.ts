@@ -44,11 +44,13 @@ export async function POST(request: Request) {
       }
 
       await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await new Promise((r) => setTimeout(r, 2000));
       const currentUrl = page.url();
       const isLoggedLinkedin = await page.evaluate(() => {
         const hasFeed = !!document.querySelector('.feed-identity-module, .global-nav__me, #global-nav, img.global-nav__me-photo, button.global-nav__primary-link-me-menu-trigger, [data-control-name="nav.settings"]');
         const hasSignIn = !!document.querySelector('a[href*="/login"], a[href*="/signup"], .join-form, #login-email, input#username');
-        return hasFeed || (!hasSignIn && !window.location.href.includes('/login') && !window.location.href.includes('/signup') && !window.location.href.includes('/checkpoint'));
+        const isFeedUrl = window.location.href.includes('/feed');
+        return hasFeed || (isFeedUrl && !hasSignIn);
       });
       const isNotLoginUrl = !currentUrl.includes('/login') && !currentUrl.includes('/signup') && !currentUrl.includes('/checkpoint');
       results.linkedin = {
@@ -69,6 +71,7 @@ export async function POST(request: Request) {
       }
 
       await page.goto('https://id.jobstreet.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await new Promise((r) => setTimeout(r, 1000));
       const isLoggedJobstreet = await page.evaluate(() => {
         return !!document.querySelector('[data-automation="user-menu"], a[href*="/profile"], button[aria-label*="Profile"]');
       });
@@ -90,6 +93,7 @@ export async function POST(request: Request) {
       }
 
       await page.goto('https://glints.com/id', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await new Promise((r) => setTimeout(r, 1000));
       const isLoggedGlints = await page.evaluate(() => {
         const hasAvatar = !!document.querySelector('[data-cy="user-avatar"], [class*="UserAvatar"], a[href*="/profile"]');
         const hasSignInBtn = !!document.querySelector('a[href*="/login"], button[data-cy="login-button"], a[href*="/register"]');
@@ -113,11 +117,12 @@ export async function POST(request: Request) {
       }
 
       await page.goto('https://id.indeed.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await new Promise((r) => setTimeout(r, 2000));
       const currentUrl = page.url();
       const isLoggedIndeed = await page.evaluate(() => {
-        const hasUserMenu = !!document.querySelector('[data-gnav-element-name="UserMenu"], a[href*="/account"], button[aria-label*="akun"], [class*="AccountMenu"]');
-        const hasSignIn = !!document.querySelector('a[href*="/account/login"], a[href*="secure.indeed.com/auth"]');
-        return hasUserMenu && !hasSignIn;
+        const hasUserMenu = !!document.querySelector('[data-gnav-element-name="UserMenu"], a[href*="/account"], button[aria-label*="akun"], [class*="AccountMenu"], [data-testid="gnav-ProfileMenu"]');
+        const hasSignIn = !!document.querySelector('a[href*="/account/login"], a[href*="secure.indeed.com/auth"], button[data-gnav-element-name="SignIn"]');
+        return (hasUserMenu && !hasSignIn) || (!hasSignIn && !window.location.href.includes('/auth') && !window.location.href.includes('/login'));
       });
       const isNotLoginUrl = !currentUrl.includes('/account/login') && !currentUrl.includes('/auth');
       results.indeed = {

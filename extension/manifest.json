@@ -6,8 +6,7 @@
   "permissions": [
     "cookies",
     "storage",
-    "activeTab",
-    "alarms"
+    "activeTab"
   ],
   "host_permissions": [
     "*://*.linkedin.com/*",

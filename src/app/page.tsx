@@ -46,6 +46,7 @@ import {
   Settings2
 } from 'lucide-react';
 import { OnboardingTour } from '@/components/OnboardingTour';
+import BatchQuestionModal from '@/components/BatchQuestionModal';
 
 export interface BrowserProfileAccount {
   id: string;
@@ -260,6 +261,7 @@ export default function Home() {
   const [questionSearch, setQuestionSearch] = useState('');
   const [editingQuestion, setEditingQuestion] = useState<QuestionItem | null>(null);
   const [isNewQuestionModalOpen, setIsNewQuestionModalOpen] = useState(false);
+  const [isBatchAiModalOpen, setIsBatchAiModalOpen] = useState(false);
   const [newQuestionData, setNewQuestionData] = useState<Omit<QuestionItem, 'id'>>({
     question: '',
     type: 'radiobutton',
@@ -3807,6 +3809,15 @@ export default function Home() {
                   </button>
 
                   <button
+                    onClick={() => setIsBatchAiModalOpen(true)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition flex items-center gap-1.5 shadow-sm"
+                    title="Biarkan AI mengisi jawaban untuk seluruh 1.000 pertanyaan sesuai profil Anda"
+                  >
+                    <Bot className="w-3.5 h-3.5" />
+                    <span>Personalisasi AI</span>
+                  </button>
+
+                  <button
                     onClick={handleClearAllQuestions}
                     className="px-3.5 py-2 rounded-xl text-xs font-medium bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 transition flex items-center gap-1.5"
                     title="Hapus semua pertanyaan dari database"
@@ -4059,6 +4070,13 @@ export default function Home() {
           )}
         </main>
       </div>
+
+      {/* MODAL: BATCH AI PERSONALISASI */}
+      <BatchQuestionModal
+        isOpen={isBatchAiModalOpen}
+        onClose={() => setIsBatchAiModalOpen(false)}
+        onFinished={() => fetchQuestions()}
+      />
 
       {/* MODAL: TAMBAH PERTANYAAN */}
       {isNewQuestionModalOpen && (
