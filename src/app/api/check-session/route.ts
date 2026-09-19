@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { launchBrowserWithFallback } from '@/lib/browserHelper';
+import { getConfig } from '@/lib/config';
+import { parseCookiesInput, injectCookiesIntoPage } from '@/lib/cookieHelper';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 1 minute max for session checks
@@ -8,6 +10,7 @@ export async function POST(request: Request) {
   let browser: any = null;
   try {
     const { profileFolder } = await request.json();
+    const config = getConfig();
 
     // Launch in headless mode to quickly check session status
     const launchResult = await launchBrowserWithFallback('headless', undefined, profileFolder);
@@ -32,12 +35,20 @@ export async function POST(request: Request) {
 
     // 1. Cek LinkedIn
     try {
+      // Injeksi cookies jika tersedia di config (dari ekstensi Chrome / sinkronisasi)
+      if (config.portalCookies?.linkedin) {
+        const cookies = parseCookiesInput(config.portalCookies.linkedin, '.linkedin.com');
+        if (cookies.length > 0) {
+          await injectCookiesIntoPage(page, cookies);
+        }
+      }
+
       await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded', timeout: 15000 });
       const currentUrl = page.url();
       const isLoggedLinkedin = await page.evaluate(() => {
-        const hasFeed = !!document.querySelector('.feed-identity-module, .global-nav__me, #global-nav');
-        const hasSignIn = !!document.querySelector('a[href*="/login"], a[href*="/signup"], .join-form, #login-email');
-        return hasFeed && !hasSignIn;
+        const hasFeed = !!document.querySelector('.feed-identity-module, .global-nav__me, #global-nav, img.global-nav__me-photo, button.global-nav__primary-link-me-menu-trigger, [data-control-name="nav.settings"]');
+        const hasSignIn = !!document.querySelector('a[href*="/login"], a[href*="/signup"], .join-form, #login-email, input#username');
+        return hasFeed || (!hasSignIn && !window.location.href.includes('/login') && !window.location.href.includes('/signup') && !window.location.href.includes('/checkpoint'));
       });
       const isNotLoginUrl = !currentUrl.includes('/login') && !currentUrl.includes('/signup') && !currentUrl.includes('/checkpoint');
       results.linkedin = {
@@ -50,6 +61,13 @@ export async function POST(request: Request) {
 
     // 2. Cek Jobstreet
     try {
+      if (config.portalCookies?.jobstreet) {
+        const cookies = parseCookiesInput(config.portalCookies.jobstreet, '.jobstreet.com');
+        if (cookies.length > 0) {
+          await injectCookiesIntoPage(page, cookies);
+        }
+      }
+
       await page.goto('https://id.jobstreet.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
       const isLoggedJobstreet = await page.evaluate(() => {
         return !!document.querySelector('[data-automation="user-menu"], a[href*="/profile"], button[aria-label*="Profile"]');
@@ -64,6 +82,13 @@ export async function POST(request: Request) {
 
     // 3. Cek Glints
     try {
+      if (config.portalCookies?.glints) {
+        const cookies = parseCookiesInput(config.portalCookies.glints, '.glints.com');
+        if (cookies.length > 0) {
+          await injectCookiesIntoPage(page, cookies);
+        }
+      }
+
       await page.goto('https://glints.com/id', { waitUntil: 'domcontentloaded', timeout: 15000 });
       const isLoggedGlints = await page.evaluate(() => {
         const hasAvatar = !!document.querySelector('[data-cy="user-avatar"], [class*="UserAvatar"], a[href*="/profile"]');
@@ -80,6 +105,13 @@ export async function POST(request: Request) {
 
     // 4. Cek Indeed
     try {
+      if (config.portalCookies?.indeed) {
+        const cookies = parseCookiesInput(config.portalCookies.indeed, '.indeed.com');
+        if (cookies.length > 0) {
+          await injectCookiesIntoPage(page, cookies);
+        }
+      }
+
       await page.goto('https://id.indeed.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
       const currentUrl = page.url();
       const isLoggedIndeed = await page.evaluate(() => {

@@ -7,10 +7,10 @@
 let API_BASE = 'http://localhost:3000';
 
 const PORTALS = {
-  linkedin: { domain: '.linkedin.com', checkCookie: 'li_at' },
-  indeed: { domain: '.indeed.com', checkCookie: 'SURF' },
-  glints: { domain: '.glints.com', checkCookie: 'GlintsToken' },
-  jobstreet: { domain: '.jobstreet.com', checkCookie: 'jobseekerSession' }
+  linkedin: { domains: ['linkedin.com', '.linkedin.com', 'www.linkedin.com'], checkCookie: 'li_at' },
+  indeed: { domains: ['indeed.com', '.indeed.com', 'id.indeed.com', 'secure.indeed.com'], checkCookie: 'SURF' },
+  glints: { domains: ['glints.com', '.glints.com'], checkCookie: 'GlintsToken' },
+  jobstreet: { domains: ['jobstreet.com', '.jobstreet.com', 'id.jobstreet.com', 'jobstreet.co.id', '.jobstreet.co.id'], checkCookie: 'jobseekerSession' }
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -66,13 +66,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Check current cookie states
   for (const [key, info] of Object.entries(PORTALS)) {
     try {
-      const cookies = await chrome.cookies.getAll({ domain: info.domain });
+      let allCookies = [];
+      for (const d of info.domains) {
+        const cookies = await chrome.cookies.getAll({ domain: d });
+        allCookies = allCookies.concat(cookies);
+      }
+      // Deduplicate
+      const uniqueMap = new Map();
+      allCookies.forEach(c => uniqueMap.set(`${c.name}_${c.domain}_${c.path}`, c));
+      const count = uniqueMap.size;
+
       const dot = document.getElementById(`dot-${key}`);
       const text = document.getElementById(`text-${key}`);
 
-      if (cookies.length > 0) {
+      if (count > 0) {
         dot.className = 'status-dot status-active';
-        text.innerText = `${cookies.length} Cookies`;
+        text.innerText = `${count} Cookies`;
         text.style.color = '#34d399';
       } else {
         dot.className = 'status-dot status-inactive';
@@ -97,15 +106,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       const cfgData = await cfgRes.json();
       const currentConfig = cfgData.config || {};
 
-      // 2. Extract cookies for each portal
+      // 2. Extract cookies for each portal across all its domains
       const collectedCookies = {};
       let totalSynced = 0;
 
       for (const [key, info] of Object.entries(PORTALS)) {
-        const cookies = await chrome.cookies.getAll({ domain: info.domain });
-        if (cookies && cookies.length > 0) {
-          collectedCookies[key] = JSON.stringify(cookies);
-          totalSynced += cookies.length;
+        let allCookies = [];
+        for (const d of info.domains) {
+          const cookies = await chrome.cookies.getAll({ domain: d });
+          allCookies = allCookies.concat(cookies);
+        }
+        const uniqueMap = new Map();
+        allCookies.forEach(c => uniqueMap.set(`${c.name}_${c.domain}_${c.path}`, c));
+        const uniqueList = Array.from(uniqueMap.values());
+
+        if (uniqueList.length > 0) {
+          collectedCookies[key] = JSON.stringify(uniqueList);
+          totalSynced += uniqueList.length;
         }
       }
 

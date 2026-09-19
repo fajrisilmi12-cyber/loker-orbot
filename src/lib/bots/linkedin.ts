@@ -5,6 +5,7 @@ import { captureFormDomSnapshot, inspectFormWithAi, applyAiFormActions } from '.
 import { evaluateJobMatch } from '../jobMatcher';
 import { generateDynamicCoverLetter } from '../coverLetterGenerator';
 import { humanClick, humanType, randomDelay } from '../humanStealth';
+import { parseCookiesInput, injectCookiesIntoPage } from '../cookieHelper';
 
 export interface BotMetrics {
   successCount: number;
@@ -45,7 +46,6 @@ export async function runLinkedinBot(
 
     // Injeksi cookies jika tersedia di konfigurasi
     if (config.portalCookies?.linkedin) {
-      const { parseCookiesInput, injectCookiesIntoPage } = require('../cookieHelper');
       const cookies = parseCookiesInput(config.portalCookies.linkedin, '.linkedin.com');
       if (cookies.length > 0) {
         const injectedCount = await injectCookiesIntoPage(page, cookies);

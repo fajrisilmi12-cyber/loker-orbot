@@ -7,10 +7,10 @@
 let API_BASE = 'http://localhost:3000';
 
 const PORTALS = {
-  linkedin: { domain: '.linkedin.com' },
-  indeed: { domain: '.indeed.com' },
-  glints: { domain: '.glints.com' },
-  jobstreet: { domain: '.jobstreet.com' }
+  linkedin: { domains: ['linkedin.com', '.linkedin.com', 'www.linkedin.com'] },
+  indeed: { domains: ['indeed.com', '.indeed.com', 'id.indeed.com', 'secure.indeed.com'] },
+  glints: { domains: ['glints.com', '.glints.com'] },
+  jobstreet: { domains: ['jobstreet.com', '.jobstreet.com', 'id.jobstreet.com', 'jobstreet.co.id', '.jobstreet.co.id'] }
 };
 
 // Automatic Sync Function
@@ -26,9 +26,17 @@ async function autoSyncCookies() {
     let hasAnyCookie = false;
 
     for (const [key, info] of Object.entries(PORTALS)) {
-      const cookies = await chrome.cookies.getAll({ domain: info.domain });
-      if (cookies && cookies.length > 0) {
-        collectedCookies[key] = JSON.stringify(cookies);
+      let allCookies = [];
+      for (const d of info.domains) {
+        const cookies = await chrome.cookies.getAll({ domain: d });
+        allCookies = allCookies.concat(cookies);
+      }
+      const uniqueMap = new Map();
+      allCookies.forEach(c => uniqueMap.set(`${c.name}_${c.domain}_${c.path}`, c));
+      const uniqueList = Array.from(uniqueMap.values());
+
+      if (uniqueList.length > 0) {
+        collectedCookies[key] = JSON.stringify(uniqueList);
         hasAnyCookie = true;
       }
     }

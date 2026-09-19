@@ -5,6 +5,7 @@ import { answerQuestion } from '../questionAnswer';
 import { generateCoverLetter } from '../coverLetterHelper';
 import { evaluateJobMatch } from '../jobMatcher';
 import { humanClick } from '../humanStealth';
+import { parseCookiesInput, injectCookiesIntoPage } from '../cookieHelper';
 
 export interface BotMetrics {
   successCount: number;
@@ -50,7 +51,6 @@ export async function runIndeedBot(
 
     // Injeksi cookies jika tersedia di konfigurasi
     if (config.portalCookies?.indeed) {
-      const { parseCookiesInput, injectCookiesIntoPage } = require('../cookieHelper');
       const cookies = parseCookiesInput(config.portalCookies.indeed, '.indeed.com');
       if (cookies.length > 0) {
         const injectedCount = await injectCookiesIntoPage(page, cookies);
