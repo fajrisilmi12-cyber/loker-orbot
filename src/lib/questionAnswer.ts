@@ -135,59 +135,69 @@ const skills = [
 export function getDynamicProfile() {
   try {
     const cfg = getConfig();
+    const fullName = cfg.fullName?.trim() || '';
+    // Build resume hint from user's own name
+    const resumeHint = fullName ? `${fullName}` : 'My Resume';
+
     return {
-      expectedMonthlySalaryIDR: Number(cfg.expectedSalary) || 8_000_000,
+      expectedMonthlySalaryIDR: Number(cfg.expectedSalary) || 5_000_000,
       educationLevel: cfg.educationLevel || "Sarjana (S1)",
-      gpa: cfg.gpa || "3.75",
-      defaultExperienceYears: Number(cfg.yearsOfExperience) || 3,
+      gpa: cfg.gpa || "3.50",
+      defaultExperienceYears: Number(cfg.yearsOfExperience) || 1,
       experienceByRole: [
-        { keywords: ["full stack", "fullstack"], years: Number(cfg.yearsOfExperience) || 3 },
-        { keywords: ["backend"], years: Number(cfg.yearsOfExperience) || 3 },
-        { keywords: ["java developer", "java"], years: 2 },
-        { keywords: ["postgresql", "postgres"], years: 2 },
-        { keywords: ["web developer"], years: Number(cfg.yearsOfExperience) || 3 },
-        { keywords: ["software development", "programmer"], years: Number(cfg.yearsOfExperience) || 3 },
+        { keywords: ["full stack", "fullstack"], years: Number(cfg.yearsOfExperience) || 1 },
+        { keywords: ["backend"], years: Number(cfg.yearsOfExperience) || 1 },
+        { keywords: ["java developer", "java"], years: Math.max(1, Number(cfg.yearsOfExperience) - 1) || 1 },
+        { keywords: ["postgresql", "postgres"], years: Math.max(1, Number(cfg.yearsOfExperience) - 1) || 1 },
+        { keywords: ["web developer"], years: Number(cfg.yearsOfExperience) || 1 },
+        { keywords: ["software development", "programmer"], years: Number(cfg.yearsOfExperience) || 1 },
         { keywords: ["sales", "marketing"], years: 0 },
       ],
       workRights: {
         id: "Saya adalah warga negara Indonesia",
         en: "I'm an Indonesian citizen",
       },
-      preferredResumeHint: "Full Stack Developer - Glints TapLoker",
+      preferredResumeHint: resumeHint,
       resumeFallback: "Don't include a resumé",
       coverLetterPreference: "Don't include a cover letter",
       wantDefaultResume: true,
       knownTools: ["git", "svn", "subversion"],
-      portfolio: cfg.portfolioUrl || "https://github.com/yogaadi",
-      github: cfg.githubUrl || "https://github.com/yogaadi",
-      linkedin: cfg.linkedinUrl || "https://www.linkedin.com",
+      portfolio: cfg.portfolioUrl || cfg.githubUrl || "",
+      github: cfg.githubUrl || "",
+      linkedin: cfg.linkedinUrl || "",
       noticePeriod: cfg.noticePeriod || "Immediately",
       cvContext: cfg.cvExtractedText ? cfg.cvExtractedText.slice(0, 3500) : "",
+      fullName,
+      phoneNumber: cfg.phoneNumber || "",
+      domicile: cfg.domicile || "",
     };
   } catch {
     return {
-      expectedMonthlySalaryIDR: 8_000_000,
+      expectedMonthlySalaryIDR: 5_000_000,
       educationLevel: "Sarjana (S1)",
-      gpa: "3.75",
-      defaultExperienceYears: 3,
+      gpa: "3.50",
+      defaultExperienceYears: 1,
       experienceByRole: [
-        { keywords: ["full stack", "fullstack"], years: 3 },
-        { keywords: ["backend"], years: 3 },
-        { keywords: ["web developer"], years: 3 },
+        { keywords: ["full stack", "fullstack"], years: 1 },
+        { keywords: ["backend"], years: 1 },
+        { keywords: ["web developer"], years: 1 },
       ],
       workRights: {
         id: "Saya adalah warga negara Indonesia",
         en: "I'm an Indonesian citizen",
       },
-      preferredResumeHint: "Full Stack Developer",
+      preferredResumeHint: "My Resume",
       resumeFallback: "Don't include a resumé",
       coverLetterPreference: "Don't include a cover letter",
       wantDefaultResume: true,
       knownTools: ["git"],
-      portfolio: "https://github.com/yogaadi",
-      github: "https://github.com/yogaadi",
-      linkedin: "https://www.linkedin.com",
+      portfolio: "",
+      github: "",
+      linkedin: "",
       noticePeriod: "Immediately",
+      fullName: "",
+      phoneNumber: "",
+      domicile: "",
     };
   }
 }
@@ -349,37 +359,51 @@ function tryRegexAnswer(
   const dynamicSkills = getDynamicSkills();
 
   const cfg = getConfig();
-  const fullName = (cfg.fullName || "Yoga Adi Saputra").trim();
+  const fullName = (cfg.fullName || "").trim();
   const nameParts = fullName.split(/\s+/);
-  const firstName = nameParts[0] || "Yoga";
-  const lastName = nameParts.slice(1).join(" ") || "Adi Saputra";
+  const firstName = nameParts[0] || "";
+  const lastName = nameParts.slice(1).join(" ") || "";
 
   // 1. Profil Pribadi: First Name, Last Name, Full Name
   if (/^(?:first\s*name|given\s*name|nama\s*depan)(\s*\*|\s*:)?$/i.test(q) || /(?:first|given)\s*name|nama\s*depan/i.test(q)) {
-    return [firstName];
+    return firstName ? [firstName] : null;
   }
 
   if (/^(?:last\s*name|family\s*name|surname|nama\s*belakang)(\s*\*|\s*:)?$/i.test(q) || /(?:last|family|sur)\s*name|nama\s*belakang/i.test(q)) {
-    return [lastName];
+    return lastName ? [lastName] : null;
   }
 
   if (/^(?:full\s*name|nama\s*lengkap)(\s*\*|\s*:)?$/i.test(q)) {
-    return [fullName];
+    return fullName ? [fullName] : null;
   }
 
   // 2. Kontak: Nomor Telepon, Handphone, Mobile, WhatsApp
   if (/^(?:phone|telephone|mobile|handphone|nomor\s*hp|nomor\s*telepon|nomor\s*wa|whatsapp|telp)(\s*\*|\s*:)?$/i.test(q) || /\b(phone|mobile|telepon|handphone|hp)\b/i.test(q)) {
-    return [cfg.phoneNumber || "081234567890"];
+    return cfg.phoneNumber ? [cfg.phoneNumber] : null;
   }
 
   // 3. Email
   if (/^(?:email|surel|alamat\s*email|e-mail)(\s*\*|\s*:)?$/i.test(q)) {
-    return ["yogaadi0902@gmail.com"];
+    // Use config email first, fallback to CV text extraction
+    if (cfg.email?.trim()) return [cfg.email.trim()];
+    const emailMatch = (cfg.cvExtractedText || '').match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    return emailMatch ? [emailMatch[0]] : null;
   }
 
-  // 4. Umur / Usia / Age
-  if (/^(?:age|umur|usia)(\s*\*|\s*:)?$/i.test(q) || /\b(umur|usia)\b|^age$/i.test(q)) {
-    return ["24"];
+  // 4. Umur / Usia / Age — compute from dateOfBirth if available
+  if (/^(?:age|umur|usia|date\s*of\s*birth|tanggal\s*lahir|dob|birth\s*date)(\s*\*|\s*:)?$/i.test(q) || /\b(umur|usia)\b|^age$/i.test(q)) {
+    const dob = (cfg as any).dateOfBirth;
+    if (dob) {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear() - (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate()) ? 1 : 0);
+      if (/date\s*of\s*birth|tanggal\s*lahir|dob|birth\s*date/i.test(q)) {
+        // Format as DD-MM-YYYY or YYYY-MM-DD based on question
+        return [dob]; // return raw ISO date
+      }
+      return [String(age)];
+    }
+    return null; // Let AI handle if no DOB configured
   }
 
   // 5. Negara / Country / Kewarganegaraan
@@ -405,7 +429,7 @@ function tryRegexAnswer(
   }
 
   if (/^(?:postal\s*code|zip\s*code|kode\s*pos)(\s*\*|\s*:)?$/i.test(q)) {
-    return ["12190"];
+    return cfg.postalCode ? [cfg.postalCode] : null;
   }
 
   // 7. Pemilihan Resume / CV (Indeed / Glints / JobStreet)
@@ -413,8 +437,23 @@ function tryRegexAnswer(
     const indeedResumeMatch = options.find(o => /use your indeed resume|indeed resume/i.test(o));
     if (indeedResumeMatch) return [indeedResumeMatch];
 
-    const pdfCandidateMatch = options.find(o => /yoga|ats_cv|\.pdf/i.test(o) && !/don't include|tidak sertakan/i.test(o));
-    if (pdfCandidateMatch) return [pdfCandidateMatch];
+    // Match by user's actual CV filename from config
+    const userCvName = (cfg.cvFileName || '').replace(/\.pdf$/i, '').toLowerCase();
+    if (userCvName) {
+      const nameMatch = options.find(o => o.toLowerCase().includes(userCvName.slice(0, 10)));
+      if (nameMatch && !/don't include|tidak sertakan/i.test(nameMatch)) return [nameMatch];
+    }
+
+    // Match by user's full name
+    const userFirstName = (cfg.fullName || '').split(' ')[0].toLowerCase();
+    if (userFirstName.length > 2) {
+      const nameMatch = options.find(o => o.toLowerCase().includes(userFirstName) && !/don't include|tidak sertakan/i.test(o));
+      if (nameMatch) return [nameMatch];
+    }
+
+    // Fallback: pick any PDF option that isn't 'don't include'
+    const pdfMatch = options.find(o => /\.pdf/i.test(o) && !/don't include|tidak sertakan/i.test(o));
+    if (pdfMatch) return [pdfMatch];
 
     const anyValidResume = options.find(o => !/don't include|tidak sertakan|batal/i.test(o));
     if (anyValidResume) return [anyValidResume];
@@ -422,20 +461,29 @@ function tryRegexAnswer(
 
   // 8. Gender / Jenis Kelamin
   if (/gender|jenis\s*kelamin/i.test(q)) {
+    const userGender = cfg.gender || 'Laki-laki';
     if (options.length > 0) {
-      const match = options.find(o => /laki-laki|male|pria/i.test(o));
+      // Try to match user's gender preference
+      const isLakilaki = /laki|male|pria|man/i.test(userGender);
+      const match = isLakilaki
+        ? options.find(o => /laki-laki|^male$|^pria$|^man$/i.test(o.trim())) || options.find(o => /laki|male|pria/i.test(o))
+        : options.find(o => /perempuan|^female$|^wanita$|^woman$/i.test(o.trim())) || options.find(o => /perempuan|female|wanita/i.test(o));
       if (match) return [match];
     }
-    return ["Laki-laki"];
+    return [userGender];
   }
 
-  // 9. Status Pernikahan / Marital Status (e.g. Single, Belum Menikah)
+  // 9. Status Pernikahan / Marital Status
   if (/marital|pernikahan|status\s*perkawinan|status\s*nikah/i.test(q) || options.some(o => /single|lajang|belum\s*menikah/i.test(o))) {
+    const userMarital = cfg.maritalStatus || 'Single';
     if (options.length > 0) {
-      const match = options.find(o => /^(single|lajang|belum\s*menikah)$/i.test(o.trim())) || options.find(o => /single|lajang|belum\s*menikah/i.test(o));
+      const isSingle = /single|lajang|belum/i.test(userMarital);
+      const match = isSingle
+        ? options.find(o => /^(single|lajang|belum\s*menikah)$/i.test(o.trim())) || options.find(o => /single|lajang|belum\s*menikah/i.test(o))
+        : options.find(o => /menikah|married/i.test(o) && !/belum/i.test(o));
       if (match) return [match];
     }
-    return ["Single"];
+    return [userMarital];
   }
 
   // 10. Pertanyaan Demografis / EEO / Keberagaman (Demographic, Disability, Veteran, Race, Consent)
@@ -654,13 +702,13 @@ function tryRegexAnswer(
 
   // Pertanyaan Portofolio / GitHub / LinkedIn jika open text
   if (/github/i.test(q)) {
-    return [profile.github || "https://github.com/yogaadi"];
+    return [profile.github || cfg.githubUrl || ""].filter(Boolean);
   }
   if (/linkedin/i.test(q)) {
     return [profile.linkedin || "https://www.linkedin.com"];
   }
   if (/portfolio|portofolio|website|link/i.test(q) && (options.length === 0 || type === "text")) {
-    return [profile.portfolio || "https://github.com/yogaadi"];
+    return [profile.portfolio || cfg.portfolioUrl || cfg.githubUrl || ""].filter(Boolean);
   }
 
   // Pertanyaan Kesiapan Mulai Bekerja (Notice Period / ASAP / Kapan Bisa Bergabung)
@@ -732,9 +780,9 @@ Reply with a concise, highly professional, direct answer (1-2 sentences maximum,
     if (/gpa|ipk/i.test(lowerQ)) return [profile.gpa || "3.75"];
     if (/experience|tahun/i.test(lowerQ)) return [String(profile.defaultExperienceYears || 3)];
     if (/project|proyek/i.test(lowerQ)) return ["4"];
-    if (/age|umur|usia/i.test(lowerQ)) return ["24"];
-    if (/phone|telepon|hp|mobile/i.test(lowerQ)) return [cfg.phoneNumber || "081234567890"];
-    if (/name|nama/i.test(lowerQ)) return [cfg.fullName || "Yoga Adi Saputra"];
+    if (/age|umur|usia/i.test(lowerQ)) return [""]; // Let AI or user fill
+    if (/phone|telepon|hp|mobile/i.test(lowerQ)) return [cfg.phoneNumber || ""];
+    if (/name|nama/i.test(lowerQ)) return [cfg.fullName || ""];
     if (/why|alasan|describe|ceritakan|jelaskan|introduce/i.test(lowerQ)) {
       return ["I have 3+ years of experience as a Software Engineer specializing in full stack web development, building robust and scalable applications."];
     }

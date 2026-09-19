@@ -44,6 +44,11 @@ export interface AppConfig {
   noticePeriod: string;
   // Candidate Profile Fields
   fullName: string;
+  email?: string;            // Email pelamar
+  gender?: string;           // 'Laki-laki' | 'Perempuan'
+  maritalStatus?: string;    // 'Single' | 'Menikah'
+  dateOfBirth?: string;      // Format YYYY-MM-DD
+  postalCode?: string;       // Kode pos domisili
   expectedSalary: number;
   educationLevel: string;
   gpa: string;
@@ -99,17 +104,22 @@ const DEFAULT_CONFIG: AppConfig = {
   useSystemChrome: true,
   customChromePath: '',
   noticePeriod: 'Immediately',
-  fullName: 'Yoga Adi Saputra',
-  expectedSalary: 8000000,
+  fullName: '',
+  email: '',
+  gender: 'Laki-laki',
+  maritalStatus: 'Single',
+  dateOfBirth: '',
+  postalCode: '',
+  expectedSalary: 5000000,
   educationLevel: 'Sarjana (S1)',
-  gpa: '3.75',
-  yearsOfExperience: 3,
-  skills: 'JavaScript, TypeScript, Python, Java, C#, C++, PHP, Go, HTML, CSS, React, React.js, Next.js, Angular, Angular.js, Tailwind CSS, Bootstrap, jQuery, Framer Motion, Three.js, React Three Fiber, Drei, Node.js, Express.js, Fiber, GORM, REST API, RESTful API, Redis, RabbitMQ, Celery, Asynq, Message Queue, Kafka, PostgreSQL, MySQL, Supabase, Prisma, SQL, Docker, Nginx, PM2, Git, GitHub, GitHub Actions, Cloudflare, Let\'s Encrypt, Certbot, CI/CD, Postman, VS Code, Full Stack Development, Backend Development, Frontend Development, Web Development, API Development, Database Design, Microservices, Object-Oriented Programming, Asynchronous Programming, Blender, TouchDesigner, MediaPipe, Figma, ClickUp, Jira, Trello, Slack, Notion, Agile, Scrum, Problem Solving, Debugging',
-  portfolioUrl: 'https://github.com/yogaadi',
-  githubUrl: 'https://github.com/yogaadi',
-  linkedinUrl: 'https://www.linkedin.com',
-  phoneNumber: '081234567890',
-  domicile: 'Jakarta Selatan, DKI Jakarta',
+  gpa: '',
+  yearsOfExperience: 1,
+  skills: '',
+  portfolioUrl: '',
+  githubUrl: '',
+  linkedinUrl: '',
+  phoneNumber: '',
+  domicile: '',
   cvFileName: '',
   cvFilePath: '',
   cvExtractedText: '',

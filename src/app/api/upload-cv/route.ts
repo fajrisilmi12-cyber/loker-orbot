@@ -101,7 +101,12 @@ export async function POST(request: Request) {
 
     const fieldKeys = [
       'fullName',
+      'email',
       'phoneNumber',
+      'gender',
+      'maritalStatus',
+      'dateOfBirth',
+      'postalCode',
       'expectedSalary',
       'yearsOfExperience',
       'educationLevel',
@@ -119,9 +124,29 @@ export async function POST(request: Request) {
         updates.fullName = aiParsedProfile.fullName;
         updatedFields.push('fullName');
       }
+      if (aiParsedProfile.email) {
+        updates.email = aiParsedProfile.email;
+        updatedFields.push('email');
+      }
       if (aiParsedProfile.phoneNumber) {
         updates.phoneNumber = aiParsedProfile.phoneNumber;
         updatedFields.push('phoneNumber');
+      }
+      if (aiParsedProfile.gender) {
+        updates.gender = aiParsedProfile.gender;
+        updatedFields.push('gender');
+      }
+      if (aiParsedProfile.maritalStatus) {
+        updates.maritalStatus = aiParsedProfile.maritalStatus;
+        updatedFields.push('maritalStatus');
+      }
+      if (aiParsedProfile.dateOfBirth) {
+        updates.dateOfBirth = aiParsedProfile.dateOfBirth;
+        updatedFields.push('dateOfBirth');
+      }
+      if (aiParsedProfile.postalCode) {
+        updates.postalCode = aiParsedProfile.postalCode;
+        updatedFields.push('postalCode');
       }
       if (aiParsedProfile.domicile) {
         updates.domicile = aiParsedProfile.domicile;

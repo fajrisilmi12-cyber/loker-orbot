@@ -5,7 +5,12 @@ import { getConfig, saveConfig } from './config';
 
 export interface CVAnalysisResult {
   fullName?: string;
+  email?: string;
   phoneNumber?: string;
+  gender?: string;
+  maritalStatus?: string;
+  dateOfBirth?: string;
+  postalCode?: string;
   domicile?: string;
   educationLevel?: string;
   gpa?: string;
@@ -56,11 +61,16 @@ ${rawCvText.slice(0, 15000)}
 Format JSON yang wajib dikembalikan (hanya JSON, tanpa markdown wrap):
 {
   "fullName": "Nama lengkap pelamar",
+  "email": "Alamat email pelamar (misal: pelamar@gmail.com)",
   "phoneNumber": "Nomor HP / WhatsApp (format angka lokal misal 08...)",
+  "gender": "Pilihan salah satu: Laki-laki atau Perempuan (sesuai data CV)",
+  "maritalStatus": "Pilihan salah satu: Single atau Menikah",
+  "dateOfBirth": "Tanggal lahir jika ada (format YYYY-MM-DD)",
+  "postalCode": "Kode pos jika ada",
   "domicile": "Domisili/Kota tempat tinggal",
   "educationLevel": "Pilihan salah satu: SMA / SMK, Diploma (D3), Sarjana (S1), Magister (S2), Doktor (S3)",
   "gpa": "IPK terakhir (misal: 3.75)",
-  "yearsOfExperience": 3,
+  "yearsOfExperience": 1,
   "skills": "Daftar seluruh keahlian, bahasa pemrograman, tools, framework, metodologi yang ditemukan, dipisahkan koma",
   "linkedinUrl": "Link profil LinkedIn jika ada (misal https://linkedin.com/in/...)",
   "githubUrl": "Link GitHub jika ada",
@@ -70,6 +80,7 @@ Format JSON yang wajib dikembalikan (hanya JSON, tanpa markdown wrap):
 
 Aturan:
 - Jika suatu data tidak ditemukan di CV, berikan string kosong "" atau null.
+- Untuk email: carilah alamat email valid di dalam CV.
 - Untuk skills: kumpulkan sebanyak mungkin skill teknis, software, tools, dan kompetensi yang tercantum di CV dan pisahkan dengan koma rapi.
 - Jangan mengarang data yang jelas-jelas tidak ada di CV.`;
 
@@ -130,6 +141,26 @@ function extractHeuristicFromText(text: string): CVAnalysisResult {
   const phoneMatch = text.match(/(?:(?:\+62|62)|0)8[0-9]{2}[\s\-]?[0-9]{3,4}[\s\-]?[0-9]{3,5}/);
   if (phoneMatch) {
     result.phoneNumber = phoneMatch[0].replace(/[\s\-]/g, '');
+  }
+
+  // 2b. Detect email
+  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  if (emailMatch) {
+    result.email = emailMatch[0].trim();
+  }
+
+  // 2c. Detect gender
+  if (/laki-laki|pria/i.test(text)) {
+    result.gender = 'Laki-laki';
+  } else if (/perempuan|wanita/i.test(text)) {
+    result.gender = 'Perempuan';
+  }
+
+  // 2d. Detect marital status
+  if (/belum menikah|single|lajang/i.test(text)) {
+    result.maritalStatus = 'Single';
+  } else if (/menikah|kawin/i.test(text)) {
+    result.maritalStatus = 'Menikah';
   }
 
   // 3. Detect domicile / city

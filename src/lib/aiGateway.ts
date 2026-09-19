@@ -180,7 +180,7 @@ export async function testAiConnection(specificEndpoint?: Partial<AiEndpointConf
             messages: [{ role: 'user', content: 'Katakan "Koneksi Router Sukses!" dalam 1 kalimat pendek.' }],
             temperature: 0.1,
           }),
-          signal: AbortSignal.timeout(15000),
+          signal: AbortSignal.timeout(30000),
         });
 
         if (!res.ok) {

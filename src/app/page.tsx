@@ -88,6 +88,11 @@ interface AppConfig {
   customChromePath?: string;
   noticePeriod?: string;
   fullName?: string;
+  email?: string;
+  gender?: string;
+  maritalStatus?: string;
+  dateOfBirth?: string;
+  postalCode?: string;
   expectedSalary?: number;
   educationLevel?: string;
   gpa?: string;
@@ -168,18 +173,22 @@ export default function Home() {
     useSystemChrome: true,
     customChromePath: '',
     noticePeriod: 'Immediately',
-    fullName: 'Yoga Adi Saputra',
-    expectedSalary: 8000000,
+    fullName: '',
+    email: '',
+    gender: 'Laki-laki',
+    maritalStatus: 'Single',
+    dateOfBirth: '',
+    postalCode: '',
+    expectedSalary: 5000000,
     educationLevel: 'Sarjana (S1)',
-    gpa: '3.75',
-    yearsOfExperience: 3,
-    skills:
-      'JavaScript, TypeScript, Python, Java, C#, C++, PHP, Go, HTML, CSS, React, React.js, Next.js, Angular, Angular.js, Tailwind CSS, Bootstrap, jQuery, Framer Motion, Three.js, React Three Fiber, Drei, Node.js, Express.js, Fiber, GORM, REST API, RESTful API, Redis, RabbitMQ, Celery, Asynq, Message Queue, Kafka, PostgreSQL, MySQL, Supabase, Prisma, SQL, Docker, Nginx, PM2, Git, GitHub, GitHub Actions, Cloudflare, Let\'s Encrypt, Certbot, CI/CD, Postman, VS Code, Full Stack Development, Backend Development, Frontend Development, Web Development, API Development, Database Design, Microservices, Object-Oriented Programming, Asynchronous Programming, Blender, TouchDesigner, MediaPipe, Figma, ClickUp, Jira, Trello, Slack, Notion, Agile, Scrum, Problem Solving, Debugging',
-    portfolioUrl: 'https://github.com/yogaadi',
-    githubUrl: 'https://github.com/yogaadi',
-    linkedinUrl: 'https://www.linkedin.com',
-    phoneNumber: '081234567890',
-    domicile: 'Jakarta Selatan, DKI Jakarta',
+    gpa: '',
+    yearsOfExperience: 1,
+    skills: '',
+    portfolioUrl: '',
+    githubUrl: '',
+    linkedinUrl: '',
+    phoneNumber: '',
+    domicile: '',
     cvFileName: '',
     cvFilePath: '',
     cvExtractedText: '',
@@ -358,11 +367,22 @@ export default function Home() {
     toast.success(`Preset "${name}" berhasil disimpan!`);
   }, [newPresetName, config, configPresets, persistPresets]);
 
-  const handleLoadPreset = useCallback((preset: ConfigPreset) => {
-    setConfig(prev => ({ ...prev, ...preset.config }));
+  const handleLoadPreset = useCallback(async (preset: ConfigPreset) => {
+    const merged = { ...config, ...preset.config };
+    setConfig(merged);
     setIsPresetsModalOpen(false);
-    toast.success(`Preset "${preset.name}" berhasil dimuat ke formulir!`);
-  }, []);
+    toast.success(`Preset "${preset.name}" berhasil dimuat!`);
+    
+    // Auto sync to backend immediately so refresh won't lose it
+    try {
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(merged),
+      });
+      fetchAppliedHistory();
+    } catch {}
+  }, [config]);
 
   const handleOverwritePreset = useCallback((preset: ConfigPreset) => {
     const updated = configPresets.map(p =>
@@ -1037,7 +1057,11 @@ export default function Home() {
           // Siapkan perbandingan sebelum vs sesudah
           const diffs = [
             { field: 'fullName', label: 'Nama Lengkap', oldVal: config.fullName || '', newVal: data.aiParsed.fullName || '', willChange: Boolean(data.aiParsed.fullName && data.aiParsed.fullName !== config.fullName) },
+            { field: 'email', label: 'Email Pelamar', oldVal: config.email || '', newVal: data.aiParsed.email || '', willChange: Boolean(data.aiParsed.email && data.aiParsed.email !== config.email) },
             { field: 'phoneNumber', label: 'Nomor HP / WhatsApp', oldVal: config.phoneNumber || '', newVal: data.aiParsed.phoneNumber || '', willChange: Boolean(data.aiParsed.phoneNumber && data.aiParsed.phoneNumber !== config.phoneNumber) },
+            { field: 'gender', label: 'Jenis Kelamin', oldVal: config.gender || '', newVal: data.aiParsed.gender || '', willChange: Boolean(data.aiParsed.gender && data.aiParsed.gender !== config.gender) },
+            { field: 'maritalStatus', label: 'Status Pernikahan', oldVal: config.maritalStatus || '', newVal: data.aiParsed.maritalStatus || '', willChange: Boolean(data.aiParsed.maritalStatus && data.aiParsed.maritalStatus !== config.maritalStatus) },
+            { field: 'dateOfBirth', label: 'Tanggal Lahir', oldVal: config.dateOfBirth || '', newVal: data.aiParsed.dateOfBirth || '', willChange: Boolean(data.aiParsed.dateOfBirth && data.aiParsed.dateOfBirth !== config.dateOfBirth) },
             { field: 'domicile', label: 'Domisili', oldVal: config.domicile || '', newVal: data.aiParsed.domicile || '', willChange: Boolean(data.aiParsed.domicile && data.aiParsed.domicile !== config.domicile) },
             { field: 'educationLevel', label: 'Pendidikan Terakhir', oldVal: config.educationLevel || '', newVal: data.aiParsed.educationLevel || '', willChange: Boolean(data.aiParsed.educationLevel && data.aiParsed.educationLevel !== config.educationLevel) },
             { field: 'gpa', label: 'IPK Terakhir', oldVal: config.gpa || '', newVal: String(data.aiParsed.gpa || ''), willChange: Boolean(data.aiParsed.gpa && String(data.aiParsed.gpa) !== config.gpa) },
@@ -1088,7 +1112,11 @@ export default function Home() {
     if (pendingParsedCv) {
       const diffs = [
         { field: 'fullName', label: 'Nama Lengkap', oldVal: config.fullName || '', newVal: pendingParsedCv.fullName || '', willChange: Boolean(pendingParsedCv.fullName && pendingParsedCv.fullName !== config.fullName) },
+        { field: 'email', label: 'Email Pelamar', oldVal: config.email || '', newVal: pendingParsedCv.email || '', willChange: Boolean(pendingParsedCv.email && pendingParsedCv.email !== config.email) },
         { field: 'phoneNumber', label: 'Nomor HP / WhatsApp', oldVal: config.phoneNumber || '', newVal: pendingParsedCv.phoneNumber || '', willChange: Boolean(pendingParsedCv.phoneNumber && pendingParsedCv.phoneNumber !== config.phoneNumber) },
+        { field: 'gender', label: 'Jenis Kelamin', oldVal: config.gender || '', newVal: pendingParsedCv.gender || '', willChange: Boolean(pendingParsedCv.gender && pendingParsedCv.gender !== config.gender) },
+        { field: 'maritalStatus', label: 'Status Pernikahan', oldVal: config.maritalStatus || '', newVal: pendingParsedCv.maritalStatus || '', willChange: Boolean(pendingParsedCv.maritalStatus && pendingParsedCv.maritalStatus !== config.maritalStatus) },
+        { field: 'dateOfBirth', label: 'Tanggal Lahir', oldVal: config.dateOfBirth || '', newVal: pendingParsedCv.dateOfBirth || '', willChange: Boolean(pendingParsedCv.dateOfBirth && pendingParsedCv.dateOfBirth !== config.dateOfBirth) },
         { field: 'domicile', label: 'Domisili', oldVal: config.domicile || '', newVal: pendingParsedCv.domicile || '', willChange: Boolean(pendingParsedCv.domicile && pendingParsedCv.domicile !== config.domicile) },
         { field: 'educationLevel', label: 'Pendidikan Terakhir', oldVal: config.educationLevel || '', newVal: pendingParsedCv.educationLevel || '', willChange: Boolean(pendingParsedCv.educationLevel && pendingParsedCv.educationLevel !== config.educationLevel) },
         { field: 'gpa', label: 'IPK Terakhir', oldVal: config.gpa || '', newVal: String(pendingParsedCv.gpa || ''), willChange: Boolean(pendingParsedCv.gpa && String(pendingParsedCv.gpa) !== config.gpa) },
@@ -1128,7 +1156,12 @@ export default function Home() {
     };
 
     applyIf('fullName', pendingParsedCv.fullName);
+    applyIf('email', pendingParsedCv.email);
     applyIf('phoneNumber', pendingParsedCv.phoneNumber);
+    applyIf('gender', pendingParsedCv.gender);
+    applyIf('maritalStatus', pendingParsedCv.maritalStatus);
+    applyIf('dateOfBirth', pendingParsedCv.dateOfBirth);
+    applyIf('postalCode', pendingParsedCv.postalCode);
     applyIf('domicile', pendingParsedCv.domicile);
     applyIf('educationLevel', pendingParsedCv.educationLevel);
     applyIf('gpa', pendingParsedCv.gpa, String);
@@ -1201,6 +1234,93 @@ export default function Home() {
       const msg = error instanceof Error ? error.message : 'Gagal membersihkan duplikat';
       toast.error(msg);
     }
+  };
+
+  // Auto-update answers in the CSV database that can be derived from the user's profile
+  const handleUpdateQuestionsFromProfile = async () => {
+    if (questions.length === 0) { toast.info('Database kosong'); return; }
+    const salary = config.expectedSalary || 0;
+    const exp = config.yearsOfExperience || 1;
+    const name = config.fullName || '';
+    const firstName = name.split(' ')[0] || '';
+    const cvFile = config.cvFileName || '';
+
+    let updatedCount = 0;
+    const updated = questions.map((q) => {
+      const qLower = q.question.toLowerCase();
+      const opts = q.options ? q.options.split('|').map((o: string) => o.trim()) : [];
+      let newAnswer = q.answer;
+
+      // Salary questions
+      if (/salary|gaji|expected|diharapkan/i.test(qLower) && opts.length > 0) {
+        // Pick closest salary option to user's expected salary
+        let closest = opts[0];
+        let minDiff = Infinity;
+        for (const opt of opts) {
+          const nums = opt.match(/[\d.]+/);
+          if (nums) {
+            const val = parseFloat(nums[0].replace(/\./g, '')) * (/juta|million/i.test(opt) ? 1_000_000 : 1);
+            const diff = Math.abs(val - salary);
+            if (diff < minDiff) { minDiff = diff; closest = opt; }
+          }
+        }
+        newAnswer = closest;
+      }
+
+      // Years of experience questions
+      else if (/how many years|berapa tahun|years.*experience|tahun pengalaman/i.test(qLower) && opts.length > 0) {
+        let closest = opts[0];
+        let minDiff = Infinity;
+        for (const opt of opts) {
+          const nums = opt.match(/\d+/);
+          if (nums) {
+            const val = parseInt(nums[0]);
+            const diff = Math.abs(val - exp);
+            if (diff < minDiff) { minDiff = diff; closest = opt; }
+          }
+        }
+        newAnswer = closest;
+      }
+
+      // Resume/CV filename questions — match by user's name
+      else if (opts.some((o: string) => /\.pdf|resume|cv/i.test(o))) {
+        // Skip "Indeed resume" type
+        const indeedOpt = opts.find((o: string) => /use your indeed resume/i.test(o));
+        if (indeedOpt) { /* keep as is */ }
+        else if (cvFile) {
+          const cvMatch = opts.find((o: string) => o.toLowerCase().includes(cvFile.toLowerCase().slice(0, 8)));
+          if (cvMatch && !/don't include/i.test(cvMatch)) newAnswer = cvMatch;
+        } else if (firstName.length > 2) {
+          const nameMatch = opts.find((o: string) => o.toLowerCase().includes(firstName.toLowerCase()) && !/don't include/i.test(o));
+          if (nameMatch) newAnswer = nameMatch;
+        }
+      }
+
+      // Name questions
+      else if (/^(your name|nama anda|full name|nama lengkap)/i.test(qLower) && !opts.length && name) {
+        newAnswer = name;
+      }
+
+      if (newAnswer !== q.answer) {
+        updatedCount++;
+        return { ...q, answer: newAnswer };
+      }
+      return q;
+    });
+
+    if (updatedCount === 0) {
+      toast.info('Tidak ada jawaban yang perlu diperbarui dari profil saat ini');
+      return;
+    }
+    await handleSaveQuestionsList(updated);
+    toast.success(`✅ ${updatedCount} jawaban berhasil diperbarui dari profil kamu!`);
+  };
+
+  // Hapus semua pertanyaan
+  const handleClearAllQuestions = async () => {
+    if (!confirm(`Hapus SEMUA ${questions.length} pertanyaan dari database? Tindakan ini tidak bisa dibatalkan.`)) return;
+    await handleSaveQuestionsList([]);
+    toast.success('Database soal dikosongkan');
   };
 
   return (
@@ -1716,7 +1836,7 @@ export default function Home() {
                           className={`w-full input-theme border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition ${
                             updatedCvFields.includes('fullName') ? 'border-emerald-500 shadow-sm' : ''
                           }`}
-                          placeholder="Yoga Adi Saputra"
+                          placeholder="Misal: Budi Santoso"
                         />
                       </div>
 
@@ -1749,6 +1869,74 @@ export default function Home() {
                           }`}
                           placeholder="081234567890"
                         />
+                      </div>
+
+                      {/* Email Pelamar */}
+                      <div className="p-2 rounded-xl">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-medium text-main-theme">Email Pelamar</label>
+                          <span className="text-[10px] text-muted-theme bg-slate-500/10 px-1.5 py-0.5 rounded border border-subtle-theme">Opsional</span>
+                        </div>
+                        <input
+                          type="email"
+                          value={(config as any).email || ''}
+                          onChange={(e) => setConfig({ ...config, email: e.target.value } as any)}
+                          className="w-full input-theme border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition"
+                          placeholder="emailkamu@gmail.com"
+                        />
+                        <p className="text-[10px] text-muted-theme mt-1">Digunakan untuk mengisi form email di platform lamaran</p>
+                      </div>
+
+                      {/* Gender & Status Pernikahan — side by side */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-2 rounded-xl">
+                          <label className="block text-xs font-medium text-main-theme mb-1.5">Jenis Kelamin</label>
+                          <select
+                            value={(config as any).gender || 'Laki-laki'}
+                            onChange={(e) => setConfig({ ...config, gender: e.target.value } as any)}
+                            className="w-full input-theme border rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition"
+                          >
+                            <option value="Laki-laki">Laki-laki</option>
+                            <option value="Perempuan">Perempuan</option>
+                          </select>
+                        </div>
+                        <div className="p-2 rounded-xl">
+                          <label className="block text-xs font-medium text-main-theme mb-1.5">Status Pernikahan</label>
+                          <select
+                            value={(config as any).maritalStatus || 'Single'}
+                            onChange={(e) => setConfig({ ...config, maritalStatus: e.target.value } as any)}
+                            className="w-full input-theme border rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition"
+                          >
+                            <option value="Single">Single / Belum Menikah</option>
+                            <option value="Menikah">Menikah</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Tanggal Lahir & Kode Pos — side by side */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-2 rounded-xl">
+                          <label className="block text-xs font-medium text-main-theme mb-1.5">Tanggal Lahir</label>
+                          <input
+                            type="date"
+                            value={(config as any).dateOfBirth || ''}
+                            onChange={(e) => setConfig({ ...config, dateOfBirth: e.target.value } as any)}
+                            className="w-full input-theme border rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition"
+                          />
+                          <p className="text-[10px] text-muted-theme mt-1">Untuk pertanyaan umur/DOB</p>
+                        </div>
+                        <div className="p-2 rounded-xl">
+                          <label className="block text-xs font-medium text-main-theme mb-1.5">Kode Pos Domisili</label>
+                          <input
+                            type="text"
+                            value={(config as any).postalCode || ''}
+                            onChange={(e) => setConfig({ ...config, postalCode: e.target.value } as any)}
+                            className="w-full input-theme border rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition"
+                            placeholder="60235"
+                            maxLength={10}
+                          />
+                          <p className="text-[10px] text-muted-theme mt-1">Untuk pertanyaan zip/postal code</p>
+                        </div>
                       </div>
 
                       {/* Gaji Bulanan */}
@@ -3400,6 +3588,24 @@ export default function Home() {
                   >
                     <RefreshCw className="w-3.5 h-3.5 text-muted-theme" />
                     <span>Bersihkan Duplikat</span>
+                  </button>
+
+                  <button
+                    onClick={handleUpdateQuestionsFromProfile}
+                    className="px-3.5 py-2 rounded-xl text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1.5 shadow-sm"
+                    title="Update jawaban gaji, pengalaman, nama & CV dari profil kamu sekarang"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Perbarui dari Profil</span>
+                  </button>
+
+                  <button
+                    onClick={handleClearAllQuestions}
+                    className="px-3.5 py-2 rounded-xl text-xs font-medium bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 transition flex items-center gap-1.5"
+                    title="Hapus semua pertanyaan dari database"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Hapus Semua</span>
                   </button>
                 </div>
               </div>

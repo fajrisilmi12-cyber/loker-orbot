@@ -44,13 +44,15 @@ export async function runLinkedinBot(
 
     // 1. Pengecekan status login
     const isLoggedIn = await page.evaluate(() => {
-      return !!document.querySelector('.global-nav, .global-nav__me, #global-nav, [data-control-name="nav.settings"], img.global-nav__me-photo') ||
-             !document.querySelector('a[href*="/login"], a[href*="/signup"], .join-form, #login-email');
+      const hasNav = !!document.querySelector('.global-nav, .global-nav__me, #global-nav, [data-control-name="nav.settings"], img.global-nav__me-photo, button.global-nav__primary-link-me-menu-trigger');
+      const hasSignIn = !!document.querySelector('a[href*="/login"], a[href*="/signup"], .join-form, #login-email, input#username');
+      return hasNav || (!hasSignIn && !window.location.href.includes('/login') && !window.location.href.includes('/signup') && !window.location.href.includes('/checkpoint'));
     });
 
     const currentUrl = page.url();
     if (currentUrl.includes('/login') || currentUrl.includes('/signup') || currentUrl.includes('/checkpoint') || !isLoggedIn) {
-      onLog('⚠️ LinkedIn: Belum login! Silakan klik tombol "Buka Browser (Login Setup)" di Dashboard untuk login LinkedIn terlebih dahulu.');
+      onLog('⚠️ LinkedIn: Sesi login belum terdeteksi aktif.');
+      onLog('💡 Saran: Gunakan tombol "Buka Browser (Login Setup)" di Dashboard, selesaikan login & verifikasi/captcha LinkedIn di tab yang terbuka sampai halaman beranda feed muncul, lalu jalankan bot kembali.');
       return { successCount, alreadyAppliedCount, errorCount };
     }
 

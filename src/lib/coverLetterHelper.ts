@@ -35,17 +35,20 @@ Hormat saya,
 
   const cleanCompany = (companyName || 'Perusahaan').trim();
   const cleanTitle = (jobTitle || 'Software Engineer').trim();
-  const cleanFullName = (config.fullName || 'Yoga Adi Saputra').trim();
-  const cleanDomicile = (config.domicile || config.location || 'Jakarta Selatan, DKI Jakarta').trim();
-  const cleanPhone = (config.phoneNumber || '081234567890').trim();
-  const cleanLinkedIn = (config.linkedinUrl || 'https://www.linkedin.com').trim();
-  const cleanPortfolio = (config.githubUrl || config.portfolioUrl || 'https://github.com/yogaadi').trim();
+  const cleanFullName = (config.fullName || '').trim();
+  const cleanDomicile = (config.domicile || (config as any).location || '').trim();
+  const cleanPhone = (config.phoneNumber || '').trim();
+  const cleanLinkedIn = (config.linkedinUrl || '').trim();
+  const cleanPortfolio = (config.githubUrl || config.portfolioUrl || '').trim();
+  // Extract email from CV text if available
+  const emailMatch = (config.cvExtractedText || '').match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  const cleanEmail = emailMatch ? emailMatch[0] : '';
 
   let letter = template
     .replace(/\[Nama Anda\]/g, cleanFullName)
     .replace(/\[Kota, Wilayah\]/g, cleanDomicile)
     .replace(/\[Nomor Telepon\]/g, cleanPhone)
-    .replace(/\[Alamat Email\]/g, 'yogaadisaputra@gmail.com')
+    .replace(/\[Alamat Email\]/g, cleanEmail)
     .replace(/\[Link LinkedIn\]/g, cleanLinkedIn)
     .replace(/\[Link GitHub \/ Portfolio\]/g, cleanPortfolio)
     .replace(/\[Tanggal Hari Ini\]/g, dateFormatted)
