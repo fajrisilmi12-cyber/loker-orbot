@@ -10,7 +10,7 @@ Question,Type,Options,Answer
 "How many years' experience do you have as a Full Stack Developer?","dropdown","No experience | Less than 1 year | 1 year | 2 years | 3 years | 4 years | 5 years | More than 5 years","Less than 1 year"
 "How many years' experience do you have as a java developer?","dropdown","| No experience | Less than 1 year | 1 year | 2 years | 3 years | 4 years | 5 years | More than 5 years","Less than 1 year"
 "Pernyataan mana di bawah ini yang paling mendeskripsikan hakmu bekerja di Indonesia?","dropdown","| Saya adalah warga negara Indonesia | Saya memiliki izin Ketenagakerjaan/Kerja | Saya memiliki izin tinggal Indonesia (KITAS/KITAP) | Saya memiliki Visa Bisnis | Saya memiliki ABTC (APEC Business Travel Card) | Saya membutuhkan sponsor untuk bekerja pada perusahaan baru di Indonesia","Saya adalah warga negara Indonesia"
-"Berapa gaji bulanan yang kamu inginkan?","dropdown","Rp 1 Jt | Rp 1.5 Jt | Rp 2 Jt | Rp 2.5 Jt | Rp 3 Jt | Rp 3.5 Jt | Rp 4 Jt | Rp 4.5 Jt | Rp 5 Jt | Rp 5.5 Jt | Rp 6 Jt | Rp 7 Jt | Rp 8 Jt | Rp 9 Jt | Rp 10 Jt | Rp 15 Jt | Rp 20 Jt | Rp 25 Jt | Rp 30 Jt | Rp 40 Jt | Rp 60 Jt | Rp 80 Jt | Rp 100 Jt atau lebih","Rp 100 Jt atau lebih"
+"Berapa gaji bulanan yang kamu inginkan?","dropdown","Rp 1 Jt | Rp 1.5 Jt | Rp 2 Jt | Rp 2.5 Jt | Rp 3 Jt | Rp 3.5 Jt | Rp 4 Jt | Rp 4.5 Jt | Rp 5 Jt | Rp 5.5 Jt | Rp 6 Jt | Rp 7 Jt | Rp 8 Jt | Rp 9 Jt | Rp 10 Jt | Rp 15 Jt | Rp 20 Jt | Rp 25 Jt | Rp 30 Jt | Rp 40 Jt | Rp 60 Jt | Rp 80 Jt | Rp 100 Jt atau lebih","Rp 4.5 Jt"
 "Kualifikasi mana yang kamu miliki?","dropdown","Sekolah Dasar atau sederajat | SMP atau sederajat | SMA/SMK atau sederajat | Diploma 1 | Diploma 2 | Diploma 3 | Diploma 4 | Sarjana (S1) | Program Pendidikan Profesi | Magister (S2) | Doktor (S3) | Saya memiliki kualifikasi yang tidak ada dalam daftar","SMA/SMK atau sederajat"
 "Berapa tahun pengalaman kerjamu menggunakan query SQL?","dropdown","Tidak ada pengalaman | Kurang dari 1 tahun | 1 tahun | 2 tahun | 3 tahun | 4 tahun | 5 tahun | Lebih dari 5 tahun","Kurang dari 1 tahun"
 "Berapa tahun pengalaman kerjamu sebagai programmer?","dropdown","Tidak ada pengalaman | Kurang dari 1 tahun | 1 tahun | 2 tahun | 3 tahun | 4 tahun | 5 tahun | Lebih dari 5 tahun","Kurang dari 1 tahun"
@@ -1010,3 +1010,4 @@ Question,Type,Options,Answer
 "Apakah anda punya pengalaman dalam membangun bisnis sendiri?","text","","Yes"
 "Apakah anda senang bertemu orang baru dan sharing suatu pengalaman dengan orang?","text","","Yes"
 "Apakah anda punya pengalaman dalam penjualan langsung?","text","","Yes"
+"CV_LUTHFI SHIDQI HABIBULLOH.pdf","radiobutton","CV_LUTHFI SHIDQI HABIBULLOH.pdf | Jangan sertakan resume","CV_LUTHFI SHIDQI HABIBULLOH.pdf"

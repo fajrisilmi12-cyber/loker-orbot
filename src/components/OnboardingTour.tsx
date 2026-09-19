@@ -28,7 +28,7 @@ export interface TourStep {
   title: string;
   content: string;
   icon: React.ComponentType<{ className?: string }>;
-  tab?: 'wizard' | 'logs' | 'questions' | 'history' | 'jobs';
+  tab?: 'wizard' | 'logs' | 'questions' | 'history' | 'jobs' | 'talent';
   wizardStep?: 1 | 2 | 3;
   preferredPlacement?: 'bottom' | 'top' | 'center';
 }

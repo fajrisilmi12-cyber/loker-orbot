@@ -50,11 +50,13 @@ import {
   Tag,
   Info,
   Lightbulb,
-  Search
+  Search,
+  Copy
 } from 'lucide-react';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import BatchQuestionModal from '@/components/BatchQuestionModal';
 import JobsTab from '@/components/JobsTab';
+import TalentScoutTab from '@/components/TalentScoutTab';
 
 export interface BrowserProfileAccount {
   id: string;
@@ -184,7 +186,7 @@ interface ConfigPreset {
 const DRAFT_KEY = 'cv-blaster-draft';
 const PRESETS_KEY = 'cv-blaster-presets';
 
-type NavTab = 'wizard' | 'questions' | 'logs' | 'history' | 'jobs';
+type NavTab = 'wizard' | 'questions' | 'logs' | 'history' | 'jobs' | 'talent';
 type WizardStep = 1 | 2 | 3;
 
 export default function Home() {
@@ -1583,6 +1585,34 @@ export default function Home() {
               )}
             </button>
 
+            {/* MODUL OUTSOURCING & TALENT SCOUT */}
+            <div className="pt-2 pb-1 px-1">
+              <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 my-1" />
+              <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
+                <span className="text-[10px] font-bold text-muted-theme uppercase tracking-wider">
+                  Outsourcing / HR
+                </span>
+                <span className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1 rounded border border-emerald-500/20">
+                  MODUL 2
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveTab('talent')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                activeTab === 'talent'
+                  ? 'sidebar-nav-active'
+                  : 'sidebar-nav-idle'
+              }`}
+            >
+              <UserCheck className="w-4 h-4 text-emerald-500" />
+              <span>Talent Scout</span>
+              <span className="ml-auto text-[9px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded-md">
+                OpenToWork
+              </span>
+            </button>
+
             {/* Preset Konfigurasi */}
             <button
               onClick={() => setIsPresetsModalOpen(true)}
@@ -1649,6 +1679,8 @@ export default function Home() {
               {activeTab === 'logs' && 'Terminal Pemantau Eksekusi'}
               {activeTab === 'questions' && 'Koleksi Jawaban Kuesioner'}
               {activeTab === 'history' && 'Rekapitulasi Lamaran Terkirim'}
+              {activeTab === 'jobs' && 'Kartu Lowongan'}
+              {activeTab === 'talent' && 'Talent Scout & Sourcing Engine (Outsourcing & HRIS)'}
             </span>
           </div>
 
@@ -4333,6 +4365,21 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => {
+                      if (logs.length === 0) {
+                        toast.info('Belum ada log untuk disalin');
+                        return;
+                      }
+                      navigator.clipboard.writeText(logs.join('\n'));
+                      toast.success(`${logs.length} baris log berhasil disalin ke clipboard!`);
+                    }}
+                    className="px-3 py-1.5 rounded-lg card-subtle-theme border border-subtle-theme text-muted-theme hover:text-main-theme text-xs transition flex items-center gap-1.5 shadow-2xs"
+                    title="Salin seluruh log aktivitas ke clipboard"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Salin Log</span>
+                  </button>
+                  <button
                     onClick={() => setLogs([])}
                     className="px-3 py-1.5 rounded-lg card-subtle-theme border border-subtle-theme text-muted-theme hover:text-main-theme text-xs transition"
                   >
@@ -4727,6 +4774,11 @@ export default function Home() {
                 </table>
               </div>
             </div>
+          )}
+
+          {/* TAB 6: TALENT SCOUT & SOURCING ENGINE (OUTSOURCING / HRIS) */}
+          {activeTab === 'talent' && (
+            <TalentScoutTab />
           )}
         </main>
       </div>

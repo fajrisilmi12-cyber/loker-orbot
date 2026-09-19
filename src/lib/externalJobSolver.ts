@@ -62,7 +62,7 @@ export async function solveExternalJobApplication(
     }
 
     // 2. Upload File CV / Resume jika ada input file
-    const cvPath = config.cvFilePath ? (path.isAbsolute(config.cvFilePath) ? config.cvFilePath : path.join(process.cwd(), config.cvFilePath)) : null;
+    const cvPath = config.cvFilePath ? (path.isAbsolute(config.cvFilePath) ? config.cvFilePath : path.join(/*turbopackIgnore: true*/ process.cwd(), config.cvFilePath)) : null;
     if (cvPath && fs.existsSync(cvPath)) {
       try {
         const fileInputs = await page.$$('input[type="file"]');

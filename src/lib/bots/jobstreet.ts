@@ -514,10 +514,12 @@ export async function runJobstreetBot(
 
                 const firstCb = group[0];
                 let questionText = 'Select options';
-                const parentSection = firstCb.closest('div[class*="a6x"], div[class*="a6t"], div[class*="a75"], fieldset');
+                const parentSection = firstCb.closest('fieldset, div[class*="a6x"], div[class*="a6t"], div[class*="a75"], div[data-automation*="question"], div[role="group"]');
                 if (parentSection) {
-                  const strongEl = parentSection.querySelector('strong');
-                  if (strongEl) questionText = (strongEl.textContent || '').trim();
+                  const titleEl = parentSection.querySelector('[data-automation*="question-title"], [data-automation*="question-heading"], legend, strong, h3, h4, [class*="heading"], [class*="title"]');
+                  if (titleEl && (titleEl.textContent || '').trim()) {
+                    questionText = (titleEl.textContent || '').trim();
+                  }
                 }
 
                 const options: string[] = [];
@@ -529,6 +531,19 @@ export async function runJobstreetBot(
                     options.push(optionText);
                   }
                 }
+
+                // Heuristic Fallback by options fingerprint jika title tidak terdeteksi
+                if (questionText === 'Select options' && options.length > 0) {
+                  const optStr = options.join(' ');
+                  if (optStr.includes('PHP') && optStr.includes('JavaScript')) {
+                    questionText = 'Bahasa pemrograman apa saja di bawah ini yang bisa kamu gunakan?';
+                  } else if (optStr.includes('React.js') || optStr.includes('Bootstrap') || optStr.includes('Node.js')) {
+                    questionText = 'Library/framework front end apa saja di bawah ini yang bisa kamu gunakan?';
+                  } else if (optStr.includes('PostgreSQL') || optStr.includes('MySQL')) {
+                    questionText = 'Sistem Relational Database Management (RDBMS) apa saja yang bisa kamu gunakan?';
+                  }
+                }
+
                 stepData.push({ name, question: questionText, type: 'checklist', options });
               }
 
@@ -550,10 +565,12 @@ export async function runJobstreetBot(
 
                 const firstRd = group[0];
                 let questionText = 'Select one option';
-                const parentSection = firstRd.closest('div[class*="a6x"], div[class*="a6t"], div[class*="a75"], fieldset');
+                const parentSection = firstRd.closest('fieldset, div[class*="a6x"], div[class*="a6t"], div[class*="a75"], div[data-automation*="question"], div[role="group"]');
                 if (parentSection) {
-                  const strongEl = parentSection.querySelector('strong');
-                  if (strongEl) questionText = (strongEl.textContent || '').trim();
+                  const titleEl = parentSection.querySelector('[data-automation*="question-title"], [data-automation*="question-heading"], legend, strong, h3, h4, [class*="heading"], [class*="title"]');
+                  if (titleEl && (titleEl.textContent || '').trim()) {
+                    questionText = (titleEl.textContent || '').trim();
+                  }
                 }
 
                 const options: string[] = [];
