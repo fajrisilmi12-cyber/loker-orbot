@@ -731,6 +731,26 @@ export async function runGlintsBot(
 
               workerLog(`📍 Progres Modal: Step ${stepData.stepLabel}`);
 
+              // Pastikan CV/Resume terpilih (terutama pada step 1 awal)
+              await workerPage.evaluate(() => {
+                const modal = document.querySelector('[data-testid="modal-wrapper"]');
+                if (!modal) return;
+                // Cek apakah ada resume card / radio button resume di modal
+                const resumeRadios = Array.from(modal.querySelectorAll('input[type="radio"]')) as HTMLInputElement[];
+                const resumeCard = modal.querySelector('[class*="ResumeCard"], [class*="ResumeItem"], [class*="ResumeContainer"]');
+                if (resumeCard || resumeRadios.length > 0) {
+                  // Jika belum ada radio yang checked
+                  const checkedRadio = resumeRadios.find(r => r.checked);
+                  if (!checkedRadio && resumeRadios.length > 0) {
+                    const firstRadio = resumeRadios[0];
+                    const label = firstRadio.closest('label') || firstRadio.parentElement;
+                    (label || firstRadio).click();
+                    firstRadio.checked = true;
+                    firstRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                  }
+                }
+              });
+
               // Jawab pertanyaan pada step ini
               if (stepData.questions.length > 0) {
                 for (const qItem of stepData.questions) {

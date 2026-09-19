@@ -1486,6 +1486,36 @@ export default function Home() {
 
           {/* Main Action Buttons + Theme Toggle */}
           <div className="flex items-center gap-2.5">
+            {/* Quick Toggle: Mode Simulasi / Live Submit */}
+            <div 
+              onClick={() => {
+                const nextVal = !config.debugTest;
+                setConfig({ ...config, debugTest: nextVal });
+                // Auto save config perubahan mode debug
+                fetch('/api/config', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ...config, debugTest: nextVal })
+                }).catch(() => {});
+              }}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer select-none transition flex items-center gap-2 shadow-sm ${
+                config.debugTest
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'
+                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+              }`}
+              title="Klik untuk mengganti mode Simulasi (Dry-run) atau Live Kirim Lamaran Langsung"
+            >
+              <div className={`w-2 h-2 rounded-full ${config.debugTest ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+              <div className="flex flex-col text-left">
+                <span className="leading-tight font-semibold">
+                  {config.debugTest ? 'Mode Simulasi' : 'Mode LIVE Submit'}
+                </span>
+                <span className="text-[9px] opacity-75 font-normal">
+                  {config.debugTest ? 'Lamaran tidak dikirim' : 'Lamaran resmi terkirim'}
+                </span>
+              </div>
+            </div>
+
             {/* Theme Toggle Button */}
             <button
               type="button"

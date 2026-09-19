@@ -7,13 +7,40 @@ export interface LaunchBrowserResult {
   browserType: 'google-chrome' | 'chromium-bundled' | 'custom-chrome';
 }
 
+import { execSync } from 'child_process';
+
 /**
- * Removes stale Chromium/Chrome singleton lock symlinks if left over from a previous crash/close.
- * This prevents the "Failed to launch: Opening in existing browser session" error.
+ * Removes stale Chromium/Chrome singleton lock symlinks and kills any orphan
+ * Chrome/Chromium processes that are still holding locks on the userDataDir.
+ * This prevents "The browser is already running for ... Use a different userDataDir" errors.
  */
 export function cleanupStaleProfileLocks(profilePath: string) {
+  // 1. On Windows, if Chrome crashed or was left orphan, terminate orphan processes holding the folder
+  if (process.platform === 'win32') {
+    try {
+      // Find and kill processes matching this automation profile directory using PowerShell
+      const safeDir = profilePath.replace(/'/g, "''");
+      const psCommand = `powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_Process -Filter \\"name = 'chrome.exe' or name = 'chromium.exe'\\" | Where-Object { $_.CommandLine -like '*${safeDir}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"`;
+      execSync(psCommand, { stdio: 'ignore', timeout: 4000 });
+    } catch {
+      try {
+        const normalizedPath = profilePath.replace(/\\/g, '\\\\');
+        const cmd = `wmic process where "(name='chrome.exe' or name='chromium.exe') and commandline like '%${normalizedPath}%'" call terminate`;
+        execSync(cmd, { stdio: 'ignore', timeout: 3000 });
+      } catch {}
+    }
+  }
+
+  // 2. Remove lock files
   try {
-    const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket', 'DevToolsActivePort'];
+    const lockFiles = [
+      'SingletonLock',
+      'SingletonCookie',
+      'SingletonSocket',
+      'DevToolsActivePort',
+      'lockfile',
+      'parent.lock'
+    ];
     for (const file of lockFiles) {
       const fullPath = path.join(/*turbopackIgnore: true*/ profilePath, file);
       try {

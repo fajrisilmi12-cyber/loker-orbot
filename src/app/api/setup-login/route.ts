@@ -21,7 +21,16 @@ export async function POST(request: Request) {
     }
 
     if (global.activeSetupBrowser) {
-      return NextResponse.json({ success: false, error: 'Browser is already running. Please close it first.' }, { status: 400 });
+      // Periksa apakah browser benar-benar masih terhubung atau sudah ditutup manual oleh user
+      const isConnected = typeof global.activeSetupBrowser.isConnected === 'function' 
+        ? global.activeSetupBrowser.isConnected() 
+        : true;
+
+      if (!isConnected) {
+        global.activeSetupBrowser = null;
+      } else {
+        return NextResponse.json({ success: false, error: 'Browser login masih berjalan. Silakan klik "Tutup Browser" atau tutup jendelanya terlebih dahulu.' }, { status: 400 });
+      }
     }
 
     // Launch Google Chrome (with automatic Chromium fallback) in headful mode
@@ -64,6 +73,14 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
+  if (global.activeSetupBrowser) {
+    const isConnected = typeof global.activeSetupBrowser.isConnected === 'function' 
+      ? global.activeSetupBrowser.isConnected() 
+      : true;
+    if (!isConnected) {
+      global.activeSetupBrowser = null;
+    }
+  }
   const isRunning = !!global.activeSetupBrowser;
   return NextResponse.json({ isRunning });
 }
