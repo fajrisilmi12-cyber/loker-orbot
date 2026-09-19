@@ -415,17 +415,28 @@ function tryRegexAnswer(
     return ["Indonesia"];
   }
 
-  // 6. Kota / Lokasi / Alamat / Kode Pos
-  if (/^(?:city|kota|kabupaten|lokasi|domisili)(\s*\*|\s*:)?$/i.test(q)) {
+  // 6. Kota / Lokasi / Alamat / Tempat Tinggal / Kode Pos
+  if (/(?:mana kamu tinggal|tempat tinggal|domisili|dimana kamu tinggal|where do you live|current location)/i.test(q)) {
+    const userCity = cfg.domicile || cfg.location || "Gresik";
+    const userAddr = cfg.address || userCity;
     if (options.length > 0) {
-      const match = options.find(o => /jakarta/i.test(o));
+      const match = options.find(o => o.toLowerCase().includes(userCity.toLowerCase()) || userCity.toLowerCase().includes(o.toLowerCase()));
       if (match) return [match];
     }
-    return [cfg.location || cfg.domicile || "Jakarta"];
+    return [`Saat ini saya berdomisili di ${userCity} (${userAddr}) dan siap untuk bekerja baik secara on-site, hybrid, maupun remote.`];
+  }
+
+  if (/^(?:city|kota|kabupaten|lokasi|domisili)(\s*\*|\s*:)?$/i.test(q)) {
+    const userCity = cfg.domicile || cfg.location || "Gresik";
+    if (options.length > 0) {
+      const match = options.find(o => o.toLowerCase().includes(userCity.toLowerCase()) || userCity.toLowerCase().includes(o.toLowerCase()));
+      if (match) return [match];
+    }
+    return [userCity];
   }
 
   if (/(?:street\s*address|address|alamat|street|domisili)/i.test(q)) {
-    return [cfg.domicile || "Jakarta Selatan, DKI Jakarta"];
+    return [cfg.address || cfg.domicile || "Gresik, Jawa Timur"];
   }
 
   if (/^(?:postal\s*code|zip\s*code|kode\s*pos)(\s*\*|\s*:)?$/i.test(q)) {

@@ -59,6 +59,7 @@ export interface AppConfig {
   linkedinUrl: string;
   phoneNumber: string;
   domicile: string;
+  address?: string;          // Alamat lengkap / jalan / RT RW
   // Uploaded CV Document Information
   cvFileName?: string;
   cvFilePath?: string;
@@ -120,6 +121,7 @@ const DEFAULT_CONFIG: AppConfig = {
   linkedinUrl: '',
   phoneNumber: '',
   domicile: '',
+  address: '',
   cvFileName: '',
   cvFilePath: '',
   cvExtractedText: '',

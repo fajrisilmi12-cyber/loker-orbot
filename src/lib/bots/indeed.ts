@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { isJobAlreadyApplied, addAppliedJob } from '../storage';
 import { appendQuestionToCsv } from '../csvHelper';
 import { answerQuestion } from '../questionAnswer';
@@ -295,7 +296,7 @@ export async function runIndeedBot(
             }
 
             // 1. Cek & Isi Location Fields jika muncul pada halaman lokasi (Add your location)
-            const locationHandled = await activeFrame.evaluate((candidateDomicile: string, candidateLocation: string) => {
+            const locationHandled = await activeFrame.evaluate((candidateDomicile: string, candidateLocation: string, candidateAddress?: string) => {
               const container = document.querySelector('#ia-container, .ia-BasePage, [data-testid="ia-container"], main, body') || document;
               const locationHeading = container.querySelector('[data-testid="profile-location-page"], [data-testid="location-fields-country"], h2[data-testid="profile-location-heading"]');
               const postalInput = container.querySelector('input[name="location-postal-code"], [data-testid="location-fields-postal-code-input"]') as HTMLInputElement | null;
@@ -318,18 +319,68 @@ export async function runIndeedBot(
                 setVal(postalInput, '12190');
               }
               if (localityInput && !localityInput.value) {
-                setVal(localityInput, candidateLocation || 'Jakarta');
+                setVal(localityInput, candidateLocation || candidateDomicile || 'Gresik');
               }
               if (addressInput && !addressInput.value) {
-                setVal(addressInput, candidateDomicile || 'Jakarta Selatan, DKI Jakarta');
+                setVal(addressInput, candidateAddress || candidateDomicile || 'Gresik, Jawa Timur');
               }
 
               return handled || !!locationHeading;
-            }, config.domicile, config.location);
+            }, config.domicile, config.location, config.address);
 
-            if (locationHandled) {
-              onLog(`📍 [Indeed] Step ${currentStep}: Mengisi data lokasi & domisili pelamar...`);
-              await sleep(400);
+            // 1. Cek & Tangani Halaman Resume ("Add a resume" / "Select a resume")
+            const resumeHandled = await activeFrame.evaluate(() => {
+              const container = document.querySelector('#ia-container, .ia-BasePage, [data-testid="ia-container"], main, body') || document;
+              const headingText = (container.querySelector('h1, h2, legend, [data-testid*="header"]')?.textContent || '').toLowerCase();
+              const isResumePage = /add a resume|pilih resume|unggah resume|resume selection|select a resume/i.test(headingText) || window.location.href.includes('resume-selection');
+              if (!isResumePage) return false;
+
+              // A. Cari opsi "Upload a resume" / "Upload resume"
+              const uploadResumeCard = Array.from(container.querySelectorAll('label, div[role="radio"], button, [data-testid*="resume"], fieldset > div')).find(el =>
+                /Upload a resume|Unggah resume|Upload resume/i.test(el.textContent || '')
+              ) as HTMLElement | null;
+
+              if (uploadResumeCard) {
+                const radioInput = uploadResumeCard.querySelector('input[type="radio"]') as HTMLInputElement | null;
+                if (radioInput) {
+                  radioInput.checked = true;
+                  radioInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                uploadResumeCard.click();
+                return true;
+              }
+
+              // B. Jika sudah ada resume yang pernah diunggah di Indeed, pilih yang pertama
+              const existingResumeRadio = container.querySelector('input[type="radio"][name*="resume"], [data-testid*="resume-card"] input[type="radio"]') as HTMLInputElement | null;
+              if (existingResumeRadio && !existingResumeRadio.checked) {
+                const lbl = container.querySelector(`label[for="${existingResumeRadio.id}"]`) || existingResumeRadio.closest('label');
+                if (lbl) (lbl as HTMLElement).click();
+                else existingResumeRadio.click();
+                existingResumeRadio.checked = true;
+                existingResumeRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                return true;
+              }
+
+              return false;
+            });
+
+            if (resumeHandled) {
+              onLog(`📄 [Indeed] Step ${currentStep}: Memilih opsi 'Upload / Select Resume'...`);
+              await sleep(600);
+
+              // Jika ada file input untuk CV, sematkan file CV dari config
+              if (config.cvFilePath && fs.existsSync(config.cvFilePath)) {
+                try {
+                  const fileInput = await activeFrame.$('input[type="file"][accept*="pdf"], input[type="file"]');
+                  if (fileInput) {
+                    await fileInput.uploadFile(config.cvFilePath);
+                    onLog(`📎 [Indeed] Mengunggah dokumen CV: "${config.cvFileName || 'CV'}"...`);
+                    await sleep(2000);
+                  }
+                } catch (upErr: any) {
+                  onLog(`⚠️ [Indeed] Gagal attach file CV: ${upErr?.message || upErr}`);
+                }
+              }
             }
 
             // 2. Cek & Tangani Cover Letter Step jika ada opsi "Enter text" (HANYA pada halaman Cover Letter!)

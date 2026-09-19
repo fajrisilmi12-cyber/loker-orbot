@@ -103,6 +103,7 @@ interface AppConfig {
   linkedinUrl?: string;
   phoneNumber?: string;
   domicile?: string;
+  address?: string;
   cvFileName?: string;
   cvFilePath?: string;
   cvExtractedText?: string;
@@ -189,6 +190,7 @@ export default function Home() {
     linkedinUrl: '',
     phoneNumber: '',
     domicile: '',
+    address: '',
     cvFileName: '',
     cvFilePath: '',
     cvExtractedText: '',
@@ -1063,6 +1065,7 @@ export default function Home() {
             { field: 'maritalStatus', label: 'Status Pernikahan', oldVal: config.maritalStatus || '', newVal: data.aiParsed.maritalStatus || '', willChange: Boolean(data.aiParsed.maritalStatus && data.aiParsed.maritalStatus !== config.maritalStatus) },
             { field: 'dateOfBirth', label: 'Tanggal Lahir', oldVal: config.dateOfBirth || '', newVal: data.aiParsed.dateOfBirth || '', willChange: Boolean(data.aiParsed.dateOfBirth && data.aiParsed.dateOfBirth !== config.dateOfBirth) },
             { field: 'domicile', label: 'Domisili', oldVal: config.domicile || '', newVal: data.aiParsed.domicile || '', willChange: Boolean(data.aiParsed.domicile && data.aiParsed.domicile !== config.domicile) },
+            { field: 'address', label: 'Alamat Lengkap', oldVal: config.address || '', newVal: data.aiParsed.address || '', willChange: Boolean(data.aiParsed.address && data.aiParsed.address !== config.address) },
             { field: 'educationLevel', label: 'Pendidikan Terakhir', oldVal: config.educationLevel || '', newVal: data.aiParsed.educationLevel || '', willChange: Boolean(data.aiParsed.educationLevel && data.aiParsed.educationLevel !== config.educationLevel) },
             { field: 'gpa', label: 'IPK Terakhir', oldVal: config.gpa || '', newVal: String(data.aiParsed.gpa || ''), willChange: Boolean(data.aiParsed.gpa && String(data.aiParsed.gpa) !== config.gpa) },
             { field: 'yearsOfExperience', label: 'Pengalaman (Tahun)', oldVal: String(config.yearsOfExperience || 0), newVal: String(data.aiParsed.yearsOfExperience ?? ''), willChange: Boolean(data.aiParsed.yearsOfExperience !== undefined && Number(data.aiParsed.yearsOfExperience) !== config.yearsOfExperience) },
@@ -1118,6 +1121,7 @@ export default function Home() {
         { field: 'maritalStatus', label: 'Status Pernikahan', oldVal: config.maritalStatus || '', newVal: pendingParsedCv.maritalStatus || '', willChange: Boolean(pendingParsedCv.maritalStatus && pendingParsedCv.maritalStatus !== config.maritalStatus) },
         { field: 'dateOfBirth', label: 'Tanggal Lahir', oldVal: config.dateOfBirth || '', newVal: pendingParsedCv.dateOfBirth || '', willChange: Boolean(pendingParsedCv.dateOfBirth && pendingParsedCv.dateOfBirth !== config.dateOfBirth) },
         { field: 'domicile', label: 'Domisili', oldVal: config.domicile || '', newVal: pendingParsedCv.domicile || '', willChange: Boolean(pendingParsedCv.domicile && pendingParsedCv.domicile !== config.domicile) },
+        { field: 'address', label: 'Alamat Lengkap', oldVal: config.address || '', newVal: pendingParsedCv.address || '', willChange: Boolean(pendingParsedCv.address && pendingParsedCv.address !== config.address) },
         { field: 'educationLevel', label: 'Pendidikan Terakhir', oldVal: config.educationLevel || '', newVal: pendingParsedCv.educationLevel || '', willChange: Boolean(pendingParsedCv.educationLevel && pendingParsedCv.educationLevel !== config.educationLevel) },
         { field: 'gpa', label: 'IPK Terakhir', oldVal: config.gpa || '', newVal: String(pendingParsedCv.gpa || ''), willChange: Boolean(pendingParsedCv.gpa && String(pendingParsedCv.gpa) !== config.gpa) },
         { field: 'yearsOfExperience', label: 'Pengalaman (Tahun)', oldVal: String(config.yearsOfExperience || 0), newVal: String(pendingParsedCv.yearsOfExperience ?? ''), willChange: Boolean(pendingParsedCv.yearsOfExperience !== undefined && Number(pendingParsedCv.yearsOfExperience) !== config.yearsOfExperience) },
@@ -1163,6 +1167,7 @@ export default function Home() {
     applyIf('dateOfBirth', pendingParsedCv.dateOfBirth);
     applyIf('postalCode', pendingParsedCv.postalCode);
     applyIf('domicile', pendingParsedCv.domicile);
+    applyIf('address', pendingParsedCv.address);
     applyIf('educationLevel', pendingParsedCv.educationLevel);
     applyIf('gpa', pendingParsedCv.gpa, String);
     applyIf('yearsOfExperience', pendingParsedCv.yearsOfExperience, Number);
@@ -1299,6 +1304,11 @@ export default function Home() {
       // Name questions
       else if (/^(your name|nama anda|full name|nama lengkap)/i.test(qLower) && !opts.length && name) {
         newAnswer = name;
+      }
+
+      // Domicile / Living questions
+      else if (/(?:mana kamu tinggal|tempat tinggal|domisili|dimana kamu tinggal|where do you live|current location)/i.test(qLower) && !opts.length && config.domicile) {
+        newAnswer = `Saat ini saya berdomisili di ${config.domicile} (${config.address || config.domicile}) dan siap untuk bekerja baik secara on-site, hybrid, maupun remote.`;
       }
 
       if (newAnswer !== q.answer) {
@@ -2122,7 +2132,37 @@ export default function Home() {
                           className={`w-full input-theme border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition ${
                             updatedCvFields.includes('domicile') ? 'border-emerald-500 shadow-sm' : ''
                           }`}
-                          placeholder="Jakarta Selatan, DKI Jakarta"
+                          placeholder="Gresik, Surabaya, atau Jakarta"
+                        />
+                      </div>
+
+                      {/* Alamat Lengkap / Street Address */}
+                      <div className={`p-2 rounded-xl transition-all ${
+                        updatedCvFields.includes('address')
+                          ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
+                          : unchangedCvFields.includes('address')
+                          ? 'ring-1 ring-subtle-theme'
+                          : ''
+                      }`}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <label className="block text-xs font-medium text-main-theme">Alamat Lengkap / Jalan</label>
+                            {updatedCvFields.includes('address') && (
+                              <span className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                ✨ Baru Diperbarui
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-theme bg-slate-500/10 px-1.5 py-0.5 rounded border border-subtle-theme">Opsional</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={config.address || ''}
+                          onChange={(e) => setConfig({ ...config, address: e.target.value })}
+                          className={`w-full input-theme border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition ${
+                            updatedCvFields.includes('address') ? 'border-emerald-500 shadow-sm' : ''
+                          }`}
+                          placeholder="Desa Banjaran RT 03 RW 03, Wringinanom, Gresik"
                         />
                       </div>
 

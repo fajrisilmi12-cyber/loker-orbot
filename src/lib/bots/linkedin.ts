@@ -1,6 +1,7 @@
 import { isJobAlreadyApplied, addAppliedJob } from '../storage';
 import { appendQuestionToCsv } from '../csvHelper';
 import { answerQuestion } from '../questionAnswer';
+import { captureFormDomSnapshot, inspectFormWithAi, applyAiFormActions } from '../aiFormInspector';
 
 export interface BotMetrics {
   successCount: number;
@@ -132,42 +133,48 @@ export async function runLinkedinBot(
           continue;
         }
 
-        // 2. Scroll elemen <li> kartu loker ke tengah layar agar kontennya ter-hydrate dari placeholder <!---->
+        // 2. Scroll container hasil pencarian panel kiri agar elemen <li> target benar-benar ter-hydrate dari placeholder <!---->
         await page.evaluate((jobId: string) => {
+          const listContainer = document.querySelector(
+            '.jobs-search-results-list, .scaffold-layout__list, ul.mMSLLoaspsoJNCBFVKxApWEWnMtxcoYvskkg'
+          ) as HTMLElement;
           const cardLi = document.querySelector(`li[data-occludable-job-id="${jobId}"]`) as HTMLElement;
           if (cardLi) {
-            cardLi.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (listContainer) {
+              const topOffset = cardLi.offsetTop - listContainer.offsetTop;
+              listContainer.scrollTop = Math.max(0, topOffset - 60);
+            }
+            cardLi.scrollIntoView({ behavior: 'auto', block: 'nearest' });
           }
         }, targetJobId);
-        await sleep(600);
+        await sleep(500);
 
-        // 3. Ekstraksi detail kartu yang sudah ter-hydrate dan klik kartu untuk memuat panel kanan
-        const cardInfo = await page.evaluate((jobId: string) => {
+        // 3. Ekstraksi info detail dari kartu loker di panel kiri
+        let cardInfo = await page.evaluate((jobId: string) => {
           const cardLi = document.querySelector(`li[data-occludable-job-id="${jobId}"]`) as HTMLElement;
           if (!cardLi) return null;
 
-          const container = cardLi.querySelector('div.job-card-container') || cardLi;
-          const titleAnchor = cardLi.querySelector('a.job-card-container__link, a.job-card-list__title--link') as HTMLAnchorElement;
+          const titleAnchor = cardLi.querySelector(
+            'a.job-card-container__link, a.job-card-list__title--link, a[data-control-name="job_card_click"], [data-view-name="job-card-title-link"]'
+          ) as HTMLAnchorElement;
           const title = titleAnchor?.getAttribute('aria-label') || titleAnchor?.textContent?.trim().replace(/\s+/g, ' ') || '';
 
-          const companyEl = cardLi.querySelector('.artdeco-entity-lockup__subtitle, .job-card-container__primary-description');
+          const companyEl = cardLi.querySelector(
+            '.artdeco-entity-lockup__subtitle, .job-card-container__primary-description, .job-card-container__company-name'
+          );
           const company = companyEl?.textContent?.trim().replace(/\s+/g, ' ') || '';
 
-          const locEl = cardLi.querySelector('.job-card-container__metadata-wrapper li, .artdeco-entity-lockup__caption');
+          const locEl = cardLi.querySelector(
+            '.job-card-container__metadata-wrapper li, .artdeco-entity-lockup__caption, .job-card-container__metadata-item'
+          );
           const location = locEl?.textContent?.trim().replace(/\s+/g, ' ') || '';
 
           const isAlreadyApplied = /Applied|Dilamar|Lamaran terkirim/i.test(cardLi.textContent || '');
 
-          // Klik kartu
-          const clickableTarget = titleAnchor || container;
-          if (clickableTarget) {
-            (clickableTarget as HTMLElement).click();
-          }
-
           return {
             jobId,
-            title: title || 'Lowongan Kerja',
-            company: company || 'Perusahaan',
+            title: title || '',
+            company: company || '',
             location,
             url: `https://www.linkedin.com/jobs/view/${jobId}/`,
             isAlreadyApplied
@@ -178,38 +185,47 @@ export async function runLinkedinBot(
           continue;
         }
 
-        onLog('==================================================');
-        onLog(`💼 [${i + 1}/${totalJobs}] Lowongan: "${cardInfo.title}"`);
-        onLog(`🏢 Perusahaan: "${cardInfo.company}" | 📍 ${cardInfo.location || 'Indonesia'}`);
-        onLog(`🔗 URL: ${cardInfo.url}`);
+        // 4. Klik kartu untuk memicu pemuatan detail di panel kanan
+        await page.evaluate((jobId: string) => {
+          const cardLi = document.querySelector(`li[data-occludable-job-id="${jobId}"]`) as HTMLElement;
+          if (cardLi) {
+            const clickableTarget = cardLi.querySelector(
+              'a.job-card-container__link, a.job-card-list__title--link, div.job-card-container, [data-view-name="job-card-title-link"]'
+            ) as HTMLElement;
+            if (clickableTarget) {
+              clickableTarget.click();
+            } else {
+              cardLi.click();
+            }
+          }
+        }, targetJobId);
 
-        // Cek label pada kartu
-        if (cardInfo.isAlreadyApplied) {
-          onLog(`⏩ Melewati "${cardInfo.title}" - Sudah ada label 'Applied / Dilamar' pada kartu.`);
-          alreadyAppliedCount++;
-          continue;
-        }
+        // Tunggu panel detail kanan selesai memuat
+        await sleep(1500);
 
-        // Tunggu panel detail kanan selesai memuat data
-        await sleep(2000);
-
-        // Ekstraksi info detail & tombol Apply di komponen panel kanan
-        const rightPaneDetail = await page.evaluate(() => {
-          const detailContainer = document.querySelector('.jobs-search__job-details--container, .jobs-search__job-details--wrapper, .jobs-details');
+        // 5. Ekstraksi info detail & tombol Apply di komponen panel kanan
+        const getRightPaneDetail = () => page.evaluate((currentJobId: string) => {
+          const detailContainer = document.querySelector(
+            '.jobs-search__job-details--container, .jobs-search__job-details--wrapper, .jobs-details, .scaffold-layout__detail, main'
+          );
           if (!detailContainer) return null;
 
-          const titleEl = detailContainer.querySelector('h1.job-details-jobs-unified-top-card__job-title, h1 a, h1');
-          const officialTitle = titleEl?.textContent?.trim() || '';
+          const titleEl = detailContainer.querySelector(
+            'h1.job-details-jobs-unified-top-card__job-title, h1.t-24, h1 a, h1, .jobs-unified-top-card__job-title'
+          );
+          const officialTitle = titleEl?.textContent?.trim().replace(/\s+/g, ' ') || '';
 
-          const companyEl = detailContainer.querySelector('.job-details-jobs-unified-top-card__company-name a, .job-details-jobs-unified-top-card__company-name');
-          const officialCompany = companyEl?.textContent?.trim() || '';
+          const companyEl = detailContainer.querySelector(
+            '.job-details-jobs-unified-top-card__company-name a, .job-details-jobs-unified-top-card__company-name, .jobs-unified-top-card__company-name a, .jobs-unified-top-card__company-name'
+          );
+          const officialCompany = companyEl?.textContent?.trim().replace(/\s+/g, ' ') || '';
 
           const applyBtn = detailContainer.querySelector(
-            'button.jobs-apply-button, button#jobs-apply-button-id, button[data-live-test-job-apply-button], .jobs-s-apply button'
+            'button.jobs-apply-button, button#jobs-apply-button-id, button[data-live-test-job-apply-button], .jobs-s-apply button, button[aria-label*="Easy Apply"], button[aria-label*="Lamar Mudah"]'
           ) as HTMLButtonElement;
 
           const alreadyAppliedTag = detailContainer.querySelector(
-            '.jobs-applied-tag, button[aria-label*="Applied"], button[aria-label*="Sudah Dilamar"]'
+            '.jobs-applied-tag, button[aria-label*="Applied"], button[aria-label*="Sudah Dilamar"], .jobs-s-apply .artdeco-inline-feedback'
           );
 
           const btnText = applyBtn ? (applyBtn.textContent || '').trim().replace(/\s+/g, ' ') : '';
@@ -223,34 +239,81 @@ export async function runLinkedinBot(
             btnText,
             isAlreadyApplied: !!alreadyAppliedTag
           };
-        });
+        }, targetJobId);
 
-        if (!rightPaneDetail) {
-          onLog(`⚠️ Komponen detail panel kanan tidak termuat untuk lowongan "${cardInfo.title}".`);
+        let rightPaneDetail = await getRightPaneDetail();
+
+        // Jika judul belum terdeteksi dari panel kiri, gunakan yang ada di panel kanan
+        if (!cardInfo.title && rightPaneDetail?.officialTitle) {
+          cardInfo.title = rightPaneDetail.officialTitle;
+        }
+        if (!cardInfo.company && rightPaneDetail?.officialCompany) {
+          cardInfo.company = rightPaneDetail.officialCompany;
+        }
+
+        const displayTitle = cardInfo.title || rightPaneDetail?.officialTitle || 'Lowongan Kerja';
+        const displayCompany = cardInfo.company || rightPaneDetail?.officialCompany || 'Perusahaan';
+
+        onLog('==================================================');
+        onLog(`💼 [${i + 1}/${totalJobs}] Lowongan: "${displayTitle}"`);
+        onLog(`🏢 Perusahaan: "${displayCompany}" | 📍 ${cardInfo.location || 'Indonesia'}`);
+        onLog(`🔗 URL: ${cardInfo.url}`);
+
+        // Cek label sudah dilamar pada kartu
+        if (cardInfo.isAlreadyApplied) {
+          onLog(`⏩ Melewati "${displayTitle}" - Sudah ada label 'Applied / Dilamar' pada kartu.`);
+          alreadyAppliedCount++;
           continue;
         }
 
-        const activeTitle = rightPaneDetail.officialTitle || cardInfo.title;
-        const activeCompany = rightPaneDetail.officialCompany || cardInfo.company;
-
-        // Pengecekan apakah kartu sama persis dengan kartu sebelumnya
-        if (activeTitle === lastProcessedTitle && activeCompany === lastProcessedCompany && lastProcessedTitle !== '') {
+        // Pengecekan apakah panel kanan belum berganti dari kartu sebelumnya
+        if (
+          rightPaneDetail &&
+          lastProcessedTitle &&
+          lastProcessedTitle !== 'Lowongan Kerja' &&
+          rightPaneDetail.officialTitle === lastProcessedTitle &&
+          rightPaneDetail.officialCompany === lastProcessedCompany
+        ) {
           onLog(`ℹ️ Kartu belum berpindah dari "${lastProcessedTitle}". Mengklik ulang kartu loker...`);
           await page.evaluate((jobId: string) => {
             const cardLi = document.querySelector(`li[data-occludable-job-id="${jobId}"]`) as HTMLElement;
             if (cardLi) {
-              const target = cardLi.querySelector('a.job-card-container__link, a.job-card-list__title--link, div.job-card-container') as HTMLElement;
+              const target = cardLi.querySelector(
+                'a.job-card-container__link, a.job-card-list__title--link, div.job-card-container, [data-view-name="job-card-title-link"]'
+              ) as HTMLElement;
               if (target) target.click();
             }
           }, targetJobId);
-          await sleep(2000);
+          await sleep(1500);
+          rightPaneDetail = await getRightPaneDetail();
         }
+
+        // Jika panel kanan masih belum memiliki tombol Apply, coba navigasikan langsung ke targetJobUrl untuk me-refresh detail view
+        if (!rightPaneDetail?.hasApplyBtn && !rightPaneDetail?.isAlreadyApplied) {
+          // Buka view URL langsung jika panel kanan gagal ter-load di single-page mode
+          onLog(`🔄 Mencoba memuat panel detail melalui URL view: ${targetJobUrl}`);
+          try {
+            await page.goto(targetJobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await sleep(2000);
+            rightPaneDetail = await getRightPaneDetail();
+          } catch {
+            // Abaikan jika timeout
+          }
+        }
+
+        if (!rightPaneDetail) {
+          onLog(`⚠️ Komponen detail panel kanan tidak termuat untuk lowongan "${displayTitle}". Melewati...`);
+          continue;
+        }
+
+        const activeTitle = rightPaneDetail.officialTitle || displayTitle;
+        const activeCompany = rightPaneDetail.officialCompany || displayCompany;
 
         lastProcessedTitle = activeTitle;
         lastProcessedCompany = activeCompany;
 
         if (rightPaneDetail.isAlreadyApplied) {
-          onLog(`⏩ Lowongan "${activeTitle}" di "${activeCompany}" SUDAH DILAMAR (terdeteksi di panel kanan). Melewati...`);
+          onLog(`⏩ Lowongan "${activeTitle}" di "${activeCompany}" SUDAH DILAMAR. Melewati...`);
           alreadyAppliedCount++;
           continue;
         }
@@ -263,7 +326,7 @@ export async function runLinkedinBot(
         onLog(`🔘 Mengklik tombol Apply di panel kanan ("${rightPaneDetail.btnText}")...`);
         await page.evaluate(() => {
           const applyBtn = document.querySelector(
-            'button.jobs-apply-button, button#jobs-apply-button-id, button[data-live-test-job-apply-button], .jobs-s-apply button'
+            'button.jobs-apply-button, button#jobs-apply-button-id, button[data-live-test-job-apply-button], .jobs-s-apply button, button[aria-label*="Easy Apply"], button[aria-label*="Lamar Mudah"]'
           ) as HTMLElement;
           if (applyBtn) applyBtn.click();
         });
@@ -704,7 +767,28 @@ export async function runLinkedinBot(
           });
 
           if (hasError) {
-            onLog(`⚠️ Validasi form LinkedIn: "${hasError}". Mengoreksi isian angka/teks...`);
+            onLog(`⚠️ Validasi form LinkedIn: "${hasError}". Memanggil AI Inspector untuk memeriksa elemen yang belum terisi/valid...`);
+            try {
+              const snapshot = await captureFormDomSnapshot(page, '.jobs-easy-apply-modal');
+              if (snapshot.htmlSnippet) {
+                const profileContext = `Nama: ${config.fullName || ''}, Email: ${config.email || ''}, No HP: ${config.phoneNumber || ''}, Domisili: ${config.domicile || ''}, Alamat: ${config.address || ''}, Pengalaman: ${config.yearsOfExperience || 1} tahun, Gaji: Rp ${config.expectedSalary || 5000000}`;
+                const plan = await inspectFormWithAi({
+                  platform: 'LinkedIn',
+                  jobTitle: activeTitle,
+                  company: activeCompany,
+                  candidateProfileContext: profileContext,
+                  domSnippet: snapshot.htmlSnippet,
+                  stepHint: `Error: ${hasError}`
+                });
+                if (plan) {
+                  await applyAiFormActions(page, plan, (msg) => onLog(msg));
+                  await sleep(1500);
+                }
+              }
+            } catch (aiErr: any) {
+              onLog(`⚠️ AI Inspector LinkedIn error: ${aiErr?.message || aiErr}`);
+            }
+
             await page.evaluate(() => {
               const modal = document.querySelector('.jobs-easy-apply-modal') || document;
               const errorElements = Array.from(modal.querySelectorAll('.artdeco-inline-feedback--error, [data-test-form-element-error], .artdeco-inline-feedback__message, .fb-dash-form-element--error'));
@@ -734,6 +818,13 @@ export async function runLinkedinBot(
           }
 
           currentStep++;
+        }
+
+        // Jika halaman sempat dialihkan ke halaman view langsung (/jobs/view/), kembalikan ke halaman pencarian
+        if (page.url().includes('/jobs/view/')) {
+          onLog('🔙 Mengembalikan browser ke halaman daftar pencarian LinkedIn...');
+          await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await sleep(2500);
         }
 
         await sleep(1500);

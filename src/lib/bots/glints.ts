@@ -1,6 +1,7 @@
 import { isJobAlreadyApplied, addAppliedJob } from '../storage';
 import { appendQuestionToCsv } from '../csvHelper';
 import { answerQuestion } from '../questionAnswer';
+import { captureFormDomSnapshot, inspectFormWithAi, applyAiFormActions } from '../aiFormInspector';
 
 export interface BotMetrics {
   successCount: number;
@@ -136,7 +137,9 @@ export async function runGlintsBot(
 
     // 2. Ketik Lokasi dari Dashboard
     if (location) {
-      onLog(`✍️ Mengisi lokasi: "${location}"...`);
+      // Glints dropdown mengharapkan nama 1 kota bersih (misal: "Surabaya", bukan "Surabaya, remote")
+      const primaryCity = location.split(/[,/]/)[0].trim();
+      onLog(`✍️ Mengisi lokasi: "${primaryCity}" (dari konfigurasi "${location}")...`);
       const citySelector = 'input[data-cy="search_bar_city"], input[placeholder*="Semua Kota"], input[aria-label*="Semua Kota"]';
       try {
         const cityInput = await page.$(citySelector);
@@ -144,7 +147,7 @@ export async function runGlintsBot(
           await page.click(citySelector, { clickCount: 3 });
           await sleep(300);
           await page.keyboard.press('Backspace');
-          await page.type(citySelector, location, { delay: 100 });
+          await page.type(citySelector, primaryCity, { delay: 100 });
           // Menunggu kontainer SuggestionDropdown muncul
           try {
             await page.waitForSelector('[class*="SuggestionDropdown"], [class*="SearchFieldsc__SuggestionDropdown"]', { visible: true, timeout: 5000 });
@@ -487,6 +490,8 @@ export async function runGlintsBot(
             let currentStep = 1;
             const maxSteps = 15;
             let reachedFinal = false;
+            let lastStepLabel = '';
+            let stuckStepCount = 0;
 
             while (currentStep <= maxSteps && !reachedFinal) {
               if (!global.isBotRunning) break;
@@ -515,6 +520,42 @@ export async function runGlintsBot(
                 await sleep(2000);
                 continue;
               }
+
+              // 0b. Auto-fill Ekspektasi Gaji Bulanan (Min. & Max.) atau Resume di Step 1
+              await workerPage.evaluate((targetSalary: number) => {
+                const modal = document.querySelector('[data-testid="modal-wrapper"]');
+                if (!modal) return;
+
+                // 1. Native Selects jika ada
+                const nativeSelects = Array.from(modal.querySelectorAll('select')) as HTMLSelectElement[];
+                for (const sel of nativeSelects) {
+                  if (sel.selectedIndex <= 0 && sel.options.length > 1) {
+                    sel.selectedIndex = Math.min(2, sel.options.length - 1);
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
+                  }
+                }
+
+                // 2. Radio buttons pada step 1 jika belum terpilih
+                const radios = Array.from(modal.querySelectorAll('input[type="radio"]')) as HTMLInputElement[];
+                if (radios.length > 0 && !radios.some(r => r.checked)) {
+                  radios[0].click();
+                }
+              }, config.expectedSalary || 4500000);
+
+              // Tangani dropdown custom Glints (React-Select / Styled Select) jika ada
+              try {
+                const customSelectContainers = await workerPage.$$('[data-testid="modal-wrapper"] [class*="control"], [data-testid="modal-wrapper"] [class*="SelectContainer"], [data-testid="modal-wrapper"] [class*="Dropdown"]');
+                for (const selEl of customSelectContainers) {
+                  const currentText = await selEl.evaluate((el: Element) => el.textContent || '');
+                  if (/pilih|select|min|max|rentang|rp/i.test(currentText)) {
+                    await selEl.click();
+                    await sleep(300);
+                    const opt = await workerPage.$('[class*="option"], [class*="Option"], [role="option"]');
+                    if (opt) await opt.click();
+                    await sleep(300);
+                  }
+                }
+              } catch (e) {}
 
               // Baca step & pertanyaan modal
               const stepData = await workerPage.evaluate(() => {
@@ -653,6 +694,39 @@ export async function runGlintsBot(
                 workerLog('🏁 Modal lamaran ditutup atau selesai.');
                 reachedFinal = true;
                 break;
+              }
+
+              if (stepData.stepLabel === lastStepLabel) {
+                stuckStepCount++;
+                if (stuckStepCount === 2) {
+                  workerLog(`🤖 [AI Inspector] Mendeteksi step modal tertahan di "${stepData.stepLabel}". Memanggil AI untuk menginspeksi DOM form...`);
+                  try {
+                    const snapshot = await captureFormDomSnapshot(workerPage, '[data-testid="modal-wrapper"]');
+                    if (snapshot.htmlSnippet) {
+                      const profileContext = `Nama: ${config.fullName || ''}, Gaji Diharapkan: Rp ${config.expectedSalary || 4500000}, Pendidikan: ${config.educationLevel || ''}, Pengalaman: ${config.yearsOfExperience || 1} thn, Skills: ${config.skills || ''}`;
+                      const plan = await inspectFormWithAi({
+                        platform: 'Glints',
+                        jobTitle: activeJobTitle,
+                        company: activeCompanyName,
+                        candidateProfileContext: profileContext,
+                        domSnippet: snapshot.htmlSnippet,
+                        stepHint: stepData.stepLabel
+                      });
+                      if (plan) {
+                        await applyAiFormActions(workerPage, plan, (msg) => workerLog(msg));
+                        await sleep(1500);
+                      }
+                    }
+                  } catch (aiErr: any) {
+                    workerLog(`⚠️ AI Inspector error: ${aiErr?.message || aiErr}`);
+                  }
+                } else if (stuckStepCount >= 4) {
+                  workerLog(`⚠️ Modal tidak berpindah dari step ${stepData.stepLabel} setelah 4 kali percobaan. Melewati loker ini...`);
+                  break;
+                }
+              } else {
+                stuckStepCount = 0;
+                lastStepLabel = stepData.stepLabel;
               }
 
               workerLog(`📍 Progres Modal: Step ${stepData.stepLabel}`);

@@ -12,6 +12,7 @@ export interface CVAnalysisResult {
   dateOfBirth?: string;
   postalCode?: string;
   domicile?: string;
+  address?: string;
   educationLevel?: string;
   gpa?: string;
   yearsOfExperience?: number;
@@ -67,7 +68,8 @@ Format JSON yang wajib dikembalikan (hanya JSON, tanpa markdown wrap):
   "maritalStatus": "Pilihan salah satu: Single atau Menikah",
   "dateOfBirth": "Tanggal lahir jika ada (format YYYY-MM-DD)",
   "postalCode": "Kode pos jika ada",
-  "domicile": "Domisili/Kota tempat tinggal",
+  "domicile": "Domisili/Kota tempat tinggal (misal: Gresik, Surabaya, Jakarta)",
+  "address": "Alamat lengkap jalan/RT/RW/Desa/Kecamatan jika ada",
   "educationLevel": "Pilihan salah satu: SMA / SMK, Diploma (D3), Sarjana (S1), Magister (S2), Doktor (S3)",
   "gpa": "IPK terakhir (misal: 3.75)",
   "yearsOfExperience": 1,
@@ -163,8 +165,13 @@ function extractHeuristicFromText(text: string): CVAnalysisResult {
     result.maritalStatus = 'Menikah';
   }
 
-  // 3. Detect domicile / city
-  const cityMatch = text.match(/(?:domisili|kota|tinggal|alamat|desa|kelurahan)[^:\n]*[:\s]+([^\n,]{3,35})/i);
+  // 3. Detect domicile / city & detailed address
+  const addressMatch = text.match(/(?:desa|jalan|jl\.|dusun|komplek|rt\s*\d+)[^\n]{5,80}/i);
+  if (addressMatch) {
+    result.address = addressMatch[0].trim();
+  }
+
+  const cityMatch = text.match(/(?:domisili|kota|tinggal|alamat)[^:\n]*[:\s]+([^\n,]{3,35})/i);
   if (cityMatch && cityMatch[1]) {
     result.domicile = cityMatch[1].trim();
   } else if (/gresik/i.test(text)) {

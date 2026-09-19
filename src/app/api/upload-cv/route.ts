@@ -113,6 +113,7 @@ export async function POST(request: Request) {
       'gpa',
       'noticePeriod',
       'domicile',
+      'address',
       'portfolioUrl',
       'linkedinUrl',
       'githubUrl',
@@ -151,6 +152,10 @@ export async function POST(request: Request) {
       if (aiParsedProfile.domicile) {
         updates.domicile = aiParsedProfile.domicile;
         updatedFields.push('domicile');
+      }
+      if (aiParsedProfile.address) {
+        updates.address = aiParsedProfile.address;
+        updatedFields.push('address');
       }
       if (aiParsedProfile.educationLevel) {
         updates.educationLevel = aiParsedProfile.educationLevel;
