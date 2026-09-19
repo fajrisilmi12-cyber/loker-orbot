@@ -950,6 +950,41 @@ export async function runGlintsBot(
                         }
                       });
                     }
+                  } else if (qItem.type === 'text' && chosenAnswers.length > 0) {
+                    const targetAnswer = chosenAnswers[0];
+                    const inputSel = qItem.inputName
+                      ? `[data-testid="modal-wrapper"] textarea[name="${qItem.inputName}"], [data-testid="modal-wrapper"] input[name="${qItem.inputName}"]`
+                      : '[data-testid="modal-wrapper"] textarea, [data-testid="modal-wrapper"] input[type="text"]';
+
+                    if (config.enableHumanStealth !== false) {
+                      await humanType(workerPage, inputSel, targetAnswer);
+                    } else {
+                      await workerPage.evaluate((targetQ: any, ans: string) => {
+                        const modal = document.querySelector('[data-testid="modal-wrapper"]');
+                        if (!modal) return;
+                        const txtInput = (targetQ.inputName
+                          ? modal.querySelector(`textarea[name="${targetQ.inputName}"], input[name="${targetQ.inputName}"]`)
+                          : modal.querySelector('textarea, input[type="text"]')) as (HTMLTextAreaElement | HTMLInputElement);
+
+                        if (txtInput) {
+                          txtInput.focus();
+                          const nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+                          const nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+
+                          if (txtInput instanceof HTMLTextAreaElement && nativeTextAreaSetter) {
+                            nativeTextAreaSetter.call(txtInput, ans);
+                          } else if (txtInput instanceof HTMLInputElement && nativeInputSetter) {
+                            nativeInputSetter.call(txtInput, ans);
+                          } else {
+                            txtInput.value = ans;
+                          }
+
+                          txtInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                          txtInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                          txtInput.blur();
+                        }
+                      }, qItem, targetAnswer);
+                    }
                   } else {
                     await workerPage.evaluate((targetQ: any, answers: string[]) => {
                       const modal = document.querySelector('[data-testid="modal-wrapper"]');
@@ -980,33 +1015,6 @@ export async function runGlintsBot(
                           if (cbInput && shouldCheck !== cbInput.checked) {
                             lbl.click();
                           }
-                        }
-                      } else if (targetQ.type === 'text' && answers.length > 0) {
-                        const targetAnswer = answers[0];
-                        const txtInput = (targetQ.inputName
-                          ? modal.querySelector(`textarea[name="${targetQ.inputName}"], input[name="${targetQ.inputName}"]`)
-                          : modal.querySelector('textarea, input[type="text"]')) as (HTMLTextAreaElement | HTMLInputElement);
-
-                        if (txtInput) {
-                          txtInput.focus();
-                          const nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-                          const nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-
-                          if (txtInput instanceof HTMLTextAreaElement && nativeTextAreaSetter) {
-                            nativeTextAreaSetter.call(txtInput, targetAnswer);
-                          } else if (txtInput instanceof HTMLInputElement && nativeInputSetter) {
-                            nativeInputSetter.call(txtInput, targetAnswer);
-                          } else {
-                            txtInput.value = targetAnswer;
-                          }
-
-                          // Dispatch complete suite of React input/change events
-                          txtInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-                          txtInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-                          try {
-                            txtInput.dispatchEvent(new InputEvent('input', { bubbles: true, data: targetAnswer }));
-                          } catch {}
-                          txtInput.blur();
                         }
                       }
                     }, qItem, chosenAnswers);

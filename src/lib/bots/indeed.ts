@@ -4,7 +4,7 @@ import { appendQuestionToCsv } from '../csvHelper';
 import { answerQuestion } from '../questionAnswer';
 import { generateCoverLetter } from '../coverLetterHelper';
 import { evaluateJobMatch } from '../jobMatcher';
-import { humanClick } from '../humanStealth';
+import { humanClick, humanType } from '../humanStealth';
 import { parseCookiesInput, injectCookiesIntoPage } from '../cookieHelper';
 
 export interface BotMetrics {
@@ -81,8 +81,13 @@ export async function runIndeedBot(
       }
     }
 
-    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await sleep(3500);
+    // 2. SESSION WARMER: Kunjungi Beranda Indeed untuk aktivasi token Cloudflare & Sesi
+    onLog('☕ [Session Warmer] Membuka Beranda Indeed (https://id.indeed.com/) untuk pemanasan sesi...');
+    await page.goto('https://id.indeed.com/', { 
+      waitUntil: 'domcontentloaded', 
+      timeout: 60000 
+    });
+    await sleep(2500);
 
     // 1b. Deteksi Cloudflare Challenge (Additional Verification Required)
     const checkCloudflare = async (): Promise<boolean> => {
@@ -115,7 +120,7 @@ export async function runIndeedBot(
       }
     }
 
-    // 2. Pengecekan status login
+    // 2. Pengecekan status login di beranda
     let isLoggedIn = await page.evaluate(() => {
       const navAccount = document.querySelector('[data-gnav-element-name="AccountMenu"], #gnav-account-container, .gnav-AccountMenu, a[href*="/account"], button[aria-label*="Account"], button[aria-label*="Akun"]');
       const signInBtn = document.querySelector('a[href*="/account/login"], a[href*="secure.indeed.com/auth"]');
@@ -133,7 +138,7 @@ export async function runIndeedBot(
           return !!navAccount || !signInBtn;
         });
         if (isLoggedIn) {
-          onLog('✅ Sesi login Indeed terdeteksi aktif!');
+          onLog('✅ Login Indeed terverifikasi aktif!');
           break;
         }
         onLog(`⏳ Menunggu login Indeed... (${(waitSec + 1) * 5}s/30s)`);
@@ -146,6 +151,15 @@ export async function runIndeedBot(
     }
 
     onLog('✅ Indeed: Akun terverifikasi dan sesi login aktif.');
+
+    // 3. WARMUP TRANSITION: Navigasi alami dari Beranda ke Hasil Pencarian
+    onLog(`🌐 Membuka URL Pencarian Indeed: ${searchUrl}`);
+    await page.goto(searchUrl, { 
+      waitUntil: 'domcontentloaded', 
+      timeout: 60000,
+      referer: 'https://id.indeed.com/' 
+    });
+    await sleep(2500);
 
     // Tunggu hasil pencarian selesai dimuat
     onLog('⏳ Menunggu hasil pencarian Indeed dimuat...');
@@ -955,16 +969,30 @@ export async function runIndeedBot(
                           valToSet = valToSet.slice(0, 950);
                         }
 
-                        const proto = inp.tagName.toLowerCase() === 'textarea' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
-                        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-                        if (setter) {
-                          setter.call(inp, valToSet);
-                        } else {
-                          inp.value = valToSet;
-                        }
-                        inp.dispatchEvent(new Event('input', { bubbles: true }));
-                        inp.dispatchEvent(new Event('change', { bubbles: true }));
-                        inp.blur();
+                        const humanType = async (el: HTMLInputElement | HTMLTextAreaElement, text: string) => {
+                          el.focus();
+                          const proto = el.tagName.toLowerCase() === 'textarea' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+                          const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+                          
+                          if (setter) setter.call(el, '');
+                          else el.value = '';
+                          el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+
+                          for (let i = 0; i < text.length; i++) {
+                            const currentVal = el.value + text[i];
+                            if (setter) {
+                              setter.call(el, currentVal);
+                            } else {
+                              el.value = currentVal;
+                            }
+                            el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                            await new Promise(r => setTimeout(r, 10));
+                          }
+                          el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                          el.blur();
+                        };
+
+                        await humanType(inp, valToSet);
                       }
                     }
                   }, qItem, chosenAnswers);

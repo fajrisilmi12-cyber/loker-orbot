@@ -270,6 +270,10 @@ export async function startBot(
       onLog(`🚀 Menjalankan ${runPlatformTasks.length} platform secara berurutan...`);
       for (const task of runPlatformTasks) {
         if (!global.isBotRunning) break;
+        if (isSharedMode && totalSuccess >= sharedLimitTarget && !isSinglePlatform) {
+          onLog(`🎯 [Shared Limit] Kuota bersama sesi (${totalSuccess}/${sharedLimitTarget}) telah terpenuhi dari portal sebelumnya. Portal ${task.name} dilewati.`);
+          continue;
+        }
         onLog(`▶️ Memulai portal: ${task.name}`);
         await task.run();
         onLog(`⏹️ Selesai portal: ${task.name}`);

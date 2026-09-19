@@ -77,7 +77,7 @@ export async function runLinkedinBot(
     onLog(`🌐 Membuka URL Pencarian LinkedIn: ${searchUrl}`);
 
 
-    // Injeksi cookies jika tersedia di konfigurasi
+    // 1. Injeksi cookies jika tersedia di konfigurasi
     if (config.portalCookies?.linkedin) {
       const cookies = parseCookiesInput(config.portalCookies.linkedin, '.linkedin.com');
       if (cookies.length > 0) {
@@ -86,15 +86,13 @@ export async function runLinkedinBot(
       }
     }
 
-    // Spoofing User-Agent agar lebih mirip browser manusia
-    await page.setExtraHTTPHeaders({
-      'sec-ch-ua': '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"',
-      'sec-ch-ua-platform': '"Windows"',
-      'sec-ch-ua-mobile': '?0',
+    // 2. SESSION WARMER: Kunjungi Beranda Feed LinkedIn untuk Validasi Sesi
+    onLog('☕ [Session Warmer] Membuka Beranda LinkedIn (https://www.linkedin.com/feed/) untuk validasi sesi...');
+    await page.goto('https://www.linkedin.com/feed/', { 
+      waitUntil: 'domcontentloaded', 
+      timeout: 60000 
     });
-
-    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await sleep(3000);
+    await sleep(2500);
 
     // Cek apakah LinkedIn redirect ke security challenge
     let currentUrlAfterNav = page.url();
@@ -115,9 +113,9 @@ export async function runLinkedinBot(
       }
     }
 
-    // 1. Pengecekan status login
+    // Pengecekan status login di halaman beranda
     let isLoggedIn = await page.evaluate(() => {
-      const hasNav = !!document.querySelector('.global-nav, .global-nav__me, #global-nav, [data-control-name="nav.settings"], img.global-nav__me-photo, button.global-nav__primary-link-me-menu-trigger');
+      const hasNav = !!document.querySelector('.global-nav, .global-nav__me, #global-nav, [data-control-name="nav.settings"], img.global-nav__me-photo, button.global-nav__primary-link-me-menu-trigger, .feed-identity-module');
       const hasSignIn = !!document.querySelector('a[href*="/login"], a[href*="/signup"], .join-form, #login-email, input#username');
       return hasNav || (!hasSignIn && !window.location.href.includes('/login') && !window.location.href.includes('/signup') && !window.location.href.includes('/checkpoint'));
     });
@@ -128,7 +126,7 @@ export async function runLinkedinBot(
       for (let logWait = 0; logWait < 6; logWait++) {
         await sleep(5000);
         isLoggedIn = await page.evaluate(() => {
-          const hasNav = !!document.querySelector('.global-nav, .global-nav__me, #global-nav, [data-control-name="nav.settings"], img.global-nav__me-photo, button.global-nav__primary-link-me-menu-trigger');
+          const hasNav = !!document.querySelector('.global-nav, .global-nav__me, #global-nav, [data-control-name="nav.settings"], img.global-nav__me-photo, button.global-nav__primary-link-me-menu-trigger, .feed-identity-module');
           const hasSignIn = !!document.querySelector('a[href*="/login"], a[href*="/signup"], .join-form, #login-email, input#username');
           return hasNav || (!hasSignIn && !window.location.href.includes('/login') && !window.location.href.includes('/signup') && !window.location.href.includes('/checkpoint'));
         });
@@ -146,6 +144,15 @@ export async function runLinkedinBot(
     }
 
     onLog('✅ LinkedIn: Akun terverifikasi dan sesi login aktif.');
+
+    // 3. WARMUP TRANSITION: Navigasi alami dari Feed ke Pencarian Lowongan
+    onLog(`🌐 Membuka URL Pencarian LinkedIn: ${searchUrl}`);
+    await page.goto(searchUrl, { 
+      waitUntil: 'domcontentloaded', 
+      timeout: 60000,
+      referer: 'https://www.linkedin.com/feed/' 
+    });
+    await sleep(2500);
 
     // Tunggu hingga hasil pencarian selesai dimuat
     onLog('⏳ Menunggu hasil pencarian selesai dimuat...');
@@ -382,17 +389,21 @@ export async function runLinkedinBot(
           rightPaneDetail = await getRightPaneDetail();
         }
 
-        // Jika panel kanan masih belum memiliki tombol Apply, coba navigasikan langsung ke targetJobUrl untuk me-refresh detail view
+        // Jika panel kanan masih belum memiliki tombol Apply, coba klik ulang kartu loker tanpa navigasi page
         if (!rightPaneDetail?.hasApplyBtn && !rightPaneDetail?.isAlreadyApplied) {
-          // Buka view URL langsung jika panel kanan gagal ter-load di single-page mode
-          onLog(`🔄 Mencoba memuat panel detail melalui URL view: ${targetJobUrl}`);
-          try {
-            await page.goto(targetJobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await sleep(2000);
-            rightPaneDetail = await getRightPaneDetail();
-          } catch {
-            // Abaikan jika timeout
-          }
+          onLog(`🔄 Mengklik ulang kartu loker ID: ${targetJobId} untuk memuat panel detail...`);
+          await page.evaluate((jobId: string) => {
+            const cardLi = document.querySelector(`li[data-occludable-job-id="${jobId}"]`) as HTMLElement;
+            if (cardLi) {
+              const target = cardLi.querySelector(
+                'a.job-card-container__link, a.job-card-list__title--link, div.job-card-container, [data-view-name="job-card-title-link"]'
+              ) as HTMLElement;
+              if (target) target.click();
+              else cardLi.click();
+            }
+          }, targetJobId);
+          await sleep(2000);
+          rightPaneDetail = await getRightPaneDetail();
         }
 
         if (!rightPaneDetail) {
@@ -789,71 +800,77 @@ export async function runLinkedinBot(
             appendQuestionToCsv(qItem.question, qItem.type as any, qItem.options, chosenAnswers);
 
             // Injeksi hasil jawaban ke DOM modal LinkedIn
-            await page.evaluate((targetQ: any, answers: string[]) => {
-              const modal = document.querySelector('.jobs-easy-apply-modal, [data-test-modal].jobs-easy-apply-modal') || document;
+            if (qItem.type === 'text' && chosenAnswers.length > 0) {
+              let valToSet = chosenAnswers[0] || '';
+              const isDescriptive = /jelaskan|ceritakan|sebutkan|describe|explain|project|proyek|portfolio|contoh|apa saja|why|bagaimana/i.test(qItem.question);
+              const isNumericQuestion = !isDescriptive && (
+                /(?:how many|berapa)\s+(?:years?|tahun)|years of (?:work )?experience|tahun pengalaman|whole number|age|usia|umur|gpa|ipk/i.test(qItem.question)
+              );
 
-              if (targetQ.type === 'text' && answers.length > 0) {
-                const el = modal.querySelector(targetQ.inputSelector) as HTMLInputElement;
-                if (el) {
-                  el.focus();
-                  let valToSet = answers[0] || '';
+              if (isNumericQuestion) {
+                const digitMatch = valToSet.match(/\d+/);
+                valToSet = digitMatch ? digitMatch[0] : (valToSet.replace(/\D/g, '') || '3');
+              }
 
-                  // Sanitasi: Hanya jika pertanyaan murni menanyakan durasi angka (0-99) dan BUKAN deskripsi/project
-                  const isDescriptive = /jelaskan|ceritakan|sebutkan|describe|explain|project|proyek|portfolio|contoh|apa saja|why|bagaimana/i.test(targetQ.question);
-                  const isNumericQuestion = !isDescriptive && (
-                    /(?:how many|berapa)\s+(?:years?|tahun)|years of (?:work )?experience|tahun pengalaman|whole number|age|usia|umur|gpa|ipk/i.test(targetQ.question) ||
-                    el.type === 'number' ||
-                    el.inputMode === 'numeric'
-                  );
-
-                  if (isNumericQuestion) {
-                    const digitMatch = valToSet.match(/\d+/);
-                    valToSet = digitMatch ? digitMatch[0] : (valToSet.replace(/\D/g, '') || '3');
+              const targetSel = `.jobs-easy-apply-modal ${qItem.inputSelector}, ${qItem.inputSelector}`;
+              if (config.enableHumanStealth !== false) {
+                await humanType(page, targetSel, valToSet);
+              } else {
+                await page.evaluate((sel: string, val: string) => {
+                  const modal = document.querySelector('.jobs-easy-apply-modal, [data-test-modal].jobs-easy-apply-modal') || document;
+                  const el = modal.querySelector(sel) as HTMLInputElement;
+                  if (el) {
+                    el.focus();
+                    el.value = val;
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                    el.blur();
                   }
+                }, qItem.inputSelector, valToSet);
+              }
+            } else {
+              await page.evaluate((targetQ: any, answers: string[]) => {
+                const modal = document.querySelector('.jobs-easy-apply-modal, [data-test-modal].jobs-easy-apply-modal') || document;
 
-                  el.value = valToSet;
-                  el.dispatchEvent(new Event('input', { bubbles: true }));
-                  el.dispatchEvent(new Event('change', { bubbles: true }));
-                  el.blur();
-                }
-              } else if (targetQ.type === 'radiobutton' && answers.length > 0) {
-                const radios = Array.from(modal.querySelectorAll(targetQ.inputSelector)) as HTMLInputElement[];
-                for (const rd of radios) {
-                  const lbl = (modal.querySelector(`label[for="${rd.id}"]`) || rd.closest('label') || rd.parentElement) as HTMLElement | null;
-                  const txt = (lbl?.textContent || rd.value || '').trim();
-                  if (answers.some(a => txt.toLowerCase().includes(a.toLowerCase()) || a.toLowerCase().includes(txt.toLowerCase()))) {
-                    if (lbl) {
-                      lbl.click();
-                    } else {
-                      rd.click();
-                    }
-                    rd.checked = true;
-                    rd.dispatchEvent(new Event('change', { bubbles: true }));
-                    break;
-                  }
-                }
-              } else if (targetQ.type === 'dropdown' && answers.length > 0) {
-                const sel = modal.querySelector(targetQ.inputSelector) as HTMLSelectElement;
-                if (sel) {
-                  const targetAns = answers[0].toLowerCase();
-                  for (let optIdx = 0; optIdx < sel.options.length; optIdx++) {
-                    const opt = sel.options[optIdx];
-                    if (opt.text.toLowerCase().includes(targetAns) || opt.value.toLowerCase().includes(targetAns)) {
-                      sel.selectedIndex = optIdx;
-                      sel.dispatchEvent(new Event('change', { bubbles: true }));
+                if (targetQ.type === 'radiobutton' && answers.length > 0) {
+                  const radios = Array.from(modal.querySelectorAll(targetQ.inputSelector)) as HTMLInputElement[];
+                  for (const rd of radios) {
+                    const lbl = (modal.querySelector(`label[for="${rd.id}"]`) || rd.closest('label') || rd.parentElement) as HTMLElement | null;
+                    const txt = (lbl?.textContent || rd.value || '').trim();
+                    if (answers.some(a => txt.toLowerCase().includes(a.toLowerCase()) || a.toLowerCase().includes(txt.toLowerCase()))) {
+                      if (lbl) {
+                        lbl.click();
+                      } else {
+                        rd.click();
+                      }
+                      rd.checked = true;
+                      rd.dispatchEvent(new Event('change', { bubbles: true }));
                       break;
                     }
                   }
+                } else if (targetQ.type === 'dropdown' && answers.length > 0) {
+                  const sel = modal.querySelector(targetQ.inputSelector) as HTMLSelectElement;
+                  if (sel) {
+                    const targetAns = answers[0].toLowerCase();
+                    for (let optIdx = 0; optIdx < sel.options.length; optIdx++) {
+                      const opt = sel.options[optIdx];
+                      if (opt.text.toLowerCase().includes(targetAns) || opt.value.toLowerCase().includes(targetAns)) {
+                        sel.selectedIndex = optIdx;
+                        sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        break;
+                      }
+                    }
+                  }
+                } else if (targetQ.type === 'checklist') {
+                  const cb = modal.querySelector(targetQ.inputSelector) as HTMLInputElement;
+                  if (cb && !cb.checked) {
+                    cb.click();
+                    cb.checked = true;
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                  }
                 }
-              } else if (targetQ.type === 'checklist') {
-                const cb = modal.querySelector(targetQ.inputSelector) as HTMLInputElement;
-                if (cb && !cb.checked) {
-                  cb.click();
-                  cb.checked = true;
-                  cb.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-              }
-            }, qItem, chosenAnswers);
+              }, qItem, chosenAnswers);
+            }
 
             await sleep(600);
           }

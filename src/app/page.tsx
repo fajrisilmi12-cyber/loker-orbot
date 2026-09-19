@@ -1459,7 +1459,7 @@ export default function Home() {
       return;
     }
     await handleSaveQuestionsList(updated);
-    toast.success(`✅ ${updatedCount} jawaban berhasil diperbarui dari profil kamu!`);
+    toast.success(`${updatedCount} jawaban berhasil diperbarui dari profil kamu!`);
   };
 
   // Hapus semua pertanyaan
@@ -1630,7 +1630,7 @@ export default function Home() {
       {/* RIGHT MAIN CONTENT AREA (Scrollable independently, sidebar stays locked) */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto content-bg-theme">
         {/* Top Header Bar */}
-        <header className="h-16 border-b header-theme px-6 flex items-center justify-between transition-colors">
+        <header className="min-h-[4.75rem] py-3.5 px-6 md:px-8 border-b header-theme flex items-center justify-between transition-colors shrink-0 shadow-sm sticky top-0 z-20 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-main-theme">
               {activeTab === 'wizard' && 'Konfigurasi & Alur Setup'}
@@ -1732,7 +1732,7 @@ export default function Home() {
         </header>
 
         {/* Body Container */}
-        <main className="p-6 md:p-8 max-w-6xl w-full mx-auto space-y-6">
+        <main className="py-8 md:py-10 px-6 md:px-8 max-w-6xl w-full mx-auto space-y-8 flex-1">
           {/* TAB 1: STEP-BY-STEP SETUP WIZARD */}
           {activeTab === 'wizard' && (
             <div className="space-y-6">
@@ -2116,8 +2116,8 @@ export default function Home() {
                   <div>
                     <span className="font-semibold">
                       {readinessMetrics.isReady100
-                        ? '✅ Sistem Siap 100%! Bot dapat langsung dijalankan kapan saja.'
-                        : `⚠️ Kesiapan Sistem ${readinessMetrics.percent}%: Masih ada beberapa data yang belum dilengkapi.`}
+                        ? 'Sistem Siap 100%! Bot dapat langsung dijalankan kapan saja.'
+                        : `Kesiapan Sistem ${readinessMetrics.percent}%: Masih ada beberapa data yang belum dilengkapi.`}
                     </span>
                     {!readinessMetrics.isReady100 && (
                       <p className="text-[11px] opacity-90 mt-0.5">
