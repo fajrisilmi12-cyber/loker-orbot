@@ -1007,6 +1007,13 @@ function getPreAnsweredQuestion(questionText: string, options: string[]): string
       const overlapScore = item.words.size > 0 ? matchCount / Math.max(item.words.size, targetWords.size) : 0;
 
       if (isExactMatch || isSubstringMatch || overlapScore >= 0.7) {
+        // Guard: jika pertanyaan deskriptif/uraian tetapi jawaban di CSV hanya kata singkat ("Yes", "No", "Ya"), abaikan agar dijawab AI secara profesional
+        const isDescriptive = /layanan|jelaskan|ceritakan|sebutkan|bagaimana|apa saja|mengapa|design pattern|arsitektur|gcp|aws|microservice|how|why|describe|explain|experience with/i.test(questionText);
+        const isInvalidShortAnswer = item.answers.some(a => /^(yes|no|ya|tidak|ok|y|n)$/i.test(a.trim()));
+        if (isDescriptive && isInvalidShortAnswer && (item.type === 'text' || options.length === 0)) {
+          continue;
+        }
+
         // Untuk pertanyaan tipe text / isian bebas
         if (item.type === 'text' || options.length === 0) {
           if (isExactMatch) return item.answers;

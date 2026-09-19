@@ -284,6 +284,16 @@ export async function runGlintsBot(
               const companyEl = document.querySelector('div[class*="JobOverViewCompanyName"] a, [class*="JobOverViewCompanyName"] a, a[href*="/companies/"], [class*="JobOverViewCompanyName"]');
               const officialCompanyName = companyEl?.textContent?.trim() || '';
 
+              // 3. Ekstrak Lokasi & Gaji resmi
+              const locationEl = document.querySelector('div[class*="JobOverViewLocation"], [class*="JobOverViewLocation"], span[class*="location"], [data-testid="job-location"]');
+              const officialLocation = locationEl?.textContent?.trim() || '';
+              const salaryEl = document.querySelector('div[class*="JobOverViewSalary"], [class*="JobOverViewSalary"], [data-testid="job-salary"]');
+              const officialSalary = salaryEl?.textContent?.trim() || '';
+
+              const bodyText = document.body?.innerText || '';
+              const isRemote = /remote|jarak jauh|work from home|wfh/i.test(bodyText);
+              const isHybrid = /hybrid/i.test(bodyText);
+
               const testIdBtn = document.querySelector('button[data-testid="apply-start"]') as HTMLButtonElement;
               const allButtons = Array.from(document.querySelectorAll('button')) as HTMLButtonElement[];
               const textMatchBtn = allButtons.find(b => /^(Lamar|Lamar Cepat|Apply|Quick Apply|Easy Apply|Apply Now)$/i.test((b.textContent || '').trim()));
@@ -293,6 +303,10 @@ export async function runGlintsBot(
               return {
                 officialJobTitle,
                 officialCompanyName,
+                officialLocation,
+                officialSalary,
+                isRemote,
+                isHybrid,
                 hasTargetBtn: !!targetBtn,
                 isAlreadyApplied: !!alreadyAppliedBtn,
                 alreadyAppliedText: alreadyAppliedBtn ? (alreadyAppliedBtn.textContent || '').trim() : null,
@@ -302,13 +316,34 @@ export async function runGlintsBot(
 
             const activeJobTitle = detailInfo.officialJobTitle || targetJob.title;
             const activeCompanyName = detailInfo.officialCompanyName || targetJob.company;
+            const activeLocation = detailInfo.officialLocation || targetJob.location || 'Indonesia';
 
             workerLog(`📋 Posisi Resmi: "${activeJobTitle}" | 🏢 Perusahaan: "${activeCompanyName}"`);
+            workerLog(`📍 Lokasi: "${activeLocation}" ${detailInfo.isRemote ? '(🌐 Remote)' : detailInfo.isHybrid ? '(🏢/🏠 Hybrid)' : '(🏢 On-site)'}`);
 
             if (detailInfo.isAlreadyApplied) {
               workerLog(`⏩ Loker ini SUDAH DILAMAR pada halaman detail: "${detailInfo.alreadyAppliedText}". Melewati...`);
               alreadyAppliedCount++;
               continue;
+            }
+
+            // Location & Remote Compatibility Filter
+            if (config.location && activeLocation && activeLocation !== 'Indonesia') {
+              const userLocations = config.location
+                .split(/[,/|]+/)
+                .map((l: string) => l.trim().toLowerCase())
+                .filter(Boolean);
+
+              const wantsRemote = userLocations.some((l: string) => l.includes('remote') || l.includes('wfh'));
+              const isJobRemoteOrHybrid = detailInfo.isRemote || detailInfo.isHybrid || /remote|hybrid|wfh/i.test(activeLocation);
+              const matchesCity = userLocations.some((l: string) => 
+                !l.includes('remote') && !l.includes('wfh') && activeLocation.toLowerCase().includes(l)
+              );
+
+              if (!matchesCity && !isJobRemoteOrHybrid && userLocations.length > 0) {
+                workerLog(`🛡️ [Location Filter] Melewati "${activeJobTitle}" di ${activeCompanyName} - Lokasi On-site di "${activeLocation}" tidak sesuai target lokasi/domisili Anda ("${config.location}").`);
+                continue;
+              }
             }
 
             // Enterprise Filter: Job Match & Dealbreaker Check
@@ -420,117 +455,47 @@ export async function runGlintsBot(
                 }
               }, config.expectedSalary || 4500000);
 
-              // 0c. Auto-handle Location Search / Domisili autocomplete (contoh: "Beberapa HRD ingin tau di mana kamu tinggal saat ini")
-              try {
-                const cityInputHandle = await workerPage.$('[data-testid="modal-wrapper"] input[placeholder*="Cari Kota" i], [data-testid="modal-wrapper"] input[placeholder*="Kota / Provinsi" i], [data-testid="modal-wrapper"] input[aria-label*="Kota" i]');
-                if (cityInputHandle) {
-                  const currentCityVal = await cityInputHandle.evaluate((el: HTMLInputElement) => el.value);
-                  if (!currentCityVal) {
-                    const candidateCity = (config.location || 'Surabaya').split(/[,/]/)[0].trim() || 'Surabaya';
-                    workerLog(`📍 [Lokasi Tinggal] Memilih kota domisili: "${candidateCity}"...`);
-                    await cityInputHandle.click({ clickCount: 3 });
-                    await sleep(200);
-                    await cityInputHandle.type(candidateCity, { delay: 60 });
-                    await sleep(800);
-                    const selectedCity = await workerPage.evaluate(() => {
-                      const dropdown = document.querySelector('[class*="SuggestionDropdown"], [class*="Dropdown"], [role="listbox"], div[class*="Option"], div[class*="suggestion"]');
-                      if (dropdown) {
-                        const opt = (dropdown.querySelector('li, div[class*="option"], p, [role="option"]') || dropdown.firstElementChild) as HTMLElement;
-                        if (opt) {
-                          opt.click();
-                          return opt.textContent || 'Kota Terpilih';
-                        }
-                      }
-                      return null;
-                    });
-                    if (selectedCity) {
-                      workerLog(`✅ [Lokasi Tinggal] Opsi berhasil dipilih: "${selectedCity.trim()}"`);
-                      recordedQA.push({
-                        question: 'Di mana kamu tinggal saat ini (Lokasi / Domisili)',
-                        answer: selectedCity.trim(),
-                        type: 'text'
-                      });
-                    } else {
-                      await workerPage.keyboard.press('ArrowDown');
-                      await sleep(200);
-                      await workerPage.keyboard.press('Enter');
-                    }
-                    await sleep(800);
-                  }
-                }
-              } catch (e) {}
-
-              // 0d. Auto-handle Skill Search / Tambah skill autocomplete jika ada
-              try {
-                const skillInputHandle = await workerPage.$('[data-testid="modal-wrapper"] input[placeholder*="Cari skill" i], [data-testid="modal-wrapper"] input[placeholder*="Tambah skill" i]');
-                if (skillInputHandle) {
-                  const currentSkillVal = await skillInputHandle.evaluate((el: HTMLInputElement) => el.value);
-                  if (!currentSkillVal) {
-                    const skillList = (config.skills || 'Full Stack, JavaScript, React, Node.js, PHP').split(',');
-                    const primarySkill = skillList[0].trim() || 'JavaScript';
-                    workerLog(`🛠️ [Skill Profil] Mengisi skill tambahan: "${primarySkill}"...`);
-                    await skillInputHandle.click();
-                    await sleep(200);
-                    await skillInputHandle.type(primarySkill, { delay: 60 });
-                    await sleep(800);
-                    const selectedSkill = await workerPage.evaluate(() => {
-                      const dropdown = document.querySelector('[class*="SuggestionDropdown"], [class*="Dropdown"], [role="listbox"], div[class*="Option"]');
-                      if (dropdown) {
-                        const opt = (dropdown.querySelector('li, div[class*="option"], p, [role="option"]') || dropdown.firstElementChild) as HTMLElement;
-                        if (opt) {
-                          opt.click();
-                          return opt.textContent || 'Skill Terpilih';
-                        }
-                      }
-                      return null;
-                    });
-                    if (selectedSkill) {
-                      workerLog(`✅ [Skill Profil] Berhasil memilih skill: "${selectedSkill.trim()}"`);
-                      recordedQA.push({
-                        question: 'Skill Tambahan',
-                        answer: selectedSkill.trim(),
-                        type: 'text'
-                      });
-                    } else {
-                      await workerPage.keyboard.press('ArrowDown');
-                      await sleep(200);
-                      await workerPage.keyboard.press('Enter');
-                    }
-                    await sleep(800);
-                  }
-                }
-              } catch (e) {}
-
-              // Tangani dropdown custom Glints (React-Select / Styled Select) jika ada
-              try {
-                const customSelectContainers = await workerPage.$$('[data-testid="modal-wrapper"] [class*="control"], [data-testid="modal-wrapper"] [class*="SelectContainer"], [data-testid="modal-wrapper"] [class*="Dropdown"]');
-                for (const selEl of customSelectContainers) {
-                  const currentText = await selEl.evaluate((el: Element) => el.textContent || '');
-                  if (/pilih|select|min|max|rentang|rp/i.test(currentText)) {
-                    await selEl.click();
-                    await sleep(300);
-                    const opt = await workerPage.$('[class*="option"], [class*="Option"], [role="option"]');
-                    if (opt) await opt.click();
-                    await sleep(300);
-                  }
-                }
-              } catch (e) {}
-
-              // Baca step & pertanyaan modal
+              // =========================================================================
+              // 1. QUESTION-FIRST: BACA DULU SEMUA PERTANYAAN & FORM PADA STEP INI
+              // =========================================================================
               const stepData = await workerPage.evaluate(() => {
                 const modal = document.querySelector('[data-testid="modal-wrapper"]');
                 if (!modal) return null;
 
-                const stepLabel = modal.querySelector('[class*="ProgressBarLabel"]')?.textContent?.trim() || `${currentStep}/?`;
-                const headerTitle = modal.querySelector('[class*="ModalHeader"] [class*="Typography"]')?.textContent?.trim() || '';
-                const resumeName = modal.querySelector('[class*="ResumeFileName"]')?.textContent?.trim() || '';
+                const stepLabel = modal.querySelector('[class*="ProgressBarLabel"]')?.textContent?.trim() || '';
+                const headerTitle = modal.querySelector('[class*="ModalHeader"] [class*="Typography"], [class*="ModalContent"] h2, [class*="ModalContent"] h3')?.textContent?.trim() || '';
+                const bodyPrompt = modal.querySelector('[class*="ModalContent"] > p, [class*="ModalContent"] h4, form p')?.textContent?.trim() || '';
+                const mainQuestion = headerTitle || bodyPrompt || 'Formulir Lamaran';
 
                 const questions: Array<{
                   inputName: string;
                   question: string;
-                  type: 'radiobutton' | 'checklist' | 'dropdown' | 'text';
+                  type: 'radiobutton' | 'checklist' | 'dropdown' | 'text' | 'skill_search' | 'city_search';
                   options: string[];
                 }> = [];
+
+                // A. Check for Autocomplete Search Inputs (Skill Search / City Search)
+                const skillInput = modal.querySelector('input[placeholder*="Cari skill" i], input[placeholder*="Tambah skill" i], input[placeholder*="skill" i]');
+                if (skillInput) {
+                  const availableChips = Array.from(modal.querySelectorAll('[class*="SkillTag"], [class*="SkillChip"], [class*="Badge"], button[class*="skill" i]')).map(c => (c.textContent || '').trim()).filter(Boolean);
+                  questions.push({
+                    inputName: (skillInput as HTMLInputElement).name || 'skill_search',
+                    question: bodyPrompt || headerTitle || 'Skill apa saja yang kamu miliki?',
+                    type: 'skill_search',
+                    options: availableChips
+                  });
+                }
+
+                const cityInput = modal.querySelector('input[placeholder*="Cari Kota" i], input[placeholder*="Kota / Provinsi" i], input[aria-label*="Kota" i]');
+                if (cityInput) {
+                  questions.push({
+                    inputName: (cityInput as HTMLInputElement).name || 'city_search',
+                    question: bodyPrompt || headerTitle || 'Di mana kamu tinggal saat ini (Lokasi Domisili)?',
+                    type: 'city_search',
+                    options: []
+                  });
+                }
+                const resumeName = modal.querySelector('[class*="ResumeFileName"]')?.textContent?.trim() || '';
 
                 // Matrix Sub-Questions (contoh: Skill Proficiency Matrix, Industry Matrix)
                 const subQuestionContainers = Array.from(modal.querySelectorAll(
@@ -928,65 +893,124 @@ export async function runGlintsBot(
                   });
 
                   // Terapkan pilihan ke DOM Glints
-                  await workerPage.evaluate((targetQ: any, answers: string[]) => {
-                    const modal = document.querySelector('[data-testid="modal-wrapper"]');
-                    if (!modal) return;
-
-                    if (targetQ.type === 'radiobutton' && answers.length > 0) {
-                      const targetAnswer = answers[0];
-                      const radioInputs = targetQ.inputName 
-                        ? Array.from(modal.querySelectorAll(`input[type="radio"][name="${targetQ.inputName}"]`)) as HTMLInputElement[]
-                        : Array.from(modal.querySelectorAll('input[type="radio"]')) as HTMLInputElement[];
-
-                      for (const rd of radioInputs) {
-                        const lbl = rd.closest('label') || rd.parentElement;
-                        const txt = (lbl?.textContent || rd.value || '').trim();
-                        if (txt === targetAnswer || txt.toLowerCase().includes(targetAnswer.toLowerCase()) || targetAnswer.toLowerCase().includes(txt.toLowerCase())) {
-                          (lbl || rd).click();
-                          rd.checked = true;
-                          rd.dispatchEvent(new Event('change', { bubbles: true }));
-                          break;
+                  if (qItem.type === 'skill_search') {
+                    // 1. Klik chip skill yang cocok jika ada
+                    await workerPage.evaluate((answers: string[]) => {
+                      const modal = document.querySelector('[data-testid="modal-wrapper"]');
+                      if (!modal) return;
+                      const chips = Array.from(modal.querySelectorAll('[class*="SkillTag"], [class*="SkillChip"], [class*="Badge"], button[class*="skill" i]')) as HTMLElement[];
+                      for (const chip of chips) {
+                        const txt = (chip.textContent || '').trim().toLowerCase();
+                        if (answers.some(a => txt.includes(a.toLowerCase()) || a.toLowerCase().includes(txt))) {
+                          chip.click();
                         }
                       }
-                    } else if (targetQ.type === 'checklist') {
-                      const labels = Array.from(modal.querySelectorAll('label'));
-                      for (const lbl of labels) {
-                        const txt = (lbl.textContent || '').trim();
-                        const shouldCheck = answers.some(ans => txt === ans || txt.includes(ans));
-                        const cbInput = lbl.querySelector('input[type="checkbox"]') as HTMLInputElement;
-                        if (cbInput && shouldCheck !== cbInput.checked) {
-                          lbl.click();
+                    }, chosenAnswers);
+
+                    // 2. Ketik ke input autocomplete skill
+                    const skillInp = await workerPage.$('[data-testid="modal-wrapper"] input[placeholder*="Cari skill" i], [data-testid="modal-wrapper"] input[placeholder*="Tambah skill" i], [data-testid="modal-wrapper"] input[placeholder*="skill" i]');
+                    if (skillInp && chosenAnswers.length > 0) {
+                      const targetSkill = chosenAnswers[0];
+                      await skillInp.click({ clickCount: 3 });
+                      await sleep(100);
+                      await skillInp.type(targetSkill, { delay: 40 });
+                      await sleep(700);
+
+                      const picked = await workerPage.evaluate(() => {
+                        const dd = document.querySelector('[class*="SuggestionDropdown"], [class*="Dropdown"], [role="listbox"], div[class*="Option"], [class*="suggestion"]');
+                        if (dd && !dd.textContent?.includes('No matching') && !dd.textContent?.includes('Tidak ada')) {
+                          const opt = (dd.querySelector('li, div[class*="option"], p, [role="option"]') || dd.firstElementChild) as HTMLElement;
+                          if (opt) {
+                            opt.click();
+                            return opt.textContent;
+                          }
                         }
-                      }
-                    } else if (targetQ.type === 'text' && answers.length > 0) {
-                      const targetAnswer = answers[0];
-                      const txtInput = (targetQ.inputName
-                        ? modal.querySelector(`textarea[name="${targetQ.inputName}"], input[name="${targetQ.inputName}"]`)
-                        : modal.querySelector('textarea, input[type="text"]')) as (HTMLTextAreaElement | HTMLInputElement);
+                        return null;
+                      });
 
-                      if (txtInput) {
-                        txtInput.focus();
-                        const nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-                        const nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-
-                        if (txtInput instanceof HTMLTextAreaElement && nativeTextAreaSetter) {
-                          nativeTextAreaSetter.call(txtInput, targetAnswer);
-                        } else if (txtInput instanceof HTMLInputElement && nativeInputSetter) {
-                          nativeInputSetter.call(txtInput, targetAnswer);
-                        } else {
-                          txtInput.value = targetAnswer;
-                        }
-
-                        // Dispatch complete suite of React input/change events
-                        txtInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-                        txtInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-                        try {
-                          txtInput.dispatchEvent(new InputEvent('input', { bubbles: true, data: targetAnswer }));
-                        } catch {}
-                        txtInput.blur();
+                      if (!picked) {
+                        await skillInp.click({ clickCount: 3 });
+                        await workerPage.keyboard.press('Backspace');
                       }
                     }
-                  }, qItem, chosenAnswers);
+                  } else if (qItem.type === 'city_search') {
+                    const cityInp = await workerPage.$('[data-testid="modal-wrapper"] input[placeholder*="Cari Kota" i], [data-testid="modal-wrapper"] input[placeholder*="Kota / Provinsi" i], [data-testid="modal-wrapper"] input[aria-label*="Kota" i]');
+                    if (cityInp && chosenAnswers.length > 0) {
+                      const targetCity = chosenAnswers[0];
+                      await cityInp.click({ clickCount: 3 });
+                      await sleep(100);
+                      await cityInp.type(targetCity, { delay: 50 });
+                      await sleep(700);
+
+                      await workerPage.evaluate(() => {
+                        const dd = document.querySelector('[class*="SuggestionDropdown"], [class*="Dropdown"], [role="listbox"], div[class*="Option"], [class*="suggestion"]');
+                        if (dd) {
+                          const opt = (dd.querySelector('li, div[class*="option"], p, [role="option"]') || dd.firstElementChild) as HTMLElement;
+                          if (opt) opt.click();
+                        }
+                      });
+                    }
+                  } else {
+                    await workerPage.evaluate((targetQ: any, answers: string[]) => {
+                      const modal = document.querySelector('[data-testid="modal-wrapper"]');
+                      if (!modal) return;
+
+                      if (targetQ.type === 'radiobutton' && answers.length > 0) {
+                        const targetAnswer = answers[0];
+                        const radioInputs = targetQ.inputName 
+                          ? Array.from(modal.querySelectorAll(`input[type="radio"][name="${targetQ.inputName}"]`)) as HTMLInputElement[]
+                          : Array.from(modal.querySelectorAll('input[type="radio"]')) as HTMLInputElement[];
+
+                        for (const rd of radioInputs) {
+                          const lbl = rd.closest('label') || rd.parentElement;
+                          const txt = (lbl?.textContent || rd.value || '').trim();
+                          if (txt === targetAnswer || txt.toLowerCase().includes(targetAnswer.toLowerCase()) || targetAnswer.toLowerCase().includes(txt.toLowerCase())) {
+                            (lbl || rd).click();
+                            rd.checked = true;
+                            rd.dispatchEvent(new Event('change', { bubbles: true }));
+                            break;
+                          }
+                        }
+                      } else if (targetQ.type === 'checklist') {
+                        const labels = Array.from(modal.querySelectorAll('label'));
+                        for (const lbl of labels) {
+                          const txt = (lbl.textContent || '').trim();
+                          const shouldCheck = answers.some(ans => txt === ans || txt.includes(ans));
+                          const cbInput = lbl.querySelector('input[type="checkbox"]') as HTMLInputElement;
+                          if (cbInput && shouldCheck !== cbInput.checked) {
+                            lbl.click();
+                          }
+                        }
+                      } else if (targetQ.type === 'text' && answers.length > 0) {
+                        const targetAnswer = answers[0];
+                        const txtInput = (targetQ.inputName
+                          ? modal.querySelector(`textarea[name="${targetQ.inputName}"], input[name="${targetQ.inputName}"]`)
+                          : modal.querySelector('textarea, input[type="text"]')) as (HTMLTextAreaElement | HTMLInputElement);
+
+                        if (txtInput) {
+                          txtInput.focus();
+                          const nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+                          const nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+
+                          if (txtInput instanceof HTMLTextAreaElement && nativeTextAreaSetter) {
+                            nativeTextAreaSetter.call(txtInput, targetAnswer);
+                          } else if (txtInput instanceof HTMLInputElement && nativeInputSetter) {
+                            nativeInputSetter.call(txtInput, targetAnswer);
+                          } else {
+                            txtInput.value = targetAnswer;
+                          }
+
+                          // Dispatch complete suite of React input/change events
+                          txtInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                          txtInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                          try {
+                            txtInput.dispatchEvent(new InputEvent('input', { bubbles: true, data: targetAnswer }));
+                          } catch {}
+                          txtInput.blur();
+                        }
+                      }
+                    }, qItem, chosenAnswers);
+                  }
 
                   await sleep(1000);
                 }

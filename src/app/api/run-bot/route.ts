@@ -5,6 +5,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get('mode') || 'headless';
+  const platform = request.nextUrl.searchParams.get('platform') || 'all';
+  const limitParam = request.nextUrl.searchParams.get('limit');
+  const customLimit = limitParam ? parseInt(limitParam, 10) : undefined;
+
   const responseStream = new TransformStream();
   const writer = responseStream.writable.getWriter();
   const encoder = new TextEncoder();
@@ -22,9 +26,14 @@ export async function GET(request: NextRequest) {
   // Launch bot asynchronously
   (async () => {
     try {
-      await startBot(async (msg) => {
-        await sendLog(msg);
-      }, mode);
+      await startBot(
+        async (msg) => {
+          await sendLog(msg);
+        },
+        mode,
+        platform,
+        customLimit
+      );
     } catch (err: any) {
       await sendLog(`🚨 Fatal error: ${err.message || err}`);
     } finally {

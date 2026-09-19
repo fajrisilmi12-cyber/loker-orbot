@@ -1,7 +1,13 @@
 'use client';
 
 import React from 'react';
-import { ExternalLink, Building2, MapPin, Calendar, Briefcase } from 'lucide-react';
+import { ExternalLink, Building2, MapPin, Calendar, Briefcase, FileText, Banknote } from 'lucide-react';
+
+export interface QuestionAnswerItem {
+  question: string;
+  answer: string;
+  type?: string;
+}
 
 export interface AppliedJobCard {
   company: string;
@@ -10,6 +16,10 @@ export interface AppliedJobCard {
   jobUrl: string;
   date: string;
   status: string;
+  salary?: string;
+  location?: string;
+  workType?: string;
+  questionsAndAnswers?: QuestionAnswerItem[];
 }
 
 const PLATFORM_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
@@ -27,26 +37,45 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }>
   pending:    { bg: 'bg-amber-500/15',   text: 'text-amber-400',   label: '⏳ Pending' },
 };
 
-function formatDate(dateStr: string): string {
+export function formatJobDate(dateStr: string): string {
   if (!dateStr) return '–';
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch {
-    return dateStr;
+  const clean = dateStr.trim();
+
+  // Handle format "19/9/2026, 17.12.36" or "19/09/2026 17:12:36" or "19/9/2026"
+  const dmyMatch = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2})[.:](\d{1,2}))?/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    const hour = dmyMatch[4] ? `${dmyMatch[4].padStart(2, '0')}:${(dmyMatch[5] || '00').padStart(2, '0')}` : '';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const monthName = months[month] || `Bulan ${month + 1}`;
+    return hour ? `${day} ${monthName} ${year}, ${hour}` : `${day} ${monthName} ${year}`;
   }
+
+  try {
+    const d = new Date(clean);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+  } catch {}
+
+  return clean;
 }
 
 interface JobCardProps {
   job: AppliedJobCard;
   index: number;
+  onViewDetail?: (job: AppliedJobCard) => void;
 }
 
-export default function JobCard({ job, index }: JobCardProps) {
+export default function JobCard({ job, index, onViewDetail }: JobCardProps) {
   const platformKey = job.platform?.toLowerCase() || 'glints';
   const platformStyle = PLATFORM_STYLES[platformKey] || PLATFORM_STYLES.glints;
   const statusKey = job.status?.toLowerCase() || 'applied';
   const statusStyle = STATUS_STYLES[statusKey] || STATUS_STYLES.applied;
+
+  const qaCount = job.questionsAndAnswers?.length || 0;
 
   return (
     <div
@@ -60,7 +89,7 @@ export default function JobCard({ job, index }: JobCardProps) {
             <Building2 className="w-4 h-4 text-muted-theme" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-muted-theme truncate leading-tight">{job.company || 'Perusahaan'}</p>
+            <p className="text-[11px] font-medium text-muted-theme truncate leading-tight">{job.company || 'Perusahaan'}</p>
           </div>
         </div>
 
@@ -76,32 +105,58 @@ export default function JobCard({ job, index }: JobCardProps) {
         {job.title || 'Posisi Tidak Diketahui'}
       </h3>
 
-      {/* Meta Info */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-theme">
+      {/* Meta Info (Location, Salary, Date) */}
+      <div className="flex flex-col gap-1 text-[11px] text-muted-theme">
+        {job.location && (
+          <div className="flex items-center gap-1.5 truncate">
+            <MapPin className="w-3 h-3 shrink-0 text-orange-400/80" />
+            <span className="truncate">{job.location}</span>
+          </div>
+        )}
+        {job.salary && job.salary !== 'Gaji Tidak Ditampilkan' && (
+          <div className="flex items-center gap-1.5 truncate text-emerald-400">
+            <Banknote className="w-3 h-3 shrink-0" />
+            <span className="truncate">{job.salary}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5">
           <Calendar className="w-3 h-3 shrink-0" />
-          <span>{formatDate(job.date)}</span>
+          <span>{formatJobDate(job.date)}</span>
         </div>
       </div>
 
-      {/* Footer: Status + Link */}
-      <div className="flex items-center justify-between pt-2 border-t border-subtle-theme mt-auto">
+      {/* Footer: Status + Q&A Button + Link */}
+      <div className="flex items-center justify-between pt-2 border-t border-subtle-theme mt-auto gap-1.5">
         <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold ${statusStyle.bg} ${statusStyle.text}`}>
           {statusStyle.label}
         </span>
 
-        {job.jobUrl ? (
-          <a
-            href={job.jobUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-theme hover:text-orange-400 transition-colors"
-          >
-            Buka ↗
-          </a>
-        ) : (
-          <span className="text-[10px] text-muted-theme/40">Tidak ada link</span>
-        )}
+        <div className="flex items-center gap-1.5 ml-auto">
+          {onViewDetail && (
+            <button
+              onClick={() => onViewDetail(job)}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 text-[10px] font-medium transition"
+              title="Lihat riwayat pertanyaan & jawaban bot"
+            >
+              <FileText className="w-3 h-3" />
+              <span>{qaCount > 0 ? `${qaCount} Q&A` : 'Detail'}</span>
+            </button>
+          )}
+
+          {job.jobUrl ? (
+            <a
+              href={job.jobUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg card-subtle-theme border border-subtle-theme text-[10px] font-medium text-muted-theme hover:text-orange-400 hover:border-orange-500/30 transition-colors"
+            >
+              <span>Buka</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          ) : (
+            <span className="text-[10px] text-muted-theme/40">No URL</span>
+          )}
+        </div>
       </div>
     </div>
   );

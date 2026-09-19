@@ -96,13 +96,10 @@ export async function launchBrowserWithFallback(
     '--no-default-browser-check',
     '--no-first-run',
     '--disable-infobars',
-    '--disable-blink-features=AutomationControlled',
-    '--disable-features=IsolateOrigins,site-per-process',
     '--window-size=1280,800',
-    '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
   ];
 
-  // Hanya tambahkan sandbox flags khusus Linux jika dijalankan di container/server Linux
+  // Sandbox flags khusus Linux jika dijalankan di container/server Linux
   if (process.platform === 'linux') {
     baseArgs.push('--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage');
   }
@@ -110,7 +107,7 @@ export async function launchBrowserWithFallback(
   const baseOptions: any = {
     headless: isHeadless,
     userDataDir: profilePath,
-    ignoreDefaultArgs: ['--enable-automation', '--enable-blink-features=IdleDetection'],
+    ignoreDefaultArgs: ['--enable-automation'],
     args: baseArgs,
     defaultViewport: isHeadless ? { width: 1280, height: 800 } : null
   };

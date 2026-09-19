@@ -326,6 +326,11 @@ export default function Home() {
   const [pendingDiffList, setPendingDiffList] = useState<Array<{ field: string; label: string; oldVal: string; newVal: string; willChange: boolean }>>([]);
   const [selectedDiffFields, setSelectedDiffFields] = useState<Set<string>>(new Set());
 
+  // Web Profile Two-Way Sync Import State
+  const [detectedWebProfile, setDetectedWebProfile] = useState<any>(null);
+  const [isProfileImportModalOpen, setIsProfileImportModalOpen] = useState(false);
+  const [selectedWebProfileFields, setSelectedWebProfileFields] = useState<Set<string>>(new Set(['fullName', 'phoneNumber', 'email', 'domicile', 'educationLevel']));
+
   const [themeMode, setThemeMode] = useState<'system' | 'dark' | 'light'>('system');
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
   const [isMounted, setIsMounted] = useState(false);
@@ -891,15 +896,23 @@ export default function Home() {
     } catch {}
   };
 
-  const executeStartBot = (mode: 'headless' | 'headful' = 'headless') => {
+  const executeStartBot = (
+    mode: 'headless' | 'headful' = 'headless',
+    platform: 'all' | 'glints' | 'linkedin' | 'jobstreet' | 'indeed' = 'all',
+    customLimit?: number
+  ) => {
     if (isBotRunning) return;
 
-    setLogs([`[${new Date().toLocaleTimeString()}] Menghubungkan ke Automation Engine (${mode.toUpperCase()})...`]);
+    const platText = platform !== 'all' ? platform.toUpperCase() : 'SEMUA PLATFORM';
+    setLogs([`[${new Date().toLocaleTimeString()}] Menghubungkan ke Automation Engine (${mode.toUpperCase()} - Target: ${platText})...`]);
     setIsBotRunning(true);
     setActiveTab('logs');
-    toast.info(`Bot dimulai dalam mode ${mode.toUpperCase()}`);
+    toast.info(`Memulai bot untuk ${platText} (${mode.toUpperCase()})`);
 
-    const eventSource = new EventSource(`/api/run-bot?mode=${mode}`);
+    let url = `/api/run-bot?mode=${mode}&platform=${platform}`;
+    if (customLimit) url += `&limit=${customLimit}`;
+
+    const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
@@ -940,7 +953,7 @@ export default function Home() {
   const handleSyncProfileGlints = () => {
     if (isSyncingProfile || isBotRunning) return;
 
-    setLogs([`[${new Date().toLocaleTimeString()}] 🚀 Memulai sinkronisasi profil akun Glints...`]);
+    setLogs([`[${new Date().toLocaleTimeString()}] 🚀 Memulai pemeriksaan & sinkronisasi profil akun Glints...`]);
     setIsSyncingProfile(true);
     setActiveTab('logs');
     toast.info('Memulai sinkronisasi profil Glints secara otomatis...');
@@ -950,7 +963,12 @@ export default function Home() {
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        setLogs((prev) => [...prev, `[${new Date(data.timestamp).toLocaleTimeString()}] ${data.message}`]);
+        if (data.type === 'profile_detected' && data.data) {
+          setDetectedWebProfile(data.data);
+          setIsProfileImportModalOpen(true);
+        } else if (data.message) {
+          setLogs((prev) => [...prev, `[${new Date(data.timestamp).toLocaleTimeString()}] ${data.message}`]);
+        }
       } catch (e) {
         console.error(e);
       }
@@ -960,8 +978,48 @@ export default function Home() {
       setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Selesai sinkronisasi profil.`]);
       setIsSyncingProfile(false);
       eventSource.close();
-      toast.success('Sinkronisasi profil Glints selesai!');
+      toast.success('Pemeriksaan profil Glints selesai!');
     };
+  };
+
+  const handleApplyWebProfileImport = async () => {
+    if (!detectedWebProfile) return;
+
+    const updated = { ...config };
+    let importCount = 0;
+
+    if (selectedWebProfileFields.has('fullName') && detectedWebProfile.name) {
+      updated.fullName = detectedWebProfile.name;
+      importCount++;
+    }
+    if (selectedWebProfileFields.has('phoneNumber') && detectedWebProfile.phone) {
+      updated.phoneNumber = detectedWebProfile.phone;
+      importCount++;
+    }
+    if (selectedWebProfileFields.has('email') && detectedWebProfile.email) {
+      updated.email = detectedWebProfile.email;
+      importCount++;
+    }
+    if (selectedWebProfileFields.has('domicile') && detectedWebProfile.location) {
+      updated.domicile = detectedWebProfile.location;
+      importCount++;
+    }
+    if (selectedWebProfileFields.has('educationLevel') && detectedWebProfile.education) {
+      updated.educationLevel = detectedWebProfile.education;
+      importCount++;
+    }
+
+    setConfig(updated);
+    setIsProfileImportModalOpen(false);
+    toast.success(`Berhasil mengimpor ${importCount} data profil dari akun Glints ke CV Blaster!`);
+
+    try {
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+    } catch {}
   };
 
   const handleSaveQuestionsList = async (updatedList: QuestionItem[]) => {
@@ -1651,19 +1709,20 @@ export default function Home() {
                 <button
                   onClick={() => executeStartBot('headless')}
                   disabled={isSetupBrowserRunning}
-                  className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium flex items-center gap-2 transition shadow-sm disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                  title="Jalankan bot di latar belakang (tanpa jendela browser)"
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>Jalankan Bot</span>
+                  <span>Run (Headless)</span>
                 </button>
                 <button
                   onClick={() => executeStartBot('headful')}
                   disabled={isSetupBrowserRunning}
                   className="px-3.5 py-2 rounded-xl card-theme border text-muted-theme hover:text-main-theme text-xs font-medium flex items-center gap-1.5 transition disabled:opacity-50 shadow-sm"
-                  title="Jalankan dengan jendela browser terlihat"
+                  title="Jalankan dengan jendela browser terbuka"
                 >
-                  <Globe className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Headful</span>
+                  <Globe className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Run (Headful)</span>
                 </button>
               </div>
             )}
@@ -1694,6 +1753,267 @@ export default function Home() {
                     <div className="text-xs text-muted-theme">Tingkat Kesiapan</div>
                     <div className="text-sm font-semibold text-main-theme">
                       {readinessMetrics.completedSteps} dari 3 Bagian Lengkap ({readinessMetrics.percent}%)
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* PROVIDER LIVE HEALTH & QUICK CONTROL CENTER */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-orange-500" />
+                    <span className="text-xs font-semibold text-main-theme">Portal Status &amp; Pengujian Mandiri</span>
+                  </div>
+                  <span className="text-[11px] text-muted-theme">Klik tombol untuk menguji portal secara terpisah</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* 1. GLINTS CARD */}
+                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-blue-500/40 transition">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500 font-bold text-xs">
+                          GL
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-semibold text-main-theme">Glints</h3>
+                          <p className="text-[10px] text-muted-theme">In-site Easy Apply</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                        {config.enableGlints ? '🟢 Aktif' : '⚪ Nonaktif'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-[11px] text-muted-theme">
+                      <div className="flex justify-between">
+                        <span>Batas Kuota:</span>
+                        <span className="font-medium text-main-theme">{config.limitGlints || 80} loker</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Status Profil:</span>
+                        <span className="font-medium text-emerald-500">{config.domicile ? 'Lengkap' : 'Perlu Setup'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-subtle-theme">
+                      <button
+                        type="button"
+                        onClick={handleSyncProfileGlints}
+                        disabled={isSyncingProfile || isBotRunning}
+                        className="w-full py-1.5 px-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                        title="Otomatis isi form domisili, skill, dan upload CV ke akun Glints"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>⚡ Auto-Fill Profil</span>
+                      </button>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headful', 'glints', 5)}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:border-blue-500 card-subtle-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          title="Uji coba Glints 5 loker (Headful)"
+                        >
+                          <Play className="w-2.5 h-2.5 text-blue-500 fill-current" />
+                          <span>Tes 5 Loker</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headless', 'glints')}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                        >
+                          <span>Jalankan</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. LINKEDIN CARD */}
+                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-sky-500/40 transition">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-500 font-bold text-xs">
+                          IN
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-semibold text-main-theme">LinkedIn</h3>
+                          <p className="text-[10px] text-muted-theme">Easy Apply &amp; ATS</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                        {config.enableLinkedin ? '🟢 Aktif' : '⚪ Nonaktif'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-[11px] text-muted-theme">
+                      <div className="flex justify-between">
+                        <span>Batas Kuota:</span>
+                        <span className="font-medium text-main-theme">{config.limitLinkedin || 50} loker</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Stealth:</span>
+                        <span className="font-medium text-emerald-500">Windows 11 Act</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-subtle-theme">
+                      <button
+                        type="button"
+                        onClick={() => executeStartBot('headful', 'linkedin', 1)}
+                        disabled={isBotRunning || isSetupBrowserRunning}
+                        className="w-full py-1.5 px-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-500 text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                        title="Buka browser untuk verifikasi / login LinkedIn"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        <span>🔑 Cek / Login</span>
+                      </button>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headful', 'linkedin', 5)}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:border-sky-500 card-subtle-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          title="Uji coba LinkedIn 5 loker (Headful)"
+                        >
+                          <Play className="w-2.5 h-2.5 text-sky-500 fill-current" />
+                          <span>Tes 5 Loker</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headless', 'linkedin')}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                        >
+                          <span>Jalankan</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. JOBSTREET CARD */}
+                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-purple-500/40 transition">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-500 font-bold text-xs">
+                          JS
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-semibold text-main-theme">JobStreet</h3>
+                          <p className="text-[10px] text-muted-theme">Seek Platform</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                        {config.enableJobstreet ? '🟢 Aktif' : '⚪ Nonaktif'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-[11px] text-muted-theme">
+                      <div className="flex justify-between">
+                        <span>Batas Kuota:</span>
+                        <span className="font-medium text-main-theme">{config.limitJobstreet || 75} loker</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Domain:</span>
+                        <span className="font-medium text-main-theme">id.jobstreet.com</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-subtle-theme">
+                      <button
+                        type="button"
+                        onClick={() => executeStartBot('headful', 'jobstreet', 1)}
+                        disabled={isBotRunning || isSetupBrowserRunning}
+                        className="w-full py-1.5 px-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                        title="Buka browser untuk verifikasi / login JobStreet"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        <span>🔑 Cek / Login</span>
+                      </button>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headful', 'jobstreet', 5)}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:border-purple-500 card-subtle-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          title="Uji coba JobStreet 5 loker (Headful)"
+                        >
+                          <Play className="w-2.5 h-2.5 text-purple-500 fill-current" />
+                          <span>Tes 5 Loker</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headless', 'jobstreet')}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                        >
+                          <span>Jalankan</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. INDEED CARD */}
+                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-orange-500/40 transition">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-500 font-bold text-xs">
+                          ID
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-semibold text-main-theme">Indeed</h3>
+                          <p className="text-[10px] text-muted-theme">Smart Apply &amp; Web</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                        {config.enableIndeed ? '🟢 Aktif' : '⚪ Nonaktif'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-[11px] text-muted-theme">
+                      <div className="flex justify-between">
+                        <span>Batas Kuota:</span>
+                        <span className="font-medium text-main-theme">{config.limitIndeed || 50} loker</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Anti-CF Shield:</span>
+                        <span className="font-medium text-emerald-500">Auto Resolve</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-subtle-theme">
+                      <button
+                        type="button"
+                        onClick={() => executeStartBot('headful', 'indeed', 1)}
+                        disabled={isBotRunning || isSetupBrowserRunning}
+                        className="w-full py-1.5 px-2 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                        title="Buka browser untuk verifikasi / login Indeed"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        <span>🔑 Cek / Login</span>
+                      </button>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headful', 'indeed', 5)}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:border-orange-500 card-subtle-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          title="Uji coba Indeed 5 loker (Headful)"
+                        >
+                          <Play className="w-2.5 h-2.5 text-orange-500 fill-current" />
+                          <span>Tes 5 Loker</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headless', 'indeed')}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                        >
+                          <span>Jalankan</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1807,21 +2127,15 @@ export default function Home() {
                   </div>
                 </div>
 
-                {readinessMetrics.isReady100 ? (
-                  <button
-                    type="button"
-                    onClick={() => executeStartBot('headless')}
-                    disabled={isBotRunning || isSetupBrowserRunning}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium flex items-center gap-1.5 shrink-0 shadow-sm"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Mulai Bot Sekarang</span>
-                  </button>
-                ) : (
-                  <span className="text-[11px] font-medium bg-amber-500/20 px-2.5 py-1 rounded-lg self-start sm:self-auto">
-                    {readinessMetrics.completedSteps} / 3 Selesai
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                  <span className={`text-[11px] font-semibold px-3 py-1 rounded-xl border ${
+                    readinessMetrics.isReady100
+                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                  }`}>
+                    {readinessMetrics.completedSteps} / 3 Langkah Selesai
                   </span>
-                )}
+                </div>
               </div>
 
               {/* Wizard Body Card */}
@@ -4266,6 +4580,7 @@ export default function Home() {
                 jobs={appliedJobs}
                 onRefresh={fetchAppliedHistory}
                 onExportCsv={handleExportCsv}
+                onSelectJob={(job: any) => setSelectedJobDetail(job)}
               />
             </div>
           )}
@@ -5356,6 +5671,214 @@ export default function Home() {
               >
                 <Check className="w-3.5 h-3.5" />
                 <span>Simpan Cookie {cookieTargetPlatform.toUpperCase()}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: TWO-WAY WEB PROFILE IMPORT & CONFLICT RESOLUTION */}
+      {isProfileImportModalOpen && detectedWebProfile && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-theme border rounded-3xl p-6 max-w-2xl w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between border-b border-subtle-theme pb-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-main-theme">Data Profil Terdeteksi dari Akun Glints</h3>
+                  <p className="text-[11px] text-muted-theme">Pilih data mana saja yang ingin disinkronkan ke form CV Blaster (Non-Destruktif)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsProfileImportModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-500/10 text-muted-theme"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2.5 shrink-0">
+              <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold">Akun Glints Anda sudah memiliki data diri asli.</div>
+                <p className="text-[11px] opacity-90 mt-0.5">
+                  Centang kolom di bawah jika Anda ingin mengimpor data dari akun Glints ke formulir CV Blaster, atau klik <strong>&quot;Pertahankan Data CV Blaster&quot;</strong> jika tidak ingin mengubah data formulir saat ini.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto border border-subtle-theme rounded-2xl divide-y divide-subtle-theme text-xs pr-1">
+              {/* Field 1: Nama Lengkap */}
+              {detectedWebProfile.name && (
+                <label className="p-3.5 flex items-start gap-3 hover:bg-slate-500/5 cursor-pointer transition">
+                  <input
+                    type="checkbox"
+                    checked={selectedWebProfileFields.has('fullName')}
+                    onChange={(e) => {
+                      const next = new Set(selectedWebProfileFields);
+                      if (e.target.checked) next.add('fullName');
+                      else next.delete('fullName');
+                      setSelectedWebProfileFields(next);
+                    }}
+                    className="w-4 h-4 rounded text-blue-600 mt-0.5"
+                  />
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-main-theme">Nama Lengkap</div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-theme">Di CV Blaster: </span>
+                        <span className="font-medium text-main-theme">{config.fullName || '(Kosong)'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              )}
+
+              {/* Field 2: No WhatsApp */}
+              {detectedWebProfile.phone && (
+                <label className="p-3.5 flex items-start gap-3 hover:bg-slate-500/5 cursor-pointer transition">
+                  <input
+                    type="checkbox"
+                    checked={selectedWebProfileFields.has('phoneNumber')}
+                    onChange={(e) => {
+                      const next = new Set(selectedWebProfileFields);
+                      if (e.target.checked) next.add('phoneNumber');
+                      else next.delete('phoneNumber');
+                      setSelectedWebProfileFields(next);
+                    }}
+                    className="w-4 h-4 rounded text-blue-600 mt-0.5"
+                  />
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-main-theme">Nomor WhatsApp / HP</div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.phone}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-theme">Di CV Blaster: </span>
+                        <span className="font-medium text-main-theme">{config.phoneNumber || '(Kosong)'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              )}
+
+              {/* Field 3: Email */}
+              {detectedWebProfile.email && (
+                <label className="p-3.5 flex items-start gap-3 hover:bg-slate-500/5 cursor-pointer transition">
+                  <input
+                    type="checkbox"
+                    checked={selectedWebProfileFields.has('email')}
+                    onChange={(e) => {
+                      const next = new Set(selectedWebProfileFields);
+                      if (e.target.checked) next.add('email');
+                      else next.delete('email');
+                      setSelectedWebProfileFields(next);
+                    }}
+                    className="w-4 h-4 rounded text-blue-600 mt-0.5"
+                  />
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-main-theme">Alamat Email</div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.email}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-theme">Di CV Blaster: </span>
+                        <span className="font-medium text-main-theme">{config.email || '(Kosong)'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              )}
+
+              {/* Field 4: Domisili / Lokasi */}
+              {detectedWebProfile.location && (
+                <label className="p-3.5 flex items-start gap-3 hover:bg-slate-500/5 cursor-pointer transition">
+                  <input
+                    type="checkbox"
+                    checked={selectedWebProfileFields.has('domicile')}
+                    onChange={(e) => {
+                      const next = new Set(selectedWebProfileFields);
+                      if (e.target.checked) next.add('domicile');
+                      else next.delete('domicile');
+                      setSelectedWebProfileFields(next);
+                    }}
+                    className="w-4 h-4 rounded text-blue-600 mt-0.5"
+                  />
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-main-theme">Lokasi Domisili</div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.location}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-theme">Di CV Blaster: </span>
+                        <span className="font-medium text-main-theme">{config.domicile || '(Kosong)'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              )}
+
+              {/* Field 5: Pendidikan */}
+              {detectedWebProfile.education && (
+                <label className="p-3.5 flex items-start gap-3 hover:bg-slate-500/5 cursor-pointer transition">
+                  <input
+                    type="checkbox"
+                    checked={selectedWebProfileFields.has('educationLevel')}
+                    onChange={(e) => {
+                      const next = new Set(selectedWebProfileFields);
+                      if (e.target.checked) next.add('educationLevel');
+                      else next.delete('educationLevel');
+                      setSelectedWebProfileFields(next);
+                    }}
+                    className="w-4 h-4 rounded text-blue-600 mt-0.5"
+                  />
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-main-theme">Pendidikan Terakhir</div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.education}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-theme">Di CV Blaster: </span>
+                        <span className="font-medium text-main-theme">{config.educationLevel || '(Kosong)'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-subtle-theme shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsProfileImportModalOpen(false)}
+                className="px-4 py-2 rounded-xl card-subtle-theme border border-subtle-theme text-muted-theme hover:text-main-theme text-xs font-medium"
+              >
+                Pertahankan Data CV Blaster (Jangan Timpa)
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyWebProfileImport}
+                disabled={selectedWebProfileFields.size === 0}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-medium shadow-sm flex items-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Impor {selectedWebProfileFields.size} Kolom Terpilih ke CV Blaster</span>
               </button>
             </div>
           </div>

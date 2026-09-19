@@ -172,10 +172,12 @@ export async function runJobstreetBot(
           await workerPage.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
           await sleep(2000);
 
-          // Extract Job Title & Company Name
+          // Extract Job Title, Company Name, Location, Salary
           const jobDetails = await workerPage.evaluate(() => {
             const titleEl = document.querySelector('[data-automation="job-detail-title"]');
             const companyEl = document.querySelector('[data-automation="advertiser-name"]');
+            const locationEl = document.querySelector('[data-automation="job-detail-location"]');
+            const salaryEl = document.querySelector('[data-automation="job-detail-salary"]');
             
             const title = titleEl ? (titleEl.textContent || '').trim() : '';
             let company = '';
@@ -183,10 +185,33 @@ export async function runJobstreetBot(
               company = companyEl.childNodes[0] ? (companyEl.childNodes[0].textContent || '').trim() : (companyEl.textContent || '').trim();
               company = company.replace(/\s+/g, ' ');
             }
-            return { title, company };
+            const location = locationEl ? (locationEl.textContent || '').trim() : '';
+            const salary = salaryEl ? (salaryEl.textContent || '').trim() : '';
+            const isRemote = /remote|jarak jauh|work from home|wfh/i.test(document.body.innerText);
+            const isHybrid = /hybrid/i.test(document.body.innerText);
+
+            return { title, company, location, salary, isRemote, isHybrid };
           });
 
-          onLog(`[Worker ${workerId + 1}] 💼 Job: "${jobDetails.title}" at "${jobDetails.company}"`);
+          onLog(`[Worker ${workerId + 1}] 💼 Job: "${jobDetails.title}" at "${jobDetails.company}" | 📍 ${jobDetails.location || 'Indonesia'}`);
+
+          // Location Preference Filter
+          if (config.location && jobDetails.location) {
+            const userLocations = config.location
+              .split(/[,/|]+/)
+              .map((l: string) => l.trim().toLowerCase())
+              .filter(Boolean);
+
+            const isRemoteOrHybrid = jobDetails.isRemote || jobDetails.isHybrid || /remote|hybrid|wfh/i.test(jobDetails.location);
+            const matchesCity = userLocations.some((l: string) => 
+              !l.includes('remote') && !l.includes('wfh') && jobDetails.location.toLowerCase().includes(l)
+            );
+
+            if (!matchesCity && !isRemoteOrHybrid && userLocations.length > 0) {
+              onLog(`[Worker ${workerId + 1}] 🛡️ [JobStreet Location] Melewati "${jobDetails.title}" di ${jobDetails.company} - Lokasi On-site di "${jobDetails.location}" tidak sesuai preferensi lokasi Anda ("${config.location}").`);
+              continue;
+            }
+          }
 
           // Enterprise Filter: Job Match & Dealbreaker Check
           if (config.enableJobMatchFilter) {

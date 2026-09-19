@@ -11,7 +11,17 @@ export async function GET(request: NextRequest) {
   const sendLog = async (message: string) => {
     try {
       await writer.write(
-        encoder.encode(`data: ${JSON.stringify({ message, timestamp: new Date().toISOString() })}\n\n`)
+        encoder.encode(`data: ${JSON.stringify({ type: 'log', message, timestamp: new Date().toISOString() })}\n\n`)
+      );
+    } catch (err) {
+      console.warn('SSE client disconnected:', err);
+    }
+  };
+
+  const sendEvent = async (type: string, data: any) => {
+    try {
+      await writer.write(
+        encoder.encode(`data: ${JSON.stringify({ type, data, timestamp: new Date().toISOString() })}\n\n`)
       );
     } catch (err) {
       console.warn('SSE client disconnected:', err);
@@ -20,9 +30,14 @@ export async function GET(request: NextRequest) {
 
   (async () => {
     try {
-      await syncGlintsProfile(async (msg) => {
-        await sendLog(msg);
-      });
+      await syncGlintsProfile(
+        async (msg) => {
+          await sendLog(msg);
+        },
+        async (profile) => {
+          await sendEvent('profile_detected', profile);
+        }
+      );
     } catch (err: any) {
       await sendLog(`🚨 Fatal error: ${err.message || err}`);
     } finally {

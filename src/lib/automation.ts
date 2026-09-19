@@ -9,14 +9,20 @@ declare global {
   var isBotRunning: boolean;
 }
 
-export async function startBot(onLog: (msg: string) => void, mode: string = 'headless') {
+export async function startBot(
+  onLog: (msg: string) => void,
+  mode: string = 'headless',
+  targetPlatform: string = 'all',
+  customLimit?: number
+) {
   if (global.isBotRunning) {
     onLog('⚠️ Bot is already running!');
     return;
   }
 
   global.isBotRunning = true;
-  onLog(`🚀 Starting CV Blaster Engine in ${mode.toUpperCase()} mode...`);
+  const platformLabel = targetPlatform !== 'all' ? targetPlatform.toUpperCase() : 'SEMUA PLATFORM';
+  onLog(`🚀 Starting CV Blaster Engine in ${mode.toUpperCase()} mode [Target: ${platformLabel}]...`);
 
   let browser: any = null;
   try {
@@ -57,22 +63,23 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
     let totalAlreadyApplied = 0;
     let totalErrors = 0;
 
-    const isSharedMode = config.limitMode !== 'per_platform';
-    const sharedLimitTarget = config.limitPerDay || 155;
+    const isSinglePlatform = targetPlatform && targetPlatform !== 'all';
+    const isSharedMode = !isSinglePlatform && config.limitMode !== 'per_platform';
+    const sharedLimitTarget = customLimit || config.limitPerDay || 155;
 
-    if (isSharedMode) {
+    if (isSinglePlatform) {
+      onLog(`🎯 Mode Single-Platform: Portal "${platformLabel}" Aktif (Batas: ${customLimit || 'Default'} lamaran).`);
+    } else if (isSharedMode) {
       onLog(`🎯 Mode Kuota: Kuota Gabungan Aktif (Target Total: ${sharedLimitTarget} lamaran untuk semua platform).`);
     } else {
       onLog(`🎯 Mode Kuota: Kuota Per-Platform Aktif (Glints: ${config.limitGlints || 80}, JobStreet: ${config.limitJobstreet || 75}, LinkedIn: ${config.limitLinkedin || 50}).`);
     }
 
     const glintsLimiter = {
-      getTargetLimit: () => isSharedMode ? sharedLimitTarget : (config.limitGlints || config.limitPerDay || 80),
+      getTargetLimit: () => customLimit || (isSharedMode ? sharedLimitTarget : (config.limitGlints || config.limitPerDay || 80)),
       isLimitReached: (currentGlintsSuccess: number) => {
-        if (isSharedMode) {
-          return totalSuccess >= sharedLimitTarget;
-        }
-        return currentGlintsSuccess >= (config.limitGlints || config.limitPerDay || 80);
+        const target = customLimit || (isSharedMode ? sharedLimitTarget : (config.limitGlints || config.limitPerDay || 80));
+        return isSharedMode ? totalSuccess >= target : currentGlintsSuccess >= target;
       },
       onJobSuccess: () => {
         totalSuccess++;
@@ -80,12 +87,10 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
     };
 
     const jobstreetLimiter = {
-      getTargetLimit: () => isSharedMode ? sharedLimitTarget : (config.limitJobstreet || config.limitPerDay || 75),
+      getTargetLimit: () => customLimit || (isSharedMode ? sharedLimitTarget : (config.limitJobstreet || config.limitPerDay || 75)),
       isLimitReached: (currentJobstreetSuccess: number) => {
-        if (isSharedMode) {
-          return totalSuccess >= sharedLimitTarget;
-        }
-        return currentJobstreetSuccess >= (config.limitJobstreet || config.limitPerDay || 75);
+        const target = customLimit || (isSharedMode ? sharedLimitTarget : (config.limitJobstreet || config.limitPerDay || 75));
+        return isSharedMode ? totalSuccess >= target : currentJobstreetSuccess >= target;
       },
       onJobSuccess: () => {
         totalSuccess++;
@@ -93,12 +98,10 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
     };
 
     const linkedinLimiter = {
-      getTargetLimit: () => isSharedMode ? sharedLimitTarget : (config.limitLinkedin || config.limitPerDay || 50),
+      getTargetLimit: () => customLimit || (isSharedMode ? sharedLimitTarget : (config.limitLinkedin || config.limitPerDay || 50)),
       isLimitReached: (currentLinkedinSuccess: number) => {
-        if (isSharedMode) {
-          return totalSuccess >= sharedLimitTarget;
-        }
-        return currentLinkedinSuccess >= (config.limitLinkedin || config.limitPerDay || 50);
+        const target = customLimit || (isSharedMode ? sharedLimitTarget : (config.limitLinkedin || config.limitPerDay || 50));
+        return isSharedMode ? totalSuccess >= target : currentLinkedinSuccess >= target;
       },
       onJobSuccess: () => {
         totalSuccess++;
@@ -106,12 +109,10 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
     };
 
     const indeedLimiter = {
-      getTargetLimit: () => isSharedMode ? sharedLimitTarget : (config.limitIndeed || config.limitPerDay || 50),
+      getTargetLimit: () => customLimit || (isSharedMode ? sharedLimitTarget : (config.limitIndeed || config.limitPerDay || 50)),
       isLimitReached: (currentIndeedSuccess: number) => {
-        if (isSharedMode) {
-          return totalSuccess >= sharedLimitTarget;
-        }
-        return currentIndeedSuccess >= (config.limitIndeed || config.limitPerDay || 50);
+        const target = customLimit || (isSharedMode ? sharedLimitTarget : (config.limitIndeed || config.limitPerDay || 50));
+        return isSharedMode ? totalSuccess >= target : currentIndeedSuccess >= target;
       },
       onJobSuccess: () => {
         totalSuccess++;
@@ -125,9 +126,10 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
 
     const getOrNewPage = async () => {
       let page;
-      if (!initialPageUsed && initialPages.length > 0 && initialPages[0]) {
+      const currentPages = await browser.pages().catch(() => []);
+      if (!initialPageUsed && currentPages.length > 0 && currentPages[0]) {
         initialPageUsed = true;
-        page = initialPages[0];
+        page = currentPages[0];
       } else {
         page = await browser.newPage();
       }
@@ -135,12 +137,30 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
       return page;
     };
 
+    const safeClosePage = async (pageToClose: any) => {
+      try {
+        const currentPages = await browser.pages().catch(() => []);
+        if (currentPages.length > 1) {
+          await pageToClose.close();
+        } else {
+          await pageToClose.goto('about:blank', { waitUntil: 'domcontentloaded' }).catch(() => {});
+        }
+      } catch {}
+    };
+
+    const shouldInclude = (platformName: string, configEnabled: boolean) => {
+      if (isSinglePlatform) {
+        return targetPlatform.toLowerCase() === platformName.toLowerCase();
+      }
+      return configEnabled;
+    };
+
     const runPlatformTasks: Array<{ name: string; run: () => Promise<void> }> = [];
 
     // ----------------------------------------------------
     // TAB 1: GLINTS AUTOMATION
     // ----------------------------------------------------
-    if (config.enableGlints) {
+    if (shouldInclude('glints', !!config.enableGlints)) {
       runPlatformTasks.push({
         name: 'Glints',
         run: async () => {
@@ -156,18 +176,18 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
             glintsLog(`❌ Error: ${err.message || err}`);
             totalErrors++;
           } finally {
-            try { await pageGlints.close(); } catch {}
+            await safeClosePage(pageGlints);
           }
         }
       });
-    } else {
+    } else if (!isSinglePlatform) {
       onLog('⏩ Glints dinonaktifkan di pengaturan.');
     }
 
     // ----------------------------------------------------
     // TAB 2: JOBSTREET AUTOMATION
     // ----------------------------------------------------
-    if (config.enableJobstreet) {
+    if (shouldInclude('jobstreet', !!config.enableJobstreet)) {
       runPlatformTasks.push({
         name: 'Jobstreet',
         run: async () => {
@@ -183,18 +203,18 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
             jobstreetLog(`❌ Error: ${err.message || err}`);
             totalErrors++;
           } finally {
-            try { await pageJobstreet.close(); } catch {}
+            await safeClosePage(pageJobstreet);
           }
         }
       });
-    } else {
+    } else if (!isSinglePlatform) {
       onLog('⏩ Jobstreet dinonaktifkan di pengaturan.');
     }
 
     // ----------------------------------------------------
     // TAB 3: LINKEDIN AUTOMATION
     // ----------------------------------------------------
-    if (config.enableLinkedin) {
+    if (shouldInclude('linkedin', !!config.enableLinkedin)) {
       runPlatformTasks.push({
         name: 'LinkedIn',
         run: async () => {
@@ -210,18 +230,18 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
             linkedinLog(`❌ Error: ${err.message || err}`);
             totalErrors++;
           } finally {
-            try { await pageLinkedin.close(); } catch {}
+            await safeClosePage(pageLinkedin);
           }
         }
       });
-    } else {
+    } else if (!isSinglePlatform) {
       onLog('⏩ LinkedIn dinonaktifkan di pengaturan.');
     }
 
     // ----------------------------------------------------
     // TAB 4: INDEED AUTOMATION
     // ----------------------------------------------------
-    if (config.enableIndeed) {
+    if (shouldInclude('indeed', !!config.enableIndeed)) {
       runPlatformTasks.push({
         name: 'Indeed',
         run: async () => {
@@ -237,11 +257,11 @@ export async function startBot(onLog: (msg: string) => void, mode: string = 'hea
             indeedLog(`❌ Error: ${err.message || err}`);
             totalErrors++;
           } finally {
-            try { await pageIndeed.close(); } catch {}
+            await safeClosePage(pageIndeed);
           }
         }
       });
-    } else {
+    } else if (!isSinglePlatform) {
       onLog('⏩ Indeed dinonaktifkan di pengaturan.');
     }
 

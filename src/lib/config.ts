@@ -60,6 +60,7 @@ export interface AppConfig {
   phoneNumber: string;
   domicile: string;
   address?: string;          // Alamat lengkap / jalan / RT RW
+  aboutMe?: string;          // Ringkasan profil / deskripsi bio pelamar
   // Uploaded CV Document Information
   cvFileName?: string;
   cvFilePath?: string;
@@ -83,6 +84,11 @@ export interface AppConfig {
   minMatchScore?: number;
   negativeKeywords?: string;
   enableHumanStealth?: boolean;
+  // Advanced Search Filters
+  datePosted?: '24h' | 'week' | 'month' | '';
+  jobType?: string[];
+  workMode?: string[];
+  experienceLevel?: string[];
   // Portal Session Cookies (Imported from user's main browser or companion extension)
   portalCookies?: {
     linkedin?: string;
@@ -122,6 +128,10 @@ const DEFAULT_CONFIG: AppConfig = {
   minMatchScore: 60,
   negativeKeywords: 'mandarin, japanese, 10+ years, sales lapangan',
   enableHumanStealth: true,
+  datePosted: '',
+  jobType: ['full_time', 'part_time'],
+  workMode: ['hybrid', 'remote'],
+  experienceLevel: ['fresh', '1-3'],
   noticePeriod: 'Immediately',
   fullName: '',
   email: '',

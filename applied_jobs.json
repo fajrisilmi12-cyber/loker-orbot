@@ -1,5 +1,267 @@
 [
   {
+    "company": "Pru Power Vision",
+    "title": "Agen Asuransi Full time/Freelance",
+    "platform": "Glints",
+    "jobUrl": "https://glints.com/id/opportunities/jobs/agen-asuransi-full-time-freelance/e9adc4e7-a943-42c0-925d-518394b003de",
+    "date": "19/9/2026, 17.39.56",
+    "status": "Dry-run Sim",
+    "salary": "Gaji Tidak Ditampilkan",
+    "location": "Jakarta Barat, DKI Jakarta",
+    "questionsAndAnswers": [
+      {
+        "question": "Apakah anda punya pengalaman dalam membangun bisnis sendiri?",
+        "answer": "Yes",
+        "type": "text"
+      },
+      {
+        "question": "Apakah anda senang bertemu orang baru dan sharing suatu pengalaman dengan orang?",
+        "answer": "Yes",
+        "type": "text"
+      },
+      {
+        "question": "Apakah anda punya pengalaman dalam penjualan langsung?",
+        "answer": "Yes",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "company": "PowerVision Tangerang",
+    "title": "Agen Asuransi Partime/ Full Time",
+    "platform": "Glints",
+    "jobUrl": "https://glints.com/id/opportunities/jobs/agen-asuransi-partime-full-time/4a2988a6-1118-4144-b2e2-927f4dbc32f6",
+    "date": "19/9/2026, 17.39.25",
+    "status": "Dry-run Sim",
+    "salary": "Rp 7-10jt",
+    "location": "Jakarta Barat, DKI Jakarta",
+    "questionsAndAnswers": []
+  },
+  {
+    "company": "Mediatech ID",
+    "title": "Full/Part-Time Pengajar Robotika dan Arduino",
+    "platform": "Glints",
+    "jobUrl": "https://glints.com/id/opportunities/jobs/full-part-time-pengajar-robotika-dan-arduino/c30e6293-6f28-4169-b792-5a76d7a157cd",
+    "date": "19/9/2026, 17.39.12",
+    "status": "Dry-run Sim",
+    "salary": "Gaji Tidak Ditampilkan",
+    "location": "Surabaya, Jawa Timur",
+    "questionsAndAnswers": []
+  },
+  {
+    "company": "CV Osle Indonesia",
+    "title": "Teknisi",
+    "platform": "Glints",
+    "jobUrl": "https://glints.com/id/opportunities/jobs/teknisi/05536138-63fa-48ec-8f59-1da3a19c4170",
+    "date": "19/9/2026, 17.38.34",
+    "status": "Dry-run Sim",
+    "salary": "Rp 1-3jt",
+    "location": "Surabaya, Jawa Timur",
+    "questionsAndAnswers": []
+  },
+  {
+    "company": "PT Garuda Proteksi Indonesia",
+    "title": "Teknisi",
+    "platform": "Glints",
+    "jobUrl": "https://glints.com/id/opportunities/jobs/teknisi/dd5f3ddf-b1d5-40e7-9613-e28295c16f3d",
+    "date": "19/9/2026, 17.38.22",
+    "status": "Dry-run Sim",
+    "salary": "Gaji Tidak Ditampilkan",
+    "location": "Tangerang Selatan, Banten",
+    "questionsAndAnswers": [
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Pemeliharaan Listrik",
+        "answer": "Dasar",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Pelayanan Pelanggan",
+        "answer": "Menengah",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Teknik Pemeliharaan",
+        "answer": "Dasar",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Kerja Tim",
+        "answer": "Menengah",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Microsoft Excel",
+        "answer": "Dasar",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Preventive Maintenance",
+        "answer": "Menengah",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Microsoft Word",
+        "answer": "Dasar",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Pemeliharaan Mekanik",
+        "answer": "Dasar",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Microsoft Office",
+        "answer": "Dasar",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Pemeliharaan Peralatan",
+        "answer": "Dasar",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Berapa lama pengalaman yang kamu miliki sebagai Maintenance Engineer?",
+        "answer": "Tidak Berpengalaman",
+        "type": "radiobutton"
+      }
+    ]
+  },
+  {
+    "company": "IT STEP Academy",
+    "title": "Full Stack AI Assisted Development (Mentor)",
+    "platform": "Glints",
+    "jobUrl": "https://glints.com/id/opportunities/jobs/full-stack-ai-assisted-development-mentor/4809223b-f1ac-443e-b413-cdf85a9c7175",
+    "date": "19/9/2026, 17.38.00",
+    "status": "Dry-run Sim",
+    "salary": "Rp 3,5jt",
+    "location": "Jakarta Selatan, DKI Jakarta",
+    "questionsAndAnswers": []
+  },
+  {
+    "company": "Hexxa Academy",
+    "title": "Web Developer",
+    "platform": "Glints",
+    "jobUrl": "https://glints.com/id/opportunities/jobs/web-developer/acb9d323-8323-4f54-bc35-da1330234aec",
+    "date": "19/9/2026, 17.37.34",
+    "status": "Dry-run Sim",
+    "salary": "Rp 3-4,5jt",
+    "location": "Jakarta Pusat, DKI Jakarta",
+    "questionsAndAnswers": [
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Node.js",
+        "answer": "Menengah",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - JavaScript",
+        "answer": "Menengah",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - jQuery",
+        "answer": "Tidak Berpengalaman",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - MySQL",
+        "answer": "Menengah",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - PostgreSQL",
+        "answer": "Dasar",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - React.js",
+        "answer": "Menengah",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Microsoft SQL Server",
+        "answer": "Tidak Berpengalaman",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - Laravel",
+        "answer": "Menengah",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - MongoDB",
+        "answer": "Dasar",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan keahlian berikut ini? - C++",
+        "answer": "Tidak Berpengalaman",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Berapa lama pengalaman yang kamu miliki sebagai Full Stack Developer?",
+        "answer": "1 - 3 thn",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Apakah kamu tinggal di Jakarta Pusat pada saat ini?",
+        "answer": "Tidak",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan bahasa berikut? - Indonesia",
+        "answer": "Mahir-Fasih",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Seberapa mahir kamu dengan bahasa berikut? - Inggris",
+        "answer": "Menengah",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Bersedia untuk bekerja Hybrid?",
+        "answer": "Ya",
+        "type": "radiobutton"
+      },
+      {
+        "question": "Kapan kamu dapat mulai bekerja?",
+        "answer": "Immediately",
+        "type": "radiobutton"
+      }
+    ]
+  },
+  {
+    "company": "PT Sun Logistics",
+    "title": "Full Stack Developer",
+    "platform": "Glints",
+    "jobUrl": "https://glints.com/id/opportunities/jobs/full-stack-developer/c00954f7-5982-456f-be8e-060a35c73049",
+    "date": "19/9/2026, 17.12.36",
+    "status": "Applied",
+    "salary": "Gaji Tidak Ditampilkan",
+    "location": "Jakarta Utara, DKI Jakarta",
+    "questionsAndAnswers": [
+      {
+        "question": "Beberapa HRD ingin tau di mana kamu tinggal saat ini",
+        "answer": "Saat ini saya berdomisili di Gresik (Desa Banjaran RT 03 RW 03, Wringinanom, Gresik) dan siap untuk bekerja baik secara on-site, hybrid, maupun remote.",
+        "type": "text"
+      },
+      {
+        "question": "Layanan GCP apa saja yang sering Anda gunakan untuk memproduksi dan mengelola aplikas?\nserta Design pattern apa saja yang pernah Anda terapkan dalam microservices dan mengapa memilihnya?",
+        "answer": "Saya terbiasa menggunakan Google Compute Engine, Cloud Run, dan Cloud SQL untuk deployment serta pengelolaan service. Untuk arsitektur microservices, saya menerapkan API Gateway pattern untuk routing dan keamanan, serta Event-Driven/CQRS pattern dengan message broker agar antar service tetap loosely coupled, scalable, dan memiliki performa tinggi.",
+        "type": "text"
+      },
+      {
+        "question": "Bagaimana Anda merancang RESTful API atau gRPC agar tetap aman, memiliki rate-limiting yang baik, serta mudah diakses oleh tim frontend maupun pihak ketiga?",
+        "answer": "Saya merancang API dengan autentikasi JWT atau OAuth2, validasi input, HTTPS, sanitasi data, kontrol akses berbasis peran, serta logging dan monitoring. Rate limiting diterapkan menggunakan Redis atau middleware, sedangkan dokumentasi OpenAPI, versioning, format respons konsisten, dan pengujian memastikan API mudah digunakan oleh frontend maupun pihak ketiga.",
+        "type": "text"
+      },
+      {
+        "question": "ERP atau sistem akuntansi apa saja yang pernah Anda hubungkan dengan aplikasi inti",
+        "answer": "Belum pernah menghubungkan ERP atau sistem akuntansi.",
+        "type": "text"
+      }
+    ]
+  },
+  {
     "company": "PT WSGS Global Sentosa",
     "title": "Full Stack Developer",
     "platform": "Glints",

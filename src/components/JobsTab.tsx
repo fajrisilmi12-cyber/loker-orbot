@@ -18,9 +18,10 @@ interface JobsTabProps {
   jobs: AppliedJobCard[];
   onRefresh: () => void;
   onExportCsv: () => void;
+  onSelectJob?: (job: AppliedJobCard) => void;
 }
 
-export default function JobsTab({ jobs, onRefresh, onExportCsv }: JobsTabProps) {
+export default function JobsTab({ jobs, onRefresh, onExportCsv, onSelectJob }: JobsTabProps) {
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState('Semua');
   const [statusFilter, setStatusFilter] = useState('Semua');
@@ -197,7 +198,12 @@ export default function JobsTab({ jobs, onRefresh, onExportCsv }: JobsTabProps) 
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {paginated.map((job, idx) => (
-            <JobCard key={`${job.company}-${job.title}-${job.date}-${idx}`} job={job} index={idx} />
+            <JobCard
+              key={`${job.company}-${job.title}-${job.date}-${idx}`}
+              job={job}
+              index={idx}
+              onViewDetail={onSelectJob}
+            />
           ))}
         </div>
       ) : (
@@ -205,19 +211,31 @@ export default function JobsTab({ jobs, onRefresh, onExportCsv }: JobsTabProps) 
           {paginated.map((job, idx) => (
             <div
               key={`${job.company}-${job.title}-${job.date}-${idx}`}
-              className="flex items-center gap-4 p-3.5 rounded-xl border border-subtle-theme card-theme hover:border-orange-500/30 transition group"
+              className="flex items-center gap-3.5 p-3.5 rounded-xl border border-subtle-theme card-theme hover:border-orange-500/30 transition group"
             >
               <div className="w-8 h-8 shrink-0 rounded-xl bg-slate-500/10 border border-subtle-theme flex items-center justify-center">
                 <Briefcase className="w-3.5 h-3.5 text-muted-theme" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-main-theme truncate group-hover:text-orange-400 transition-colors">{job.title}</p>
-                <p className="text-[11px] text-muted-theme truncate">{job.company}</p>
+                <div className="flex items-center gap-2 text-[11px] text-muted-theme truncate mt-0.5">
+                  <span className="truncate">{job.company}</span>
+                  {job.location && <span>· {job.location}</span>}
+                  {job.salary && job.salary !== 'Gaji Tidak Ditampilkan' && <span className="text-emerald-400">· {job.salary}</span>}
+                </div>
               </div>
               <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 font-medium border border-orange-500/20">
                 {job.platform}
               </span>
               <span className="shrink-0 text-[10px] text-muted-theme">{job.date?.slice(0, 10)}</span>
+              {onSelectJob && (
+                <button
+                  onClick={() => onSelectJob(job)}
+                  className="shrink-0 px-2 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 text-[10px] font-medium transition"
+                >
+                  {job.questionsAndAnswers?.length ? `${job.questionsAndAnswers.length} Q&A` : 'Detail'}
+                </button>
+              )}
               {job.jobUrl && (
                 <a
                   href={job.jobUrl}
