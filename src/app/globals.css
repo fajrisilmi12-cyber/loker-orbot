@@ -1,0 +1,234 @@
+@import "tailwindcss";
+
+:root {
+  /* Default light tokens matching clean modern UI: crisp light surface, light sidebar */
+  --bg-app: #F8FAFC;
+  --bg-sidebar: #FFFFFF;
+  --bg-sidebar-card: #F1F5F9;
+  --bg-sidebar-border: #E2E8F0;
+  --bg-header: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-subtle: #F8FAFC;
+  --bg-input: #FFFFFF;
+  --border-subtle: #E2E8F0;
+  --border-subtle-dark: #262A30;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --text-sidebar: #0F172A;
+  --accent: #F97316;
+  --accent-hover: #EA580C;
+}
+
+.dark {
+  --bg-app: #111315;
+  --bg-sidebar: #181B1E;
+  --bg-sidebar-card: #202429;
+  --bg-sidebar-border: #2D333B;
+  --bg-header: #14171A;
+  --bg-card: #181B1E;
+  --bg-card-subtle: #1F2328;
+  --bg-input: #111315;
+  --border-subtle: #262A30;
+  --border-subtle-dark: #262A30;
+  --text-main: #F3F4F6;
+  --text-muted: #94A3B8;
+  --text-sidebar: #F3F4F6;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #2E343D;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3F4752;
+}
+
+/* Theme Utilities for Dashboard */
+.sidebar-theme {
+  background-color: #FFFFFF;
+  border-color: #E2E8F0;
+  color: #0F172A;
+}
+.dark .sidebar-theme {
+  background-color: #181B1E;
+  border-color: #262A30;
+  color: #F8FAFC;
+}
+
+.sidebar-card-theme {
+  background-color: #F8FAFC;
+  border-color: #E2E8F0;
+}
+.dark .sidebar-card-theme {
+  background-color: #202429;
+  border-color: #2D333B;
+}
+
+.sidebar-nav-active {
+  background-color: #F1F5F9;
+  color: #0F172A;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.dark .sidebar-nav-active {
+  background-color: #262B32;
+  color: #FFFFFF;
+}
+
+.sidebar-nav-idle {
+  color: #64748B;
+}
+.sidebar-nav-idle:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+.dark .sidebar-nav-idle {
+  color: #94A3B8;
+}
+.dark .sidebar-nav-idle:hover {
+  background-color: #202429;
+  color: #FFFFFF;
+}
+
+.card-theme {
+  background-color: #FFFFFF;
+  border-color: #E2E8F0;
+}
+.dark .card-theme {
+  background-color: #181B1E;
+  border-color: #262A30;
+}
+
+.card-subtle-theme {
+  background-color: #F8FAFC;
+  border-color: #E2E8F0;
+}
+.dark .card-subtle-theme {
+  background-color: #1F2328;
+  border-color: #2D333B;
+}
+
+.input-theme {
+  background-color: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+.dark .input-theme {
+  background-color: #111315;
+  border-color: #2D333B;
+  color: #F8FAFC;
+}
+
+.border-subtle-theme {
+  border-color: #E2E8F0;
+}
+.dark .border-subtle-theme {
+  border-color: #262A30;
+}
+
+.text-main-theme {
+  color: #0F172A;
+}
+.dark .text-main-theme {
+  color: #F8FAFC;
+}
+
+.text-muted-theme {
+  color: #64748B;
+}
+.dark .text-muted-theme {
+  color: #94A3B8;
+}
+
+.header-theme {
+  background-color: #FFFFFF;
+  border-color: #E2E8F0;
+}
+.dark .header-theme {
+  background-color: #14171A;
+  border-color: #262A30;
+}
+
+.content-bg-theme {
+  background-color: #F1F5F9;
+}
+.dark .content-bg-theme {
+  background-color: #111315;
+}
+
+/* Micro animations & transitions */
+button, input, select, textarea, a {
+  transition: all 0.15s ease-in-out;
+}
+button:active {
+  transform: scale(0.98);
+}
+
+/* Fix browser autofill / filled input styles so light mode never turns black */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #FFFFFF inset !important;
+  -webkit-text-fill-color: #0F172A !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover, 
+.dark input:-webkit-autofill:focus, 
+.dark textarea:-webkit-autofill,
+.dark textarea:-webkit-autofill:hover,
+.dark textarea:-webkit-autofill:focus,
+.dark select:-webkit-autofill,
+.dark select:-webkit-autofill:hover,
+.dark select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #111315 inset !important;
+  -webkit-text-fill-color: #F8FAFC !important;
+}
+
+/* Ensure filled input backgrounds are strictly white in light mode */
+html:not(.dark) input.input-theme,
+html:not(.dark) select.input-theme,
+html:not(.dark) textarea.input-theme {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+.dark input.input-theme,
+.dark select.input-theme,
+.dark textarea.input-theme {
+  background-color: #111315 !important;
+  color: #F8FAFC !important;
+}
