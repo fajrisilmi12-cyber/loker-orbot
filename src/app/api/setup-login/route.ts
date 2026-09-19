@@ -43,18 +43,30 @@ export async function POST(request: Request) {
 
       global.activeSetupBrowser = browser;
 
-      // Open Glints, Jobstreet, LinkedIn, and Indeed on their main homepages
       const pages = await browser.pages();
+      const setupPageEvasions = async (p: any) => {
+        try {
+          await p.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            (window as any).chrome = (window as any).chrome || { runtime: {} };
+          });
+        } catch {}
+      };
+
       const page1 = pages[0] || await browser.newPage();
+      await setupPageEvasions(page1);
       page1.goto('https://glints.com/id', { waitUntil: 'domcontentloaded' }).catch(() => {});
 
       const page2 = await browser.newPage();
+      await setupPageEvasions(page2);
       page2.goto('https://www.jobstreet.co.id', { waitUntil: 'domcontentloaded' }).catch(() => {});
 
       const page3 = await browser.newPage();
+      await setupPageEvasions(page3);
       page3.goto('https://www.linkedin.com', { waitUntil: 'domcontentloaded' }).catch(() => {});
 
       const page4 = await browser.newPage();
+      await setupPageEvasions(page4);
       page4.goto('https://id.indeed.com', { waitUntil: 'domcontentloaded' }).catch(() => {});
 
       browser.on('disconnected', () => {

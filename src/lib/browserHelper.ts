@@ -96,9 +96,10 @@ export async function launchBrowserWithFallback(
     '--no-default-browser-check',
     '--no-first-run',
     '--disable-infobars',
-    '--test-type',
     '--disable-blink-features=AutomationControlled',
-    '--window-size=1280,800'
+    '--disable-features=IsolateOrigins,site-per-process',
+    '--window-size=1280,800',
+    '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
   ];
 
   // Hanya tambahkan sandbox flags khusus Linux jika dijalankan di container/server Linux
@@ -109,7 +110,7 @@ export async function launchBrowserWithFallback(
   const baseOptions: any = {
     headless: isHeadless,
     userDataDir: profilePath,
-    ignoreDefaultArgs: ['--enable-automation'],
+    ignoreDefaultArgs: ['--enable-automation', '--enable-blink-features=IdleDetection'],
     args: baseArgs,
     defaultViewport: isHeadless ? { width: 1280, height: 800 } : null
   };

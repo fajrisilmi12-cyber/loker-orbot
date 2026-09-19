@@ -3,6 +3,8 @@ import { isJobAlreadyApplied, addAppliedJob } from '../storage';
 import { appendQuestionToCsv } from '../csvHelper';
 import { answerQuestion } from '../questionAnswer';
 import { generateCoverLetter } from '../coverLetterHelper';
+import { evaluateJobMatch } from '../jobMatcher';
+import { humanClick } from '../humanStealth';
 
 export interface BotMetrics {
   successCount: number;
@@ -44,6 +46,16 @@ export async function runIndeedBot(
       searchParams.set('from', 'searchOnDesktopSerp');
       searchUrl = `https://id.indeed.com/jobs?${searchParams.toString()}`;
       onLog(`🌐 Membuka URL Pencarian Indeed: ${searchUrl}`);
+    }
+
+    // Injeksi cookies jika tersedia di konfigurasi
+    if (config.portalCookies?.indeed) {
+      const { parseCookiesInput, injectCookiesIntoPage } = require('../cookieHelper');
+      const cookies = parseCookiesInput(config.portalCookies.indeed, '.indeed.com');
+      if (cookies.length > 0) {
+        const injectedCount = await injectCookiesIntoPage(page, cookies);
+        onLog(`🍪 [Cookie Injection] Berhasil menyuntikkan ${injectedCount} cookie sesi Indeed!`);
+      }
     }
 
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -216,9 +228,35 @@ export async function runIndeedBot(
         const activeTitle = detailInfo?.officialTitle || cardInfo.title;
         const activeCompany = detailInfo?.officialCompany || cardInfo.company;
 
+        // Enterprise Filter: Job Match & Dealbreaker Check
+        if (config.enableJobMatchFilter) {
+          const matchResult = evaluateJobMatch({
+            jobTitle: activeTitle,
+            company: activeCompany,
+            targetKeywords: config.searchKeywords || '',
+            negativeKeywords: config.negativeKeywords || '',
+            minScoreThreshold: config.minMatchScore || 60,
+            candidateSkills: config.skills || ''
+          });
+
+          if (!matchResult.shouldApply) {
+            onLog(`🛡️ [Indeed Filter] Melewati loker: ${matchResult.reason}`);
+            continue;
+          } else {
+            onLog(`🎯 [Indeed Filter] Lolos seleksi kecocokan (Skor: ${matchResult.score}%). Melanjutkan...`);
+          }
+        }
+
         if (!detailInfo || !detailInfo.hasIndeedApply) {
           if (detailInfo?.isExternal) {
             onLog(`⏩ Melewati "${activeTitle}" - Memerlukan redirect ke situs eksternal perusahaan.`);
+            await addAppliedJob({
+              company: activeCompany,
+              title: activeTitle,
+              platform: 'Indeed',
+              jobUrl: targetJobUrl,
+              status: 'External Link'
+            });
           } else {
             onLog(`⏩ Melewati "${activeTitle}" - Tombol 'Lamar dengan Indeed / Apply now' tidak tersedia.`);
           }

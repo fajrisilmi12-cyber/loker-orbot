@@ -45,6 +45,7 @@ import {
   Sliders,
   Settings2
 } from 'lucide-react';
+import { OnboardingTour } from '@/components/OnboardingTour';
 
 export interface BrowserProfileAccount {
   id: string;
@@ -117,6 +118,17 @@ interface AppConfig {
   activeAiEndpointId?: string;
   browserAccounts?: BrowserProfileAccount[];
   activeBrowserAccountId?: string;
+  enableCoverLetterGen?: boolean;
+  enableJobMatchFilter?: boolean;
+  minMatchScore?: number;
+  negativeKeywords?: string;
+  enableHumanStealth?: boolean;
+  portalCookies?: {
+    linkedin?: string;
+    indeed?: string;
+    glints?: string;
+    jobstreet?: string;
+  };
 }
 
 interface AppliedJob {
@@ -265,6 +277,9 @@ export default function Home() {
   }>>({});
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
+  const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
+  const [cookieTargetPlatform, setCookieTargetPlatform] = useState<'linkedin' | 'indeed' | 'glints' | 'jobstreet'>('linkedin');
+  const [rawCookieInput, setRawCookieInput] = useState('');
 
   // CV Upload & Dynamic Diff Tracking States
   const [shouldUpdateProfileWithCv, setShouldUpdateProfileWithCv] = useState(true);
@@ -1334,9 +1349,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen content-bg-theme text-main-theme flex flex-col md:flex-row">
-      {/* LEFT SIDEBAR (Dynamic Light & Dark Style) */}
-      <aside className="w-full md:w-64 sidebar-theme border-r p-5 flex flex-col justify-between shrink-0 transition-colors">
+    <div className="h-screen overflow-hidden content-bg-theme text-main-theme flex flex-col md:flex-row">
+      {/* LEFT SIDEBAR (Sticky, Never scrolls off-screen) */}
+      <aside className="w-full md:w-64 h-full sidebar-theme border-r p-5 flex flex-col justify-between shrink-0 transition-colors overflow-y-auto">
         <div className="space-y-6">
           {/* Brand Header */}
           <div className="flex items-center gap-3 px-2 py-1">
@@ -1431,8 +1446,8 @@ export default function Home() {
           </nav>
         </div>
 
-        {/* System Status Footprint Card */}
-        <div className="mt-6 p-4 rounded-2xl sidebar-card-theme border space-y-3 transition-colors">
+        {/* System Status Footprint Card (Fixed pinned at sidebar bottom) */}
+        <div className="mt-6 p-4 rounded-2xl sidebar-card-theme border space-y-3 transition-colors shrink-0">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium text-muted-theme uppercase tracking-wider">Status Mesin</span>
             <span
@@ -1471,8 +1486,8 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* RIGHT MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 content-bg-theme">
+      {/* RIGHT MAIN CONTENT AREA (Scrollable independently, sidebar stays locked) */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto content-bg-theme">
         {/* Top Header Bar */}
         <header className="h-16 border-b header-theme px-6 flex items-center justify-between transition-colors">
           <div className="flex items-center gap-3">
@@ -1488,6 +1503,7 @@ export default function Home() {
           <div className="flex items-center gap-2.5">
             {/* Quick Toggle: Mode Simulasi / Live Submit */}
             <div 
+              id="tour-mode-toggle"
               onClick={() => {
                 const nextVal = !config.debugTest;
                 setConfig({ ...config, debugTest: nextVal });
@@ -1516,6 +1532,14 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Interactive Onboarding Tour Button & Modal */}
+            <OnboardingTour
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              wizardStep={wizardStep}
+              setWizardStep={setWizardStep}
+            />
+
             {/* Theme Toggle Button */}
             <button
               type="button"
@@ -1542,7 +1566,7 @@ export default function Home() {
                 <span>Hentikan Bot</span>
               </button>
             ) : (
-              <div className="flex items-center gap-2">
+              <div id="tour-start-bot" className="flex items-center gap-2">
                 <button
                   onClick={() => executeStartBot('headless')}
                   disabled={isSetupBrowserRunning}
@@ -1734,7 +1758,7 @@ export default function Home() {
                     </div>
 
                     {/* NEW: Smart CV Document Upload & AI Reading Banner */}
-                    <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/25 space-y-3">
+                    <div id="tour-cv-upload" className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/25 space-y-3">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-start gap-3">
                           <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-500 shrink-0">
@@ -2303,7 +2327,7 @@ export default function Home() {
                     </div>
 
                     {/* Platform Checkbox Pills */}
-                    <div>
+                    <div id="tour-criteria-platform">
                       <label className="block text-xs font-medium text-muted-theme mb-2">Platform Aktif</label>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <label
@@ -2554,8 +2578,108 @@ export default function Home() {
                       />
                     </div>
 
+                    {/* FITUR OTOMASI PENDUKUNG */}
+                    <div id="tour-smart-features" className="p-5 sm:p-6 rounded-2xl border border-subtle-theme card-subtle-theme space-y-4">
+                      <div className="flex items-center gap-2.5 border-b border-subtle-theme pb-3">
+                        <div className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
+                          <Sliders className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-main-theme">
+                            Otomasi Formulir &amp; Filter Relevansi
+                          </div>
+                          <p className="text-[11px] text-muted-theme mt-0.5">
+                            Opsi tambahan untuk pengisian esai motivasi, jeda waktu alami, dan filter syarat kualifikasi.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* 1. Dynamic Cover Letter */}
+                        <div className="p-4 rounded-xl border border-subtle-theme card-theme space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-main-theme">Generator Surat Motivasi</span>
+                            <input
+                              type="checkbox"
+                              checked={config.enableCoverLetterGen ?? true}
+                              onChange={(e) => setConfig({ ...config, enableCoverLetterGen: e.target.checked })}
+                              className="w-4 h-4 rounded text-orange-600 cursor-pointer"
+                            />
+                          </div>
+                          <p className="text-[11px] text-muted-theme">
+                            Menyusun respon motivasi yang relevan sesuai posisi dan profil saat form pertanyaan memintanya.
+                          </p>
+                        </div>
+
+                        {/* 2. Human Stealth Emulation */}
+                        <div className="p-4 rounded-xl border border-subtle-theme card-theme space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-main-theme">Simulasi Jeda Ketik Alami</span>
+                            <input
+                              type="checkbox"
+                              checked={config.enableHumanStealth ?? true}
+                              onChange={(e) => setConfig({ ...config, enableHumanStealth: e.target.checked })}
+                              className="w-4 h-4 rounded text-orange-600 cursor-pointer"
+                            />
+                          </div>
+                          <p className="text-[11px] text-muted-theme">
+                            Menambahkan variasi jeda pengetikan (40-120ms) dan jeda klik untuk mensimulasikan interaksi pengguna.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 3. Job Matcher & Blacklist Filter */}
+                      <div className="p-4 rounded-xl border border-subtle-theme card-theme space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-semibold text-main-theme">Penyaringan Kualifikasi Lowongan</span>
+                            <p className="text-[11px] text-muted-theme">
+                              Memeriksa kecocokan kualifikasi dan melewati lowongan yang tidak memenuhi kriteria minimal.
+                            </p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={config.enableJobMatchFilter ?? false}
+                            onChange={(e) => setConfig({ ...config, enableJobMatchFilter: e.target.checked })}
+                            className="w-4 h-4 rounded text-orange-600 cursor-pointer"
+                          />
+                        </div>
+
+                        {config.enableJobMatchFilter && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-subtle-theme">
+                            <div>
+                              <label className="block text-[11px] font-medium text-main-theme mb-1">
+                                Skor Relevansi Minimal: {config.minMatchScore || 60}%
+                              </label>
+                              <input
+                                type="range"
+                                min="40"
+                                max="90"
+                                step="5"
+                                value={config.minMatchScore || 60}
+                                onChange={(e) => setConfig({ ...config, minMatchScore: Number(e.target.value) })}
+                                className="w-full cursor-pointer accent-orange-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-medium text-main-theme mb-1">
+                                Blacklist Kata Kunci (Dipisahkan Koma)
+                              </label>
+                              <input
+                                type="text"
+                                value={config.negativeKeywords || ''}
+                                onChange={(e) => setConfig({ ...config, negativeKeywords: e.target.value })}
+                                placeholder="mandarin, 10+ years, sales lapangan..."
+                                className="w-full text-xs px-3 py-1.5 rounded-lg border border-subtle-theme input-theme"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     {/* MULTI-AKUN & KESIAPAN SESI LOGIN PORTAL KERJA */}
-                    <div className="p-5 sm:p-6 rounded-2xl border border-subtle-theme card-subtle-theme space-y-5">
+                    <div id="tour-cookie-sync" className="p-5 sm:p-6 rounded-2xl border border-subtle-theme card-subtle-theme space-y-5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle-theme pb-4">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-xl bg-orange-500/15 text-orange-500 flex items-center justify-center">
@@ -2575,7 +2699,20 @@ export default function Home() {
                         </div>
 
                         {/* Button Actions */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRawCookieInput(config.portalCookies?.[cookieTargetPlatform] || '');
+                              setIsCookieModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 text-xs font-medium flex items-center gap-1.5 transition shadow-sm"
+                            title="Impor cookie sesi dari browser untuk autentikasi langsung"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <span>Impor Cookies</span>
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => handleCheckAccountSessions()}
@@ -3886,13 +4023,15 @@ export default function Home() {
                           <td className="p-3.5 text-muted-theme">{job.date}</td>
                           <td className="p-3.5">
                             <span
-                              className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${
-                                job.status === 'Success'
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              className={`px-2 py-0.5 rounded-md text-[11px] font-medium border ${
+                                job.status === 'Applied' || job.status === 'Success'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                  : job.status === 'External Link'
+                                  ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20'
+                                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                               }`}
                             >
-                              {job.status}
+                              {job.status === 'External Link' ? '🔗 External Link' : job.status}
                             </span>
                           </td>
                           <td className="p-3.5">
@@ -4673,6 +4812,108 @@ export default function Home() {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: IMPORT PORTAL COOKIES (BYPASS CAPTCHA/GOOGLE BLOCK) */}
+      {isCookieModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-theme border rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-subtle-theme pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-main-theme">Impor Cookie Sesi Browser</h3>
+                  <p className="text-[11px] text-muted-theme">Bypass Cloudflare Turnstile &amp; Google OAuth 100%</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCookieModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-500/10 text-muted-theme"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Platform Selector Tabs */}
+            <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl card-subtle-theme border border-subtle-theme text-xs font-medium">
+              {(['linkedin', 'indeed', 'glints', 'jobstreet'] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => {
+                    setCookieTargetPlatform(p);
+                    setRawCookieInput(config.portalCookies?.[p] || '');
+                  }}
+                  className={`py-1.5 rounded-lg capitalize transition ${
+                    cookieTargetPlatform === p
+                      ? 'bg-sky-500 text-white shadow-sm'
+                      : 'text-muted-theme hover:text-main-theme'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-semibold text-main-theme">
+                  Paste JSON Cookie atau Teks Header ({cookieTargetPlatform.toUpperCase()}):
+                </span>
+                <span className="text-muted-theme">Dari ekstensi Cookie-Editor</span>
+              </div>
+              <textarea
+                rows={7}
+                value={rawCookieInput}
+                onChange={(e) => setRawCookieInput(e.target.value)}
+                placeholder={`Paste cookie ${cookieTargetPlatform} di sini (format JSON array [...] atau string li_at=...)...`}
+                className="w-full text-xs font-mono p-3 rounded-xl border border-subtle-theme input-theme focus:outline-none focus:border-sky-500"
+              />
+              <p className="text-[11px] text-muted-theme leading-relaxed">
+                💡 <b>Cara Cepat:</b> Buka {cookieTargetPlatform} di Chrome biasa Anda &gt; Buka ekstensi <i>Cookie-Editor</i> &gt; Klik <i>Export (JSON)</i> &gt; Tempel (Paste) di atas lalu klik Simpan.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-subtle-theme">
+              <button
+                type="button"
+                onClick={() => setIsCookieModalOpen(false)}
+                className="px-4 py-2 rounded-xl card-subtle-theme border border-subtle-theme text-muted-theme text-xs font-medium"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const updatedCookies = {
+                    ...(config.portalCookies || {}),
+                    [cookieTargetPlatform]: rawCookieInput.trim()
+                  };
+                  const nextConfig = { ...config, portalCookies: updatedCookies };
+                  setConfig(nextConfig);
+                  try {
+                    await fetch('/api/config', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(nextConfig)
+                    });
+                    toast.success(`Cookie ${cookieTargetPlatform.toUpperCase()} berhasil disimpan!`);
+                    setIsCookieModalOpen(false);
+                  } catch {
+                    toast.error('Gagal menyimpan cookie ke server');
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium shadow-sm flex items-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Simpan Cookie {cookieTargetPlatform.toUpperCase()}</span>
+              </button>
             </div>
           </div>
         </div>

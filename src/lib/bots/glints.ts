@@ -2,6 +2,9 @@ import { isJobAlreadyApplied, addAppliedJob } from '../storage';
 import { appendQuestionToCsv } from '../csvHelper';
 import { answerQuestion } from '../questionAnswer';
 import { captureFormDomSnapshot, inspectFormWithAi, applyAiFormActions } from '../aiFormInspector';
+import { evaluateJobMatch } from '../jobMatcher';
+import { generateDynamicCoverLetter } from '../coverLetterGenerator';
+import { humanClick, humanType, randomDelay } from '../humanStealth';
 
 export interface BotMetrics {
   successCount: number;
@@ -27,6 +30,16 @@ export async function runGlintsBot(
 
   const targetUrl = 'https://glints.com/id/opportunities/jobs/explore?country=ID&locationName=All%20Cities%2FProvinces';
   onLog(`🌐 Membuka URL Glints: ${targetUrl}`);
+
+  // Injeksi cookies jika tersedia di konfigurasi
+  if (config.portalCookies?.glints) {
+    const { parseCookiesInput, injectCookiesIntoPage } = require('../cookieHelper');
+    const cookies = parseCookiesInput(config.portalCookies.glints, '.glints.com');
+    if (cookies.length > 0) {
+      const injectedCount = await injectCookiesIntoPage(page, cookies);
+      onLog(`🍪 [Glints Cookie] Menyuntikkan ${injectedCount} cookie sesi Glints!`);
+    }
+  }
 
   try {
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -465,18 +478,49 @@ export async function runGlintsBot(
               continue;
             }
 
+            // Enterprise Filter: Job Match & Dealbreaker Check
+            if (config.enableJobMatchFilter) {
+              const matchResult = evaluateJobMatch({
+                jobTitle: activeJobTitle,
+                company: activeCompanyName,
+                targetKeywords: config.searchKeywords || '',
+                negativeKeywords: config.negativeKeywords || '',
+                minScoreThreshold: config.minMatchScore || 60,
+                candidateSkills: config.skills || ''
+              });
+
+              if (!matchResult.shouldApply) {
+                workerLog(`🛡️ [Job Filter] Melewati loker: ${matchResult.reason}`);
+                continue;
+              } else {
+                workerLog(`🎯 [Job Filter] Lolos seleksi kecocokan (Skor: ${matchResult.score}%). Melanjutkan...`);
+              }
+            }
+
             if (!detailInfo.hasTargetBtn) {
               workerLog(`⏩ Tidak ditemukan tombol "Lamar" internal (kemungkinan lowongan eksternal/ditutup). Melewati "${activeJobTitle}"...`);
+              // Catat sebagai info lowongan eksternal
+              await addAppliedJob({
+                company: activeCompanyName,
+                title: activeJobTitle,
+                platform: 'Glints',
+                jobUrl: targetJob.url,
+                status: 'External Link'
+              });
               await sleep(1500);
               continue;
             }
 
             workerLog(`🔘 Mengklik tombol "${detailInfo.buttonText}" (data-testid="apply-start")...`);
-            await workerPage.evaluate(() => {
-              const btn = (document.querySelector('button[data-testid="apply-start"]') || 
-                           Array.from(document.querySelectorAll('button')).find(b => /^(Lamar|Lamar Cepat|Apply|Quick Apply|Easy Apply|Apply Now)$/i.test((b.textContent || '').trim()))) as HTMLElement;
-              if (btn) btn.click();
-            });
+            if (config.enableHumanStealth) {
+              await humanClick(workerPage, 'button[data-testid="apply-start"]');
+            } else {
+              await workerPage.evaluate(() => {
+                const btn = (document.querySelector('button[data-testid="apply-start"]') || 
+                             Array.from(document.querySelectorAll('button')).find(b => /^(Lamar|Lamar Cepat|Apply|Quick Apply|Easy Apply|Apply Now)$/i.test((b.textContent || '').trim()))) as HTMLElement;
+                if (btn) btn.click();
+              });
+            }
 
             try {
               await workerPage.waitForSelector('[data-testid="modal-wrapper"]', { visible: true, timeout: 8000 });
@@ -759,7 +803,22 @@ export async function runGlintsBot(
                     workerLog(`   Opsi: [${qItem.options.join(' | ')}]`);
                   }
 
-                  const chosenAnswers = await answerQuestion(qItem.question, qItem.options, qItem.type as any);
+                  let chosenAnswers: string[] = [];
+
+                  // Cek apakah pertanyaan adalah Cover Letter / Surat Pengantar
+                  const isCoverLetterQuestion = /(cover letter|surat pengantar|why should we hire you|mengapa kami harus|motivation|alasan melamar)/i.test(qItem.question);
+                  if (isCoverLetterQuestion && config.enableCoverLetterGen) {
+                    workerLog(`✍️ [AI Cover Letter] Membuat surat pengantar khusus untuk "${activeCompanyName}"...`);
+                    const letter = await generateDynamicCoverLetter({
+                      jobTitle: activeJobTitle,
+                      company: activeCompanyName,
+                      preferredLanguage: 'id'
+                    });
+                    chosenAnswers = [letter];
+                  } else {
+                    chosenAnswers = await answerQuestion(qItem.question, qItem.options, qItem.type as any);
+                  }
+
                   workerLog(`🤖 Keputusan Jawaban: [${chosenAnswers.join(' | ')}]`);
                   appendQuestionToCsv(qItem.question, qItem.type as any, qItem.options, chosenAnswers);
 

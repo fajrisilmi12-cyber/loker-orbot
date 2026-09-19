@@ -1,6 +1,9 @@
 import { isJobAlreadyApplied, addAppliedJob } from '../storage';
 import { appendQuestionToCsv } from '../csvHelper';
 import { answerQuestion } from '../questionAnswer';
+import { evaluateJobMatch } from '../jobMatcher';
+import { generateDynamicCoverLetter } from '../coverLetterGenerator';
+import { parseCookiesInput, injectCookiesIntoPage } from '../cookieHelper';
 
 export interface BotMetrics {
   successCount: number;
@@ -25,6 +28,16 @@ export async function runJobstreetBot(
   let errorCount = 0;
 
   onLog('🌐 Navigating to Jobstreet Homepage...');
+
+  // Injeksi cookies jika tersedia di konfigurasi
+  if (config.portalCookies?.jobstreet) {
+    const cookies = parseCookiesInput(config.portalCookies.jobstreet, '.jobstreet.co.id');
+    if (cookies.length > 0) {
+      const injectedCount = await injectCookiesIntoPage(page, cookies);
+      onLog(`🍪 [JobStreet Cookie] Menyuntikkan ${injectedCount} cookie sesi JobStreet!`);
+    }
+  }
+
   await page.goto('https://www.jobstreet.co.id/', { waitUntil: 'networkidle2', timeout: 60000 });
 
   const isLoggedIn = await page.evaluate(() => {
@@ -159,6 +172,25 @@ export async function runJobstreetBot(
 
           onLog(`[Worker ${workerId + 1}] 💼 Job: "${jobDetails.title}" at "${jobDetails.company}"`);
 
+          // Enterprise Filter: Job Match & Dealbreaker Check
+          if (config.enableJobMatchFilter) {
+            const matchResult = evaluateJobMatch({
+              jobTitle: jobDetails.title,
+              company: jobDetails.company,
+              targetKeywords: config.searchKeywords || '',
+              negativeKeywords: config.negativeKeywords || '',
+              minScoreThreshold: config.minMatchScore || 60,
+              candidateSkills: config.skills || ''
+            });
+
+            if (!matchResult.shouldApply) {
+              onLog(`[Worker ${workerId + 1}] 🛡️ [JobStreet Filter] Melewati loker: ${matchResult.reason}`);
+              continue;
+            } else {
+              onLog(`[Worker ${workerId + 1}] 🎯 [JobStreet Filter] Lolos seleksi kecocokan (Skor: ${matchResult.score}%). Melanjutkan...`);
+            }
+          }
+
           // Find Apply button and verify status on Jobstreet
           const applyBtnStatus = await workerPage.evaluate(() => {
             const findApplyElement = (): HTMLElement | null => {
@@ -178,15 +210,15 @@ export async function runJobstreetBot(
               // 2. Priority by specific text ("Lamar Cepat", "Quick Apply", etc.)
               const candidates = Array.from(document.querySelectorAll('a, button, [role="button"]')) as HTMLElement[];
               const exactMatch = candidates.find(el => {
-                const txt = (el.textContent || '').trim();
-                return /^(Lamar Cepat|Quick Apply|Lamar Sekarang|Apply Now)$/i.test(txt);
+                const text = (el.textContent || '').trim();
+                return /^(Lamar Cepat|Lamar Sekarang|Apply Now|Quick Apply|Apply)$/i.test(text);
               });
               if (exactMatch) return exactMatch;
 
-              // 3. Fallback text search for Apply/Lamar
+              // 3. Fallback to any button containing "Lamar" or "Apply"
               return candidates.find(el => {
-                const txt = (el.textContent || '').trim();
-                return /Lamar Cepat|Quick Apply|Lamar Sekarang|Apply Now/i.test(txt) || /^(Lamar|Apply)$/i.test(txt);
+                const text = (el.textContent || '').trim();
+                return /Lamar|Apply/i.test(text) && !/Simpan|Save|Share|Laporkan|Report/i.test(text);
               }) || null;
             };
 
@@ -241,7 +273,14 @@ export async function runJobstreetBot(
           }
 
           if (applyBtnStatus.isExternal) {
-            onLog(`[Worker ${workerId + 1}] ⏩ Jobstreet: Mengarahkan ke situs eksternal ("${applyBtnStatus.text}"). Dilewati.`);
+            onLog(`[Worker ${workerId + 1}] ⏩ Jobstreet: Mengarahkan ke situs eksternal ("${applyBtnStatus.text}"). Dicatat ke Riwayat.`);
+            await addAppliedJob({ 
+              company: jobDetails.company || 'Jobstreet Company', 
+              title: jobDetails.title || 'Jobstreet Job', 
+              platform: 'Jobstreet', 
+              jobUrl: url, 
+              status: 'External Link' 
+            });
             alreadyAppliedCount++;
             continue;
           }

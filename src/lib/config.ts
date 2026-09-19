@@ -77,6 +77,19 @@ export interface AppConfig {
   // Multi-Account Browser Profiles (Bisa tambah profil browser akun)
   browserAccounts?: BrowserProfileAccount[];
   activeBrowserAccountId?: string;
+  // Enterprise Features
+  enableCoverLetterGen?: boolean;
+  enableJobMatchFilter?: boolean;
+  minMatchScore?: number;
+  negativeKeywords?: string;
+  enableHumanStealth?: boolean;
+  // Portal Session Cookies (Imported from user's main browser or companion extension)
+  portalCookies?: {
+    linkedin?: string;
+    indeed?: string;
+    glints?: string;
+    jobstreet?: string;
+  };
 }
 
 const CONFIG_PATH = path.join(process.cwd(), 'config.json');
@@ -104,6 +117,11 @@ const DEFAULT_CONFIG: AppConfig = {
   concurrency: 3,
   useSystemChrome: true,
   customChromePath: '',
+  enableCoverLetterGen: true,
+  enableJobMatchFilter: false,
+  minMatchScore: 60,
+  negativeKeywords: 'mandarin, japanese, 10+ years, sales lapangan',
+  enableHumanStealth: true,
   noticePeriod: 'Immediately',
   fullName: '',
   email: '',

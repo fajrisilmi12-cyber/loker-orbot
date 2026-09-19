@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CV Blaster Companion</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { width: 330px; background: #0f172a; color: #f8fafc; padding: 14px; }
+    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 12px; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .logo-badge { width: 28px; height: 28px; background: #ea580c; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #ffffff; }
+    h1 { font-size: 13px; font-weight: 600; }
+    p { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+    
+    .icon-btn { background: #1e293b; border: 1px solid #334155; border-radius: 6px; width: 26px; height: 26px; color: #94a3b8; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
+    .icon-btn:hover { background: #334155; color: #f8fafc; }
+
+    .guide-box { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 11px; line-height: 1.45; color: #cbd5e1; display: none; }
+    .guide-box.show { display: block; }
+    .guide-title { font-weight: 600; color: #f8fafc; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .guide-steps { margin-left: 14px; }
+    .guide-steps li { margin-bottom: 3px; }
+
+    .section { margin-bottom: 12px; }
+    .label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 6px; display: block; }
+    .portal-list { display: flex; flex-direction: column; gap: 5px; }
+    .portal-item { display: flex; align-items: center; justify-content: space-between; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 7px 10px; font-size: 12px; }
+    .portal-name { font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .status-active { background: #10b981; }
+    .status-inactive { background: #64748b; }
+    
+    .btn { width: 100%; background: #ea580c; color: #ffffff; border: none; border-radius: 8px; padding: 9px 12px; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn:hover { background: #c2410c; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-secondary { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; margin-top: 6px; }
+    .btn-secondary:hover { background: #334155; color: #ffffff; }
+    
+    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 6px 9px; color: #f8fafc; font-size: 11px; outline: none; }
+    .input-field:focus { border-color: #ea580c; }
+
+    .msg { font-size: 11px; margin-top: 8px; text-align: center; display: none; padding: 6px; border-radius: 6px; }
+    .msg.success { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); display: block; }
+    .msg.error { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); display: block; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      <div>
+        <h1>CV Blaster Companion</h1>
+        <p>Sinkronisasi Sesi Browser</p>
+      </div>
+    </div>
+    <button class="icon-btn" id="btn-toggle-guide" title="Buka / Tutup Panduan">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+        <path d="M12 17h.01"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ONBOARDING GUIDE ACCORDION / BOX -->
+  <div class="guide-box" id="guide-box">
+    <div class="guide-title">
+      <span>Alur Sinkronisasi:</span>
+      <span id="guide-close" style="cursor: pointer;">✕</span>
+    </div>
+    <ol class="guide-steps">
+      <li>Masuk ke LinkedIn, Glints, JobStreet, atau Indeed di Chrome ini.</li>
+      <li>Ekstensi mendeteksi sesi cookie yang aktif secara otomatis.</li>
+      <li>Klik tombol sinkronisasi untuk mengirim sesi ke CV Blaster.</li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+      <span class="label" style="margin-bottom: 0;">Server Target:</span>
+      <span id="save-url-status" style="font-size: 10px; color: #34d399; display: none;">Tersimpan</span>
+    </div>
+    <input 
+      type="text" 
+      id="input-api-url" 
+      class="input-field"
+      placeholder="http://localhost:3000" 
+      value="http://localhost:3000"
+    />
+  </div>
+
+  <div class="section">
+    <span class="label">Status Sesi di Browser:</span>
+    <div class="portal-list">
+      <div class="portal-item">
+        <span class="portal-name"><span class="status-dot" id="dot-linkedin"></span>LinkedIn</span>
+        <span id="text-linkedin" style="color: #94a3b8; font-size: 11px;">Mengecek...</span>
+      </div>
+      <div class="portal-item">
+        <span class="portal-name"><span class="status-dot" id="dot-indeed"></span>Indeed</span>
+        <span id="text-indeed" style="color: #94a3b8; font-size: 11px;">Mengecek...</span>
+      </div>
+      <div class="portal-item">
+        <span class="portal-name"><span class="status-dot" id="dot-glints"></span>Glints</span>
+        <span id="text-glints" style="color: #94a3b8; font-size: 11px;">Mengecek...</span>
+      </div>
+      <div class="portal-item">
+        <span class="portal-name"><span class="status-dot" id="dot-jobstreet"></span>JobStreet</span>
+        <span id="text-jobstreet" style="color: #94a3b8; font-size: 11px;">Mengecek...</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn" id="btn-sync">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+      <path d="M16 21h5v-5"/>
+    </svg>
+    <span id="sync-btn-text">Sinkronkan Cookie</span>
+  </button>
+  <button class="btn btn-secondary" id="btn-open-dashboard">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      <polyline points="15 3 21 3 21 9"/>
+      <line x1="10" y1="14" x2="21" y2="3"/>
+    </svg>
+    <span>Buka Dashboard</span>
+  </button>
+
+  <div class="msg" id="msg-box"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

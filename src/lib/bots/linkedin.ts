@@ -2,6 +2,9 @@ import { isJobAlreadyApplied, addAppliedJob } from '../storage';
 import { appendQuestionToCsv } from '../csvHelper';
 import { answerQuestion } from '../questionAnswer';
 import { captureFormDomSnapshot, inspectFormWithAi, applyAiFormActions } from '../aiFormInspector';
+import { evaluateJobMatch } from '../jobMatcher';
+import { generateDynamicCoverLetter } from '../coverLetterGenerator';
+import { humanClick, humanType, randomDelay } from '../humanStealth';
 
 export interface BotMetrics {
   successCount: number;
@@ -39,6 +42,16 @@ export async function runLinkedinBot(
 
     const searchUrl = `https://www.linkedin.com/jobs/search/?${searchParams.toString()}`;
     onLog(`🌐 Membuka URL Pencarian LinkedIn: ${searchUrl}`);
+
+    // Injeksi cookies jika tersedia di konfigurasi
+    if (config.portalCookies?.linkedin) {
+      const { parseCookiesInput, injectCookiesIntoPage } = require('../cookieHelper');
+      const cookies = parseCookiesInput(config.portalCookies.linkedin, '.linkedin.com');
+      if (cookies.length > 0) {
+        const injectedCount = await injectCookiesIntoPage(page, cookies);
+        onLog(`🍪 [Cookie Injection] Berhasil menyuntikkan ${injectedCount} cookie sesi LinkedIn!`);
+      }
+    }
 
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await sleep(3000);
@@ -318,18 +331,48 @@ export async function runLinkedinBot(
           continue;
         }
 
+        // Enterprise Filter: Job Match & Dealbreaker Check
+        if (config.enableJobMatchFilter) {
+          const matchResult = evaluateJobMatch({
+            jobTitle: activeTitle,
+            company: activeCompany,
+            targetKeywords: config.searchKeywords || '',
+            negativeKeywords: config.negativeKeywords || '',
+            minScoreThreshold: config.minMatchScore || 60,
+            candidateSkills: config.skills || ''
+          });
+
+          if (!matchResult.shouldApply) {
+            onLog(`🛡️ [LinkedIn Filter] Melewati loker: ${matchResult.reason}`);
+            continue;
+          } else {
+            onLog(`🎯 [LinkedIn Filter] Lolos seleksi kecocokan (Skor: ${matchResult.score}%). Melanjutkan...`);
+          }
+        }
+
         if (!rightPaneDetail.hasApplyBtn) {
           onLog(`⏩ Tidak ada tombol Apply di panel kanan untuk "${activeTitle}". Melewati...`);
+          await addAppliedJob({
+            company: activeCompany,
+            title: activeTitle,
+            platform: 'LinkedIn',
+            jobUrl: targetJobUrl,
+            status: 'External Link'
+          });
           continue;
         }
 
         onLog(`🔘 Mengklik tombol Apply di panel kanan ("${rightPaneDetail.btnText}")...`);
-        await page.evaluate(() => {
-          const applyBtn = document.querySelector(
-            'button.jobs-apply-button, button#jobs-apply-button-id, button[data-live-test-job-apply-button], .jobs-s-apply button, button[aria-label*="Easy Apply"], button[aria-label*="Lamar Mudah"]'
-          ) as HTMLElement;
-          if (applyBtn) applyBtn.click();
-        });
+        if (config.enableHumanStealth) {
+          await humanClick(page, 'button.jobs-apply-button, button#jobs-apply-button-id, .jobs-s-apply button');
+        } else {
+          await page.evaluate(() => {
+            const applyBtn = document.querySelector(
+              'button.jobs-apply-button, button#jobs-apply-button-id, button[data-live-test-job-apply-button], .jobs-s-apply button, button[aria-label*="Easy Apply"], button[aria-label*="Lamar Mudah"]'
+            ) as HTMLElement;
+            if (applyBtn) applyBtn.click();
+          });
+        }
 
         // Tunggu modal Easy Apply muncul
         try {
@@ -602,7 +645,20 @@ export async function runLinkedinBot(
             }
 
             // Selesaikan via Q&A Engine (KB CSV -> Regex Deterministic -> Gemini LLM)
-            const chosenAnswers = await answerQuestion(qItem.question, qItem.options, qItem.type as any);
+            let chosenAnswers: string[] = [];
+            const isCoverLetter = /(cover letter|surat lamaran|surat pengantar|why do you want to work|why are you a good fit|alasan melamar)/i.test(cleanQ);
+            if (isCoverLetter && config.enableCoverLetterGen) {
+              onLog(`✍️ [AI Cover Letter] Menyusun surat motivasi khusus untuk "${activeCompany}"...`);
+              const letter = await generateDynamicCoverLetter({
+                jobTitle: activeTitle,
+                company: activeCompany,
+                preferredLanguage: 'en'
+              });
+              chosenAnswers = [letter];
+            } else {
+              chosenAnswers = await answerQuestion(qItem.question, qItem.options, qItem.type as any);
+            }
+
             onLog(`🤖 Pertanyaan: "${qItem.question}" -> Jawaban: [${chosenAnswers.join(' | ')}]`);
             appendQuestionToCsv(qItem.question, qItem.type as any, qItem.options, chosenAnswers);
 
