@@ -21,6 +21,8 @@ import {
   ArrowRight,
   RotateCcw,
   BookOpen,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react';
 
 export interface TourStep {
@@ -272,6 +274,8 @@ export function OnboardingTour({
     } catch {}
   }, []);
 
+  const [isMinimized, setIsMinimized] = useState(false);
+
   const activeSteps = activeModule?.steps || FULL_SYSTEM_STEPS;
   const currentStepData = activeSteps[currentStepIndex];
   const StepIcon = currentStepData?.icon || Compass;
@@ -287,7 +291,6 @@ export function OnboardingTour({
 
     const el = document.getElementById(currentStepData.targetId);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const rect = el.getBoundingClientRect();
       setTargetRect(rect);
 
@@ -295,21 +298,40 @@ export function OnboardingTour({
       const popoverHeight = 240;
       const margin = 16;
 
-      let left = rect.left + rect.width / 2 - popoverWidth / 2;
-      left = Math.max(16, Math.min(window.innerWidth - popoverWidth - 16, left));
+      // Smart collision avoidance:
+      // If the target element is large (covers > 45% of viewport), dock popover to safe corner
+      const isLargeTarget = rect.height > window.innerHeight * 0.45 || rect.width > window.innerWidth * 0.75;
 
-      const spaceBelow = window.innerHeight - (rect.bottom + margin);
-      const spaceAbove = rect.top - margin;
-
+      let left = 0;
       let top = 0;
-      if (currentStepData.preferredPlacement === 'top' && spaceAbove >= popoverHeight) {
-        top = rect.top - popoverHeight - margin;
-      } else if (spaceBelow >= popoverHeight) {
-        top = rect.bottom + margin;
-      } else if (spaceAbove >= popoverHeight) {
-        top = rect.top - popoverHeight - margin;
+
+      if (isLargeTarget) {
+        // Dock to bottom-right corner to never obscure form inputs
+        left = window.innerWidth - popoverWidth - 24;
+        top = window.innerHeight - popoverHeight - 24;
       } else {
-        top = Math.max(16, Math.min(window.innerHeight - popoverHeight - 16, rect.bottom + margin));
+        left = rect.left + rect.width / 2 - popoverWidth / 2;
+        left = Math.max(16, Math.min(window.innerWidth - popoverWidth - 16, left));
+
+        const spaceBelow = window.innerHeight - (rect.bottom + margin);
+        const spaceAbove = rect.top - margin;
+
+        if (currentStepData.preferredPlacement === 'top' && spaceAbove >= popoverHeight) {
+          top = rect.top - popoverHeight - margin;
+        } else if (spaceBelow >= popoverHeight) {
+          top = rect.bottom + margin;
+        } else if (spaceAbove >= popoverHeight) {
+          top = rect.top - popoverHeight - margin;
+        } else {
+          // If neither above nor below fits without overlap, dock to right side or bottom corner
+          if (window.innerWidth - rect.right >= popoverWidth + margin) {
+            left = rect.right + margin;
+            top = Math.max(16, Math.min(window.innerHeight - popoverHeight - 16, rect.top));
+          } else {
+            top = Math.max(16, window.innerHeight - popoverHeight - 24);
+            left = Math.max(16, window.innerWidth - popoverWidth - 24);
+          }
+        }
       }
 
       setPopoverPos({ top, left });
@@ -319,7 +341,7 @@ export function OnboardingTour({
     }
   }, [isTourActive, currentStepData]);
 
-  // Sync tab and step when moving between steps
+  // Sync tab, step and smoothly scroll to target element
   useEffect(() => {
     if (!isTourActive || !currentStepData) return;
 
@@ -330,17 +352,29 @@ export function OnboardingTour({
       setWizardStep(currentStepData.wizardStep);
     }
 
-    const timer = setTimeout(() => {
-      updatePosition();
-    }, 220);
+    // Allow DOM to switch tabs/steps first, then scroll into view and calculate bounds
+    const scrollTimer = setTimeout(() => {
+      if (currentStepData.targetId !== 'tour-welcome') {
+        const el = document.getElementById(currentStepData.targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        }
+      }
+      // Re-measure after smooth scroll completes
+      const measureTimer = setTimeout(() => {
+        updatePosition();
+      }, 250);
+      return () => clearTimeout(measureTimer);
+    }, 180);
 
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
+    const handleWindowEvents = () => updatePosition();
+    window.addEventListener('resize', handleWindowEvents);
+    window.addEventListener('scroll', handleWindowEvents, true);
 
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
+      clearTimeout(scrollTimer);
+      window.removeEventListener('resize', handleWindowEvents);
+      window.removeEventListener('scroll', handleWindowEvents, true);
     };
   }, [isTourActive, currentStepIndex, currentStepData, activeTab, wizardStep, setActiveTab, setWizardStep, updatePosition]);
 
@@ -559,37 +593,37 @@ export function OnboardingTour({
             />
           )}
 
-          {/* Interactive Popover Card */}
-          <div
-            className={`fixed z-50 w-full max-w-[380px] p-5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700 text-slate-100 shadow-2xl transition-all duration-200 ${
-              !popoverPos ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : ''
-            }`}
-            style={popoverPos ? { top: `${popoverPos.top}px`, left: `${popoverPos.left}px` } : {}}
-          >
-            {/* Top Bar */}
-            <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2.5">
+          {/* Interactive Popover Card or Compact Pill */}
+          {isMinimized ? (
+            <div className="fixed bottom-6 right-6 z-50 p-2.5 px-4 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700 text-slate-100 shadow-2xl flex items-center gap-3 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0">
-                  <StepIcon className="w-4 h-4" />
+                <div className="w-6 h-6 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
+                  <StepIcon className="w-3.5 h-3.5" />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] text-orange-400 font-semibold uppercase tracking-wider">
-                    {activeModule.title}
+                    Langkah {currentStepIndex + 1}/{activeSteps.length}
                   </span>
-                  <span className="text-xs text-slate-400 font-medium">
-                    Langkah {currentStepIndex + 1} dari {activeSteps.length}
+                  <span className="text-xs font-semibold text-white truncate max-w-[200px]">
+                    {currentStepData.title}
                   </span>
                 </div>
               </div>
-
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
                 <button
                   type="button"
-                  onClick={handleBackToHub}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg text-[10px] border border-slate-700 hover:bg-slate-800 transition"
-                  title="Kembali ke Menu Pilihan Panduan"
+                  onClick={() => setIsMinimized(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                  title="Perbesar Kartu Panduan"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="px-2.5 py-1 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium transition"
+                >
+                  {currentStepIndex === activeSteps.length - 1 ? 'Selesai' : 'Lanjut'}
                 </button>
                 <button
                   type="button"
@@ -597,10 +631,60 @@ export function OnboardingTour({
                   className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
                   title="Tutup Panduan"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
+          ) : (
+            <div
+              className={`fixed z-50 w-full max-w-[380px] p-5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700 text-slate-100 shadow-2xl transition-all duration-200 ${
+                !popoverPos ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : ''
+              }`}
+              style={popoverPos ? { top: `${popoverPos.top}px`, left: `${popoverPos.left}px` } : {}}
+            >
+              {/* Top Bar */}
+              <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0">
+                    <StepIcon className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-orange-400 font-semibold uppercase tracking-wider">
+                      {activeModule.title}
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">
+                      Langkah {currentStepIndex + 1} dari {activeSteps.length}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsMinimized(true)}
+                    className="text-slate-400 hover:text-white p-1 rounded-lg text-[10px] border border-slate-700 hover:bg-slate-800 transition"
+                    title="Kecilkan Panduan agar tidak menutupi layar"
+                  >
+                    <Minimize2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBackToHub}
+                    className="text-slate-400 hover:text-white p-1 rounded-lg text-[10px] border border-slate-700 hover:bg-slate-800 transition"
+                    title="Kembali ke Menu Pilihan Panduan"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleComplete}
+                    className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                    title="Tutup Panduan"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
 
             {/* Popover Title & Content */}
             <h3 className="text-sm font-semibold text-white mb-2 leading-snug">

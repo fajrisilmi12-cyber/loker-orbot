@@ -251,7 +251,7 @@
     subEl.innerText = 'Deteksi feed Indeed';
     actionBtn.innerHTML = `
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      <span>Antrekan (4 Tab)</span>
+      <span>Lamar di Tab Ini</span>
     `;
 
     actionBtn.addEventListener('click', () => {
@@ -278,13 +278,13 @@
 
       chrome.runtime.sendMessage({ action: 'ENQUEUE_TASKS', tasks }, () => {
         actionBtn.className = 'cv-blaster-float-action-btn success';
-        actionBtn.innerHTML = `<span>${cards.length} Masuk Antrean</span>`;
-        floatToast(`${cards.length} lowongan masuk antrean 4 tab`, 'success');
+        actionBtn.innerHTML = `<span>${cards.length} Diproses</span>`;
+        floatToast(`${cards.length} lowongan siap diproses di tab ini`, 'success');
       });
     });
 
   } else {
-    titleEl.innerText = 'CV Blaster';
+    titleEl.innerText = 'lemparjaring';
     subEl.innerText = 'Portal Karir Aktif';
     actionBtn.innerHTML = `
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
@@ -300,9 +300,31 @@
   // ============================================================================
   let dragWindowEl = null;
 
+  function clampWindowToViewport() {
+    if (!dragWindowEl || dragWindowEl.style.display === 'none') return;
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+    const rect = dragWindowEl.getBoundingClientRect();
+    const elemW = rect.width || 360;
+    const elemH = rect.height || 450;
+
+    let curLeft = rect.left;
+    let curTop = rect.top;
+
+    let clampedLeft = Math.max(10, Math.min(winW - elemW - 10, curLeft));
+    let clampedTop = Math.max(10, Math.min(winH - elemH - 10, curTop));
+
+    dragWindowEl.style.left = `${clampedLeft}px`;
+    dragWindowEl.style.top = `${clampedTop}px`;
+    dragWindowEl.style.right = 'auto';
+  }
+
+  window.addEventListener('resize', clampWindowToViewport);
+
   window.cvBlasterOpenDraggableWindow = function () {
     if (dragWindowEl) {
       dragWindowEl.style.display = 'flex';
+      clampWindowToViewport();
       return;
     }
 

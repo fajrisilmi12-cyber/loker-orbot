@@ -10,12 +10,28 @@ body {
   width: 370px;
   min-width: 320px;
   max-width: 400px;
+  max-height: 580px;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #090d16;
   color: #f1f5f9;
   padding: 12px;
   font-size: 12px;
   line-height: 1.4;
-  overflow-x: hidden;
+}
+
+body::-webkit-scrollbar {
+  width: 5px;
+}
+body::-webkit-scrollbar-track {
+  background: #090d16;
+}
+body::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+body::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }
 
 /* Header */
@@ -529,7 +545,67 @@ textarea.input-field {
 }
 
 .toast-pill.info {
-  background: #1e293b;
-  border-color: #3b82f6;
-  color: #bfdbfe;
+  background: #0c4a6e;
+  border-color: #0284c7;
+  color: #bae6fd;
+}
+
+/* Status Summary Bar */
+.status-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #101726;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 5px 8px;
+  margin-bottom: 8px;
+  font-size: 10px;
+}
+
+.status-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #cbd5e1;
+}
+
+.status-chip.mode {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Advanced Settings Accordion */
+.advanced-details {
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  background: #0d131f;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.advanced-summary {
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #101726;
+}
+
+.advanced-summary:hover {
+  color: #f8fafc;
+  background: #141d30;
+}
+
+.advanced-content {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

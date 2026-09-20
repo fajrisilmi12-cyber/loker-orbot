@@ -295,8 +295,24 @@
 .cv-blaster-drag-body {
   padding: 12px;
   overflow-y: auto;
-  max-height: calc(100vh - 100px);
+  flex: 1;
+  min-height: 0;
+  max-height: calc(100vh - 80px);
   box-sizing: border-box;
+}
+
+.cv-blaster-drag-body::-webkit-scrollbar {
+  width: 5px;
+}
+.cv-blaster-drag-body::-webkit-scrollbar-track {
+  background: #090d16;
+}
+.cv-blaster-drag-body::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+.cv-blaster-drag-body::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }
 
 .cv-blaster-drag-body .card {

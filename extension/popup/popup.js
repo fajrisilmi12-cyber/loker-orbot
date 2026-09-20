@@ -457,6 +457,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 5. Inspect Currently Active Browser Tab (100% Safe)
   // ----------------------------------------------------
   try {
+    // Check CV & Profile status from backend
+    fetch(`${API_BASE}/api/config`).then(res => {
+      if (res.ok) return res.json();
+      return null;
+    }).then(cfgData => {
+      if (!cfgData || !cfgData.config) return;
+      const cfg = cfgData.config;
+      const cvText = document.getElementById('text-cv-status');
+      const cvDot = document.getElementById('dot-cv-status');
+      if (cvText && cvDot) {
+        if (cfg.fullName || cfg.cvFileName) {
+          const namePart = cfg.fullName ? cfg.fullName.split(' ')[0] : 'Siap';
+          cvText.innerText = `Profil: ${namePart} • CV: ${cfg.cvFileName ? 'Terpasang' : 'Lengkap'}`;
+          cvDot.className = 'status-dot-mini';
+        } else {
+          cvText.innerText = 'Profil: Belum diisi';
+          cvDot.className = 'status-dot-mini offline';
+        }
+      }
+    }).catch(() => {});
+
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs && tabs[0]) {
       currentActiveTab = tabs[0];

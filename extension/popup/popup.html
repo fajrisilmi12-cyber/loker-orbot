@@ -60,14 +60,58 @@
     </button>
   </nav>
 
+  <!-- Status Summary Bar -->
+  <div class="status-summary-bar">
+    <div class="status-chip">
+      <span class="status-dot-mini" id="dot-cv-status"></span>
+      <span id="text-cv-status">CV &amp; Profil: Siap</span>
+    </div>
+    <div class="status-chip mode">
+      <span>Mode: In-Tab Seimbang</span>
+    </div>
+  </div>
+
   <!-- ======================================================== -->
   <!-- TAB 1: AUTO-APPLY LOKER -->
   <!-- ======================================================== -->
   <div class="tab-panel active" id="panel-apply">
-    <!-- Filter & Direct Search Controller -->
+    <!-- 1. Active Tab Loker Detection Card (Top Priority) -->
+    <section class="card" id="card-active-job">
+      <div class="card-header">
+        <span class="card-label">Halaman Aktif</span>
+        <span class="card-badge" id="badge-active-platform">Mengecek</span>
+      </div>
+      
+      <!-- Multi-Job Cards Detected View -->
+      <div id="multi-job-detected-view" style="display: none;">
+        <div class="detected-meta">
+          <span id="multi-job-count-text" class="detected-title">0 lowongan terdeteksi</span>
+          <span id="multi-job-filter-match" class="match-pill"></span>
+        </div>
+        <div id="multi-job-preview-snippets" class="job-snippets"></div>
+        <button class="btn btn-primary" id="btn-enqueue-detected-jobs" style="margin-top: 6px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span id="text-enqueue-btn">Lamar Lowongan di Tab Ini</span>
+        </button>
+      </div>
+
+      <!-- Single Job Detected View -->
+      <div id="single-job-detected-view">
+        <div id="active-job-info" class="single-job-info">
+          <div id="active-job-title" class="single-job-title">Buka portal untuk deteksi</div>
+          <div id="active-job-company" class="single-job-sub">Tidak ada form terdeteksi</div>
+        </div>
+        <button class="btn btn-primary" id="btn-apply-active-tab" disabled>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>Lamar Lowongan Ini</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. Filter & Search Controller -->
     <section class="card">
       <div class="card-header">
-        <span class="card-label">Filter & Target</span>
+        <span class="card-label">Filter & Target Pencarian</span>
         <span class="card-badge" id="label-active-portal">Indeed</span>
       </div>
       
@@ -109,105 +153,92 @@
       </label>
 
       <div class="btn-group-2">
-        <button class="btn btn-secondary" id="btn-search-portal">
+        <button class="btn btn-secondary" id="btn-search-portal" style="width: 100%;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <span id="text-btn-search">Cari Surabaya</span>
+          <span id="text-btn-search">Cari Lowongan di Portal</span>
         </button>
-        <button class="btn btn-primary" id="btn-launch-auto-queue">
+        <button class="btn btn-secondary" id="btn-launch-auto-queue" style="display: none;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           <span>Lamar di Tab Ini</span>
         </button>
       </div>
     </section>
 
-    <!-- Active Tab Loker Detection Card -->
-    <section class="card" id="card-active-job">
-      <div class="card-header">
-        <span class="card-label">Halaman Aktif</span>
-        <span class="card-badge" id="badge-active-platform">Mengecek</span>
-      </div>
-      
-      <!-- Multi-Job Cards Detected View -->
-      <div id="multi-job-detected-view" style="display: none;">
-        <div class="detected-meta">
-          <span id="multi-job-count-text" class="detected-title">0 lowongan terdeteksi</span>
-          <span id="multi-job-filter-match" class="match-pill"></span>
-        </div>
-        <div id="multi-job-preview-snippets" class="job-snippets"></div>
-        <button class="btn btn-primary" id="btn-enqueue-detected-jobs" style="margin-top: 6px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span id="text-enqueue-btn">Lamar Lowongan Terpilih di Tab Ini</span>
-        </button>
-      </div>
+    <!-- 3. Advanced Settings (Collapsed by Default) -->
+    <details class="advanced-details">
+      <summary class="advanced-summary">
+        <span>Opsi Lanjutan &amp; Antrean Background</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <div class="advanced-content">
+        <!-- Concurrency Selector -->
+        <section class="card" style="margin-bottom: 0;">
+          <div class="card-header">
+            <span class="card-label">Tab Concurrency</span>
+            <span id="label-active-conc" class="accent-text">4 Tab</span>
+          </div>
+          <div class="concurrency-selector">
+            <button class="conc-btn" data-val="1">1</button>
+            <button class="conc-btn" data-val="2">2</button>
+            <button class="conc-btn" data-val="3">3</button>
+            <button class="conc-btn selected" data-val="4">4 Tab</button>
+          </div>
+        </section>
 
-      <!-- Single Job Detected View -->
-      <div id="single-job-detected-view">
-        <div id="active-job-info" class="single-job-info">
-          <div id="active-job-title" class="single-job-title">Buka portal untuk deteksi</div>
-          <div id="active-job-company" class="single-job-sub">Tidak ada form terdeteksi</div>
-        </div>
-        <button class="btn btn-primary" id="btn-apply-active-tab" disabled>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span>Lamar Lowongan Ini</span>
-        </button>
+        <!-- Queue Status Card -->
+        <section class="card" style="margin-bottom: 0;">
+          <div class="card-header">
+            <span class="card-label">Antrean Background</span>
+            <span id="queue-status-text" class="status-live">Aktif</span>
+          </div>
+          
+          <div class="queue-stats-grid">
+            <div class="stat-item stat-active">
+              <div class="stat-num" id="stat-running">0</div>
+              <div class="stat-label">Jalan</div>
+            </div>
+            <div class="stat-item stat-queued">
+              <div class="stat-num" id="stat-queued">0</div>
+              <div class="stat-label">Antre</div>
+            </div>
+            <div class="stat-item stat-completed">
+              <div class="stat-num" id="stat-completed">0</div>
+              <div class="stat-label">Selesai</div>
+            </div>
+            <div class="stat-item stat-failed">
+              <div class="stat-num" id="stat-failed">0</div>
+              <div class="stat-label">Gagal</div>
+            </div>
+          </div>
+
+          <div class="btn-group-2" style="margin-top: 6px;">
+            <button class="btn btn-secondary" id="btn-queue-pause">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              <span>Jeda</span>
+            </button>
+            <button class="btn btn-secondary" id="btn-queue-resume" style="display: none;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Lanjutkan</span>
+            </button>
+            <button class="btn btn-secondary" id="btn-queue-clear">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span>Bersihkan</span>
+            </button>
+          </div>
+        </section>
+      </div>
+    </details>
+
+    <!-- Manual Enqueue & Log Container -->
+    <section class="card" style="margin-bottom: 0;">
+      <div class="card-header">
+        <span class="card-label">Log Aktivitas</span>
+      </div>
+      <div class="log-container" id="worker-log-container">
+        <div class="log-entry info">[Sistem] Worker siap.</div>
       </div>
     </section>
-
-    <!-- Concurrency Selector -->
-    <section class="card">
-      <div class="card-header">
-        <span class="card-label">Background Concurrency</span>
-        <span id="label-active-conc" class="accent-text">4 Tab</span>
-      </div>
-      <div class="concurrency-selector">
-        <button class="conc-btn" data-val="1">1</button>
-        <button class="conc-btn" data-val="2">2</button>
-        <button class="conc-btn" data-val="3">3</button>
-        <button class="conc-btn selected" data-val="4">4 Tab</button>
-      </div>
-    </section>
-
-    <!-- Queue Status Card -->
-    <section class="card">
-      <div class="card-header">
-        <span class="card-label">Antrean Background</span>
-        <span id="queue-status-text" class="status-live">Aktif</span>
-      </div>
-      
-      <div class="queue-stats-grid">
-        <div class="stat-item stat-active">
-          <div class="stat-num" id="stat-running">0</div>
-          <div class="stat-label">Jalan</div>
-        </div>
-        <div class="stat-item stat-queued">
-          <div class="stat-num" id="stat-queued">0</div>
-          <div class="stat-label">Antre</div>
-        </div>
-        <div class="stat-item stat-completed">
-          <div class="stat-num" id="stat-completed">0</div>
-          <div class="stat-label">Selesai</div>
-        </div>
-        <div class="stat-item stat-failed">
-          <div class="stat-num" id="stat-failed">0</div>
-          <div class="stat-label">Gagal</div>
-        </div>
-      </div>
-
-      <div class="btn-group-2" style="margin-top: 6px;">
-        <button class="btn btn-secondary" id="btn-queue-pause">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-          <span>Jeda</span>
-        </button>
-        <button class="btn btn-secondary" id="btn-queue-resume" style="display: none;">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span>Lanjutkan</span>
-        </button>
-        <button class="btn btn-secondary" id="btn-queue-clear">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          <span>Bersihkan</span>
-        </button>
-      </div>
-    </section>
+  </div>
 
     <!-- Manual Enqueue & Log Container -->
     <section class="card" style="margin-bottom: 0;">

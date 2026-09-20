@@ -1822,10 +1822,10 @@ export default function Home() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* 1. GLINTS CARD */}
-                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-blue-500/40 transition">
+                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-slate-400/40 dark:hover:border-slate-600 transition">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500 font-bold text-xs">
+                        <div className="w-8 h-8 rounded-xl card-subtle-theme border border-subtle-theme flex items-center justify-center text-main-theme font-bold text-xs">
                           GL
                         </div>
                         <div>
@@ -1835,10 +1835,10 @@ export default function Home() {
                       </div>
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
                         config.enableGlints
-                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableGlints ? 'bg-blue-500' : 'bg-slate-400'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableGlints ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                         <span>{config.enableGlints ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
@@ -1850,7 +1850,7 @@ export default function Home() {
                       </div>
                       <div className="flex justify-between">
                         <span>Status Profil:</span>
-                        <span className="font-medium text-emerald-500">{config.domicile ? 'Lengkap' : 'Perlu Setup'}</span>
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{config.domicile ? 'Lengkap' : 'Perlu Setup'}</span>
                       </div>
                     </div>
 
@@ -1859,10 +1859,10 @@ export default function Home() {
                         type="button"
                         onClick={handleSyncProfileGlints}
                         disabled={isSyncingProfile || isBotRunning}
-                        className="w-full py-1.5 px-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                        className="w-full py-1.5 px-2 rounded-xl card-subtle-theme border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                         title="Otomatis isi form domisili, skill, dan upload CV ke akun Glints"
                       >
-                        <Sparkles className="w-3 h-3" />
+                        <Sparkles className="w-3 h-3 text-muted-theme" />
                         <span>Auto-Fill Profil</span>
                       </button>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -1870,17 +1870,17 @@ export default function Home() {
                           type="button"
                           onClick={() => executeStartBot('headful', 'glints', 5)}
                           disabled={isBotRunning || isSetupBrowserRunning}
-                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:border-blue-500 card-subtle-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
                           title="Uji coba Glints 5 loker (Headful)"
                         >
-                          <Play className="w-2.5 h-2.5 text-blue-500 fill-current" />
+                          <Play className="w-2.5 h-2.5 fill-current text-muted-theme" />
                           <span>Tes 5 Loker</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => executeStartBot('headless', 'glints')}
                           disabled={isBotRunning || isSetupBrowserRunning}
-                          className="py-1.5 px-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          className="py-1.5 px-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-[10px] font-semibold flex items-center justify-center gap-1 transition shadow-sm"
                         >
                           <span>Jalankan</span>
                         </button>
@@ -1889,10 +1889,10 @@ export default function Home() {
                   </div>
 
                   {/* 2. LINKEDIN CARD */}
-                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-sky-500/40 transition">
+                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-slate-400/40 dark:hover:border-slate-600 transition">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-500 font-bold text-xs">
+                        <div className="w-8 h-8 rounded-xl card-subtle-theme border border-subtle-theme flex items-center justify-center text-main-theme font-bold text-xs">
                           IN
                         </div>
                         <div>
@@ -1902,10 +1902,10 @@ export default function Home() {
                       </div>
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
                         config.enableLinkedin
-                          ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableLinkedin ? 'bg-sky-500' : 'bg-slate-400'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableLinkedin ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                         <span>{config.enableLinkedin ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
@@ -1917,7 +1917,7 @@ export default function Home() {
                       </div>
                       <div className="flex justify-between">
                         <span>Stealth:</span>
-                        <span className="font-medium text-emerald-500">Windows 11 Act</span>
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">Aktif</span>
                       </div>
                     </div>
 
@@ -1926,10 +1926,10 @@ export default function Home() {
                         type="button"
                         onClick={() => executeStartBot('headful', 'linkedin', 1)}
                         disabled={isBotRunning || isSetupBrowserRunning}
-                        className="w-full py-1.5 px-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-500 text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                        className="w-full py-1.5 px-2 rounded-xl card-subtle-theme border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                         title="Buka browser untuk verifikasi / login LinkedIn"
                       >
-                        <KeyRound className="w-3 h-3" />
+                        <KeyRound className="w-3 h-3 text-muted-theme" />
                         <span>Cek / Login</span>
                       </button>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -1937,17 +1937,17 @@ export default function Home() {
                           type="button"
                           onClick={() => executeStartBot('headful', 'linkedin', 5)}
                           disabled={isBotRunning || isSetupBrowserRunning}
-                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:border-sky-500 card-subtle-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
                           title="Uji coba LinkedIn 5 loker (Headful)"
                         >
-                          <Play className="w-2.5 h-2.5 text-sky-500 fill-current" />
+                          <Play className="w-2.5 h-2.5 fill-current text-muted-theme" />
                           <span>Tes 5 Loker</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => executeStartBot('headless', 'linkedin')}
                           disabled={isBotRunning || isSetupBrowserRunning}
-                          className="py-1.5 px-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          className="py-1.5 px-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-[10px] font-semibold flex items-center justify-center gap-1 transition shadow-sm"
                         >
                           <span>Jalankan</span>
                         </button>
@@ -1956,10 +1956,10 @@ export default function Home() {
                   </div>
 
                   {/* 3. JOBSTREET CARD */}
-                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-purple-500/40 transition">
+                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-slate-400/40 dark:hover:border-slate-600 transition">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-500 font-bold text-xs">
+                        <div className="w-8 h-8 rounded-xl card-subtle-theme border border-subtle-theme flex items-center justify-center text-main-theme font-bold text-xs">
                           JS
                         </div>
                         <div>
@@ -1969,10 +1969,10 @@ export default function Home() {
                       </div>
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
                         config.enableJobstreet
-                          ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableJobstreet ? 'bg-purple-500' : 'bg-slate-400'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableJobstreet ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                         <span>{config.enableJobstreet ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
@@ -1993,10 +1993,10 @@ export default function Home() {
                         type="button"
                         onClick={() => executeStartBot('headful', 'jobstreet', 1)}
                         disabled={isBotRunning || isSetupBrowserRunning}
-                        className="w-full py-1.5 px-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                        className="w-full py-1.5 px-2 rounded-xl card-subtle-theme border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                         title="Buka browser untuk verifikasi / login JobStreet"
                       >
-                        <KeyRound className="w-3 h-3" />
+                        <KeyRound className="w-3 h-3 text-muted-theme" />
                         <span>Cek / Login</span>
                       </button>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -2004,17 +2004,17 @@ export default function Home() {
                           type="button"
                           onClick={() => executeStartBot('headful', 'jobstreet', 5)}
                           disabled={isBotRunning || isSetupBrowserRunning}
-                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:border-purple-500 card-subtle-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
                           title="Uji coba JobStreet 5 loker (Headful)"
                         >
-                          <Play className="w-2.5 h-2.5 text-purple-500 fill-current" />
+                          <Play className="w-2.5 h-2.5 fill-current text-muted-theme" />
                           <span>Tes 5 Loker</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => executeStartBot('headless', 'jobstreet')}
                           disabled={isBotRunning || isSetupBrowserRunning}
-                          className="py-1.5 px-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          className="py-1.5 px-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-[10px] font-semibold flex items-center justify-center gap-1 transition shadow-sm"
                         >
                           <span>Jalankan</span>
                         </button>
@@ -2023,10 +2023,10 @@ export default function Home() {
                   </div>
 
                   {/* 4. INDEED CARD */}
-                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-orange-500/40 transition">
+                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-slate-400/40 dark:hover:border-slate-600 transition">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-500 font-bold text-xs">
+                        <div className="w-8 h-8 rounded-xl card-subtle-theme border border-subtle-theme flex items-center justify-center text-main-theme font-bold text-xs">
                           ID
                         </div>
                         <div>
@@ -2036,10 +2036,10 @@ export default function Home() {
                       </div>
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
                         config.enableIndeed
-                          ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableIndeed ? 'bg-orange-500' : 'bg-slate-400'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableIndeed ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                         <span>{config.enableIndeed ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
@@ -2051,7 +2051,7 @@ export default function Home() {
                       </div>
                       <div className="flex justify-between">
                         <span>Anti-CF Shield:</span>
-                        <span className="font-medium text-emerald-500">Auto Resolve</span>
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">Auto Resolve</span>
                       </div>
                     </div>
 
@@ -2060,10 +2060,10 @@ export default function Home() {
                         type="button"
                         onClick={() => executeStartBot('headful', 'indeed', 1)}
                         disabled={isBotRunning || isSetupBrowserRunning}
-                        className="w-full py-1.5 px-2 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                        className="w-full py-1.5 px-2 rounded-xl card-subtle-theme border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                         title="Buka browser untuk verifikasi / login Indeed"
                       >
-                        <KeyRound className="w-3 h-3" />
+                        <KeyRound className="w-3 h-3 text-muted-theme" />
                         <span>Cek / Login</span>
                       </button>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -2071,17 +2071,17 @@ export default function Home() {
                           type="button"
                           onClick={() => executeStartBot('headful', 'indeed', 5)}
                           disabled={isBotRunning || isSetupBrowserRunning}
-                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:border-orange-500 card-subtle-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
                           title="Uji coba Indeed 5 loker (Headful)"
                         >
-                          <Play className="w-2.5 h-2.5 text-orange-500 fill-current" />
+                          <Play className="w-2.5 h-2.5 fill-current text-muted-theme" />
                           <span>Tes 5 Loker</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => executeStartBot('headless', 'indeed')}
                           disabled={isBotRunning || isSetupBrowserRunning}
-                          className="py-1.5 px-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          className="py-1.5 px-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-[10px] font-semibold flex items-center justify-center gap-1 transition shadow-sm"
                         >
                           <span>Jalankan</span>
                         </button>
@@ -2227,20 +2227,20 @@ export default function Home() {
                           type="button"
                           onClick={handleSyncProfileGlints}
                           disabled={isSyncingProfile || isBotRunning}
-                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center gap-2 shadow-sm transition disabled:opacity-50"
+                          className="px-3.5 py-2 rounded-xl card-subtle-theme border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme font-medium text-xs flex items-center gap-2 shadow-sm transition disabled:opacity-50"
                           title="Otomatis sinkronkan nama, domisili, skill, dan file CV ke profil akun Glints kamu"
                         >
-                          <Sparkles className={`w-3.5 h-3.5 ${isSyncingProfile ? 'animate-spin' : ''}`} />
+                          <Sparkles className={`w-3.5 h-3.5 text-muted-theme ${isSyncingProfile ? 'animate-spin' : ''}`} />
                           <span>{isSyncingProfile ? 'Menyinkronkan ke Glints...' : 'Auto-Fill Profil Glints'}</span>
                         </button>
                       </div>
                     </div>
 
                     {/* NEW: Smart CV Document Upload & AI Reading Banner */}
-                    <div id="tour-cv-upload" className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/25 space-y-3">
+                    <div id="tour-cv-upload" className="p-4 sm:p-5 rounded-2xl card-theme border border-subtle-theme shadow-sm space-y-3">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-500 shrink-0">
+                          <div className="w-10 h-10 rounded-xl card-subtle-theme border border-subtle-theme flex items-center justify-center text-main-theme shrink-0">
                             <FileText className="w-5 h-5" />
                           </div>
                           <div>
@@ -2270,10 +2270,10 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={handleOpenCvPreview}
-                              className="px-3 py-2 rounded-xl card-subtle-theme border border-subtle-theme text-main-theme hover:bg-orange-500/10 hover:border-orange-500/30 text-xs font-medium transition flex items-center gap-1.5 shadow-sm"
+                              className="px-3 py-2 rounded-xl card-subtle-theme border border-subtle-theme text-main-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition flex items-center gap-1.5 shadow-sm"
                               title="Lihat pratinjau teks CV dan perbandingan data profil"
                             >
-                              <Eye className="w-3.5 h-3.5 text-orange-500" />
+                              <Eye className="w-3.5 h-3.5 text-muted-theme" />
                               <span>Lihat Isi &amp; Preview CV</span>
                             </button>
                           )}
@@ -2288,7 +2288,7 @@ export default function Home() {
                             type="button"
                             disabled={isUploadingCv}
                             onClick={() => cvFileInputRef.current?.click()}
-                            className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium transition flex items-center gap-2 shadow-sm disabled:opacity-50"
+                            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-semibold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
                           >
                             <Upload className="w-3.5 h-3.5" />
                             <span>{isUploadingCv ? 'Menganalisis...' : config.cvFileName ? 'Ganti File CV' : 'Upload File CV'}</span>
@@ -2297,7 +2297,7 @@ export default function Home() {
                       </div>
 
                       {/* Pilihan Sinkronisasi Form Profil Otomatis */}
-                      <div className="pt-2 border-t border-orange-500/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="pt-2 border-t border-subtle-theme flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                         <label className="flex items-center gap-2.5 cursor-pointer text-xs">
                           <input
                             type="checkbox"
