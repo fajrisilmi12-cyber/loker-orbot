@@ -46,3 +46,4 @@ config.json
 
 # uploaded CV files (user data, do not commit)
 /uploads/
+/scratch/

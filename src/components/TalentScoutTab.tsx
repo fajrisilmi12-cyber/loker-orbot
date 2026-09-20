@@ -1355,7 +1355,7 @@ export default function TalentScoutTab() {
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs rounded-xl shadow-sm cursor-grab active:cursor-grabbing transition"
                 >
                   <Bookmark className="w-3.5 h-3.5" />
-                  <span>Kirim ke CV Blaster</span>
+                  <span>Kirim ke lemparjaring</span>
                 </a>
               </div>
 
@@ -1423,7 +1423,7 @@ export default function TalentScoutTab() {
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-sm cursor-grab active:cursor-grabbing transition"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Ekstrak Profil ke Blaster</span>
+                  <span>Ekstrak Profil ke lemparjaring</span>
                 </a>
               </div>
 
@@ -1431,7 +1431,7 @@ export default function TalentScoutTab() {
                 <span className="font-semibold text-main-theme block">Cara pakai di LinkedIn:</span>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Buka profil LinkedIn kandidat mana saja (contoh: tab Mochamad Dhiki Nofianto).</li>
-                  <li>Klik tombol bookmark &quot;Ekstrak Profil ke Blaster&quot; di browser Anda.</li>
+                  <li>Klik tombol bookmark &quot;Ekstrak Profil ke lemparjaring&quot; di browser Anda.</li>
                   <li>Data riwayat kerja &amp; background check AI langsung tersimpan di tabel dashboard!</li>
                 </ol>
               </div>

@@ -47,8 +47,8 @@ export interface TourModule {
 const FULL_SYSTEM_STEPS: TourStep[] = [
   {
     targetId: 'tour-welcome',
-    title: 'Selamat Datang di CV Blaster',
-    content: 'Platform automasi pengiriman lamaran kerja cerdas ke LinkedIn, Glints, JobStreet, dan Indeed dengan integrasi AI, anti-bot stealth, dan database lokal terisolasi.',
+    title: 'Selamat Datang di lemparjaring',
+    content: 'Platform lempar jaring kerja & talent scout cerdas ke LinkedIn, Glints, JobStreet, dan Indeed dengan integrasi AI, anti-bot stealth, dan database lokal.',
     icon: Compass,
     preferredPlacement: 'center',
   },
@@ -404,7 +404,7 @@ export function OnboardingTour({
                   <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-main-theme">Pusat Panduan &amp; Tutorial CV Blaster</h2>
+                  <h2 className="text-base font-bold text-main-theme">Pusat Panduan &amp; Tutorial lemparjaring</h2>
                   <p className="text-xs text-muted-theme">Pilih modul spesifik yang ingin dipelajari atau jalankan tur kilat interaktif.</p>
                 </div>
               </div>

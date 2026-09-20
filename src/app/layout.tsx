@@ -3,8 +3,8 @@ import "./globals.css";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "CV Blaster Dashboard",
-  description: "Automate CV applications to multiple job portals",
+  title: "lemparjaring",
+  description: "Platform lempar jaring kerja & talent scout multi-portal",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

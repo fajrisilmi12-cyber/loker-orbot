@@ -5,6 +5,17 @@ import { evaluateCandidateIntegrity, parseTalentPromptWithAi } from '@/lib/talen
 import { TalentCandidate, TalentFilter } from '@/lib/talentTypes';
 import { launchBrowserWithFallback } from '@/lib/browserHelper';
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    }
+  });
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const format = searchParams.get('format');

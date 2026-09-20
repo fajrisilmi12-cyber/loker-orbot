@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "CV Blaster Companion",
-  "version": "1.0.0",
-  "description": "Companion Extension for CV Blaster - 1-Click Cookie Sync & Job Portal Session Connector",
+  "name": "lemparjaring",
+  "version": "2.0.0",
+  "description": "Bukan untuk ikan — jaring puluhan lowongan kerja & talenta profesional secara otomatis.",
   "permissions": [
     "cookies",
     "storage",
-    "activeTab"
+    "activeTab",
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "*://*.linkedin.com/*",
@@ -15,14 +17,76 @@
     "*://*.jobstreet.co.id/*",
     "*://*.jobstreet.com/*",
     "http://localhost:3000/*",
-    "http://127.0.0.1:3000/*",
-    "https://*/*"
+    "http://127.0.0.1:3000/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "CV Blaster Sync"
-  }
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "lemparjaring"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.linkedin.com/*"
+      ],
+      "js": [
+        "content_scripts/linkedin_talent.js",
+        "content_scripts/floating_assistant.js"
+      ],
+      "css": [
+        "content_scripts/floating_assistant.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://*.indeed.com/*",
+        "*://*.id.indeed.com/*"
+      ],
+      "js": [
+        "content_scripts/indeed_apply.js",
+        "content_scripts/floating_assistant.js"
+      ],
+      "css": [
+        "content_scripts/floating_assistant.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://*.jobstreet.co.id/*",
+        "*://*.jobstreet.com/*"
+      ],
+      "js": [
+        "content_scripts/floating_assistant.js"
+      ],
+      "css": [
+        "content_scripts/floating_assistant.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*",
+        "content_scripts/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
 }

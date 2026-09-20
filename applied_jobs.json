@@ -1,5 +1,25 @@
 [
   {
+    "company": "PT. Jakarta Development Centre",
+    "title": "Cari Lowongan Kerja",
+    "platform": "indeed",
+    "jobUrl": "https://id.indeed.com/?from=gnav-indapply-SmartApply",
+    "date": "20/9/2026, 08.44.32",
+    "status": "Form completed or manual review required",
+    "salary": "Rp4.612.158,56 - Rp23.908.902,53 per bulan",
+    "location": "Jakarta"
+  },
+  {
+    "company": "ITConnexion",
+    "title": "Cari Lowongan Kerja",
+    "platform": "indeed",
+    "jobUrl": "https://id.indeed.com/?r=us",
+    "date": "20/9/2026, 08.42.39",
+    "status": "Form completed or manual review required",
+    "salary": "Rp8.000.000 - Rp13.000.000 per bulan",
+    "location": "Jakarta"
+  },
+  {
     "company": "CV PRAYOGI DIGITAL SOLUTION",
     "title": "FULLSTACK WEB DEVELOPER",
     "platform": "Jobstreet",

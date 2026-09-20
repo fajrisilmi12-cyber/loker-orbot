@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server';
 import { getConfig, saveConfig } from '@/lib/config';
 import { initializeSheet } from '@/lib/googleSheets';
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    }
+  });
+}
+
 export async function GET() {
   const config = getConfig();
   return NextResponse.json({ success: true, config, ...config });
