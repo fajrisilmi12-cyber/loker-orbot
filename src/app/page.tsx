@@ -2240,40 +2240,7 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Status Readiness Banner (Sync Helper for Beginners) */}
-              <div className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
-                readinessMetrics.isReady100
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
-              }`}>
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${readinessMetrics.isReady100 ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                  <div>
-                    <span className="font-semibold">
-                      {readinessMetrics.isReady100
-                        ? 'Sistem Siap 100%! Bot dapat langsung dijalankan kapan saja.'
-                        : `Kesiapan Sistem ${readinessMetrics.percent}%: Masih ada beberapa data yang belum dilengkapi.`}
-                    </span>
-                    {!readinessMetrics.isReady100 && (
-                      <p className="text-[11px] opacity-90 mt-0.5">
-                        {!readinessMetrics.step1Complete && '• Lengkapi profil (Nama, No HP, & Skills) di Langkah 1. '}
-                        {!readinessMetrics.step2Complete && '• Pilih minimal 1 platform & kata kunci di Langkah 2. '}
-                        {!readinessMetrics.hasAi && '• Masukkan Gemini API Key atau Custom AI Router di Langkah 3.'}
-                      </p>
-                    )}
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                  <span className={`text-[11px] font-semibold px-3 py-1 rounded-xl border ${
-                    readinessMetrics.isReady100
-                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                  }`}>
-                    {readinessMetrics.completedSteps} / 3 Langkah Selesai
-                  </span>
-                </div>
-              </div>
 
               {/* Wizard Body Card */}
               <form onSubmit={handleSaveConfig} className="p-6 md:p-8 rounded-3xl card-theme border shadow-sm space-y-6 transition-colors">
