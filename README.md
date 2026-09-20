@@ -25,15 +25,16 @@
 <summary><b>Daftar Isi (Klik di sini untuk membuka navigasi)</b></summary>
 
 1. [Mengapa lemparjaring? (Audit Fitur & Batasan Jujur)](#mengapa-lemparjaring-audit-fitur--batasan-jujur)
-2. [Tragedi Klasik Pencari Kerja & Filosofi](#tragedi-klasik-pencari-kerja--filosofi)
-3. [Instruksi Instalasi: Lokal, VPS, & Home Gateway](#instruksi-instalasi--tutorial-lengkap)
+2. [Galeri Demo & Tampilan Antarmuka](#galeri-demo--tampilan-antarmuka)
+3. [Tragedi Klasik Pencari Kerja & Filosofi](#tragedi-klasik-pencari-kerja--filosofi)
+4. [Instruksi Instalasi: Lokal, VPS, & Home Gateway](#instruksi-instalasi--tutorial-lengkap)
    - [Mode 1: Lokal (Laptop Menyala)](#mode-1-lokal-laptop-menyala)
    - [Mode 2: Production Server / Cloud VPS (Laptop Mati Tetap Jalan)](#mode-2-production-server--cloud-vps-laptop-mati-tetap-jalan)
    - [Mode 3: Home Gateway 24/7 (Mini-PC / Android Termux Nol Biaya)](#mode-3-home-gateway-247-mini-pc--android-termux-nol-biaya)
    - [Pemasangan Ekstensi Chrome (Manifest V3)](#pemasangan-ekstensi-chrome-manifest-v3)
    - [Alur Penggunaan Harian](#alur-penggunaan-harian)
-4. [Struktur Proyek](#struktur-proyek)
-5. [Zona Terlarang (Misteri Easter Egg)](#zona-terlarang-baca-risiko-sebelum-buka)
+5. [Struktur Proyek](#struktur-proyek)
+6. [Zona Terlarang (Misteri Easter Egg)](#zona-terlarang-baca-risiko-sebelum-buka)
 
 </details>
 
@@ -53,6 +54,49 @@ Banyak bot berbayar di luar sana mematok tarif langganan bulanan selangit, tapi 
 | **Dukungan Portal Kerja** | Mayoritas hanya optimal untuk LinkedIn US dan ZipRecruiter global. Sering macet di portal Asia Tenggara. | **Lokal & Global**. Optimal untuk JobStreet Indonesia, Glints, Indeed ID, LinkedIn, plus ATS global (Greenhouse & Lever). |
 | **Modul Ganda** | Hanya satu arah: pelamar melamar ke loker. | **Dual Engine**: Modul 1 (Pelamar Auto-Apply) + Modul 2 (Talent Scout & AI Honesty Audit LinkedIn). |
 | **Batasan & Realita Jujur** | Mengklaim jaminan dapat kerja 100% (marketing klise). | **Bukan Joki Interview**. Bot mengantar CV ke meja HRD, sesi interview tetap Anda yang jalani. Kuota aman: 20 sampai 50 loker/hari. |
+
+---
+
+## Galeri Demo & Tampilan Antarmuka
+
+Berikut bukti visual nyata dan tangkapan layar antarmuka sistem **lemparjaring**:
+
+### 1. Dashboard Kontrol Utama
+Setup 3 langkah instan, pemantau multi-portal (Indeed, JobStreet, Glints, LinkedIn), dan sinkronisasi otomatis CV pelamar.
+
+<p align="center">
+  <img src="asset%20untuk%20readme/dashboard.png" alt="Dashboard Utama lemparjaring" width="900" style="border-radius: 8px; border: 1px solid #334155;" />
+</p>
+
+### 2. Ekstensi Chrome In-Tab Runner
+Otomasi melayang in-place langsung di halaman Indeed. Tanpa begal tab, tanpa popup liar, dan 100% lolos verifikasi Cloudflare Turnstile.
+
+<p align="center">
+  <img src="asset%20untuk%20readme/ekstensi-visual1.png" alt="Ekstensi Chrome In-Tab Runner" width="900" style="border-radius: 8px; border: 1px solid #334155;" />
+</p>
+
+### 3. Modul 2: Talent Scout & Sourcing Engine (AI Powered)
+Ketik prompt kebutuhan staf dalam bahasa manusia sehari-hari. AI merakit sinonim jabatan, memetakan keahlian, dan menyaring kandidat LinkedIn #OpenToWork.
+
+<p align="center">
+  <img src="asset%20untuk%20readme/rekrut-pekerja-dibantu-agent-ai.png" alt="Talent Scout AI Sourcing Engine" width="900" style="border-radius: 8px; border: 1px solid #334155;" />
+</p>
+
+### 4. Kartu Lowongan & Riwayat Lamaran
+Daftar seluruh lamaran yang telah sukses terkirim, lengkap dengan status riwayat per portal, filter pencarian, dan tombol ekspor.
+
+<p align="center">
+  <img src="asset%20untuk%20readme/halmaan-riwayat.png" alt="Riwayat dan Kartu Lowongan" width="900" style="border-radius: 8px; border: 1px solid #334155;" />
+</p>
+
+### 5. Video Demo Terminal Headless Runner
+Proses eksekusi bot di balik layar saat dijalankan dalam mode headless terminal.
+
+<p align="center">
+  <video src="asset%20untuk%20readme/demo-live-terminal(headless).mp4" controls width="900" style="border-radius: 8px; border: 1px solid #334155;">
+    <a href="asset%20untuk%20readme/demo-live-terminal(headless).mp4">Tonton Video Demo Live Terminal</a>
+  </video>
+</p>
 
 ---
 
@@ -182,6 +226,12 @@ Ini adalah solusi canggih untuk otomasi 24 jam nonstop tanpa biaya langganan pro
 
 ```
 cv-blaster/
+├── asset untuk readme/              # Cuplikan antarmuka UI & rekaman demo video
+│   ├── dashboard.png                # Tangkapan layar dashboard utama
+│   ├── ekstensi-visual1.png         # Tangkapan layar ekstensi in-tab di Indeed
+│   ├── rekrut-pekerja-dibantu-agent-ai.png # Tangkapan layar Talent Scout AI
+│   ├── halmaan-riwayat.png          # Tangkapan layar kartu riwayat loker
+│   └── demo-live-terminal(headless).mp4 # Rekaman video terminal headless
 ├── extension/                       # Ekstensi Chrome Manifest V3 (lemparjaring)
 │   ├── manifest.json                # Konfigurasi perizinan & nama ekstensi
 │   ├── background.js                # Service worker, queue engine & provider tab pool
