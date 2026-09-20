@@ -1,8 +1,9 @@
 <div align="center">
 
-# lemparjaring
+<img src="logo.png" alt="Lempar Jaring" width="380" />
+<br />
 
-**Bukan jaring nelayan buat nangkep ikan teri. Sekali tebar jaring di darat, dapet puluhan loker dan kandidat idaman biar HRD pusing nge-chat duluan!**
+**"Katanya 19 juta lapangan kerja, pas lulus malah disuruh jualan es teh atau magang tanpa digaji. Jangan nunggu janji manis — lempar jaring sendiri biar bot yang kerja rodi, kita tinggal nunggu panggilan interview!"**
 
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.1.7-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![React 19](https://img.shields.io/badge/React-19.0.0-blue?style=flat-square&logo=react)](https://react.dev/)
@@ -14,7 +15,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 <p>
-  <i>"Daripada jempol cantengan submit loker manual satu per satu lalu di-ghosting HRD, mending lempar jaring sekali biar bot yang lembur."</i>
+  <i>"Kalau gak punya jalur Ordal (Orang Dalam), senjatanya cuma satu: Jalur Orbot (Orang Pake Bot). Tebar 50 loker sehari, biar HRD yang pusing nge-chat duluan."</i>
 </p>
 
 </div>
@@ -101,29 +102,33 @@ Proses eksekusi bot di balik layar saat dijalankan dalam mode headless terminal.
 ---
 
 <details>
-<summary><b>Tragedi Klasik Pencari Kerja & Filosofi (Klik untuk Buka)</b></summary>
+<summary><b>Tragedi Klasik Pencari Kerja &amp; Realita Loker Konoha (Klik untuk Buka)</b></summary>
 
-### Tragedi Klasik Pencari Kerja
+### 🎭 Realita Loker Konoha & Janji 19 Juta Lapangan Kerja
 
-Setiap pencari kerja pasti pernah mengalami fase suram ini:
+Setiap pejuang loker di Indonesia pasti akrab sama penderitaan absurd ini:
 
-1. **Sindrom Tab Membludak**: Buka 50 tab Indeed dan Jobstreet sekaligus sampai kipas laptop bunyi mirip pesawat jet mau lepas landas.
-2. **Kutukan Formulir Identik**: Ngetik ulang nama, nomor WhatsApp, alamat, dan nominal gaji harapan di formulir yang sama berulang-ulang sampai hafal di luar kepala.
-3. **Teror Cloudflare Turnstile**: Baru submit 3 lowongan, tiba-tiba dihadang captcha tebak gambar motor atau kotak centang yang muter terus tanpa ampun.
-4. **Surat Motivasi Template**: Menulis esai klise bertuliskan *"Saya sangat antusias melamar di perusahaan Bapak/Ibu karena perusahaan ini sangat dinamis dan visioner"* padahal baru tahu nama perusahaannya 5 detik yang lalu.
-5. **Ghosting Massal**: Sudah kirim berkas dengan penuh keringat dan air mata, tapi balasannya cuma hening atau email penolakan otomatis jam 2 pagi.
+1. **Janji 19 Juta Lapangan Kerja**: *"Katanya ada belasan juta loker baru, tapi pas lulus kuliah malah bingung mau ngapain selain buka franchise es teh atau admin toko online."* Kirim 500 lamaran, yang bales cuma 2, itu pun email bot penolakan template jam 2 pagi.
+2. **Kualifikasi Loker di Luar Nalar**:
+   - *"Dicari Fresh Graduate, umur maksimal 21 tahun, pengalaman kerja minimal 5 tahun"* — emang pas kelas 3 SMP udah mimpin standup meeting agile?
+   - *"Menguasai Frontend, Backend, Cloud, UI/UX, Sales, Photoshop, dan Editing Video TikTok (Gaji UMR dikit, siap loyalitas tanpa batas tanpa uang lembur)."*
+   - *"Kualifikasi: Berpenampilan menarik, tahan banting, dan siap bekerja di bawah tekanan (tekanan batin)."*
+3. **Sindrom Tab Membludak**: Buka 60 tab Indeed, JobStreet, Glints, dan LinkedIn sekaligus sampai kipas laptop teriak mirip mesin helikopter.
+4. **Kutukan Formulir Identik**: Ngetik ulang nama, nomor WhatsApp, domisili, dan gaji harapan yang sama berulang-ulang sampai jempol cantengan.
+5. **Kekuatan Jalur Ordal (Orang Dalam)**: Saat kita tes logika dan psikotes 3 babak sampai pusing kepala, tiba-tiba yang kepilih malah keponakannya manajer HRD.
 
-**lemparjaring** hadir agar Anda bisa tidur nyenyak atau ngopi santai sementara script yang bekerja mengirim berkas lamaran ke sasaran.
+---
 
-### Filosofi: Kenapa lemparjaring?
+### 💡 Solusi: Lawan Jalur Ordal Pakai Jalur Orbot (Orang Pake Bot)
 
-Konsepnya sederhana: **lempar jaring**. 
+Kalau kita gak punya paman pejabat atau ordal HRD, hukum matematika berkata: **Mainkan Volume & Kecepatan!**
 
-Tetapi ingat: **bukan untuk menjaring ikan lele atau paus di samudra**. 
+Konsepnya sederhana: **Lempar Jaring**.
+Bukan buat nangkep ikan lele atau cupang di empang tetangga, tapi jaring loker di darat:
 
-Jaring ini ditebar di darat untuk dua tujuan strategis:
-1. **Menjaring Pekerjaan**: Sekali tebar, kirim lamaran kerja massal terarah ke puluhan lowongan di Indeed, JobStreet, Glints, LinkedIn, serta portal ATS eksternal (Greenhouse & Lever) secara otomatis.
-2. **Menjaring Pekerja (Talent Scout)**: Sekali tarik, jaring profil talenta potensial di LinkedIn yang berstatus `#OpenToWork`, ekstrak riwayat kerjanya, dan verifikasi integritas resumenya menggunakan Gemini AI.
+1. **Jaring Loker Otomatis**: Sekali tebar, kirim lamaran kerja massal terarah ke puluhan loker di Indeed, JobStreet, Glints, LinkedIn, serta ATS (Greenhouse & Lever) secara otomatis.
+2. **Biar Bot yang Lembur**: Sambil Anda ngopi, rebahan, atau asah skill, bot yang kerja rodi ngisi formulir dan bypass verifikasi.
+3. **Jaring Talenta (Talent Scout)**: Untuk HR/Headhunter yang pusing nyari kandidat jujur, jaring profil LinkedIn `#OpenToWork` dan audit kejujuran skill mereka pakai AI.
 
 </details>
 

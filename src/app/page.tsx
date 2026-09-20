@@ -1611,20 +1611,13 @@ export default function Home() {
       <aside className="w-full md:w-64 h-full sidebar-theme border-r p-5 flex flex-col justify-between shrink-0 transition-colors overflow-y-auto">
         <div className="space-y-6">
           {/* Brand Header */}
-          <div className="flex items-center gap-3 px-2 py-1">
-            <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 font-semibold text-base shadow-sm">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <path d="M3 9h18"/>
-                <path d="M3 15h18"/>
-                <path d="M9 3v18"/>
-                <path d="M15 3v18"/>
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold tracking-tight text-main-theme">lemparjaring</h1>
-              <p className="text-[11px] text-muted-theme">Bukan jaring ikan — jaring kerja &amp; talenta</p>
-            </div>
+          <div className="px-1 py-1 flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="Lempar Jaring"
+              className="h-8 w-auto max-w-[190px] object-contain"
+            />
           </div>
 
           {/* Navigation Links */}
@@ -1687,7 +1680,7 @@ export default function Home() {
               }`}
             >
               <History className="w-4 h-4 text-purple-500" />
-              <span>Riwayat Lamaran</span>
+              <span>Riwayat Loker Dilamar</span>
               <span className="ml-auto text-[10px] text-muted-theme sidebar-card-theme px-2 py-0.5 rounded-md border">
                 {appliedJobs.length}
               </span>
@@ -1705,7 +1698,7 @@ export default function Home() {
               }`}
             >
               <Briefcase className="w-4 h-4 text-teal-500" />
-              <span>Kartu Lowongan</span>
+              <span>Daftar Loker Terjaring</span>
               {appliedJobs.length > 0 && (
                 <span className="ml-auto text-[10px] text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-md border border-teal-500/20">
                   {appliedJobs.length}
@@ -1803,11 +1796,11 @@ export default function Home() {
         <header className="min-h-[4.75rem] py-3.5 px-6 md:px-8 border-b header-theme flex items-center justify-between transition-colors shrink-0 shadow-sm sticky top-0 z-20 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-main-theme">
-              {activeTab === 'wizard' && 'Konfigurasi & Alur Setup'}
-              {activeTab === 'logs' && 'Terminal Pemantau Eksekusi'}
-              {activeTab === 'questions' && 'Koleksi Jawaban Kuesioner'}
-              {activeTab === 'history' && 'Rekapitulasi Lamaran Terkirim'}
-              {activeTab === 'jobs' && 'Kartu Lowongan'}
+              {activeTab === 'wizard' && 'Setup Target Loker & Profil'}
+              {activeTab === 'logs' && 'Terminal Pemantau Eksekusi Bot'}
+              {activeTab === 'questions' && 'Koleksi Jawaban Kuesioner Loker'}
+              {activeTab === 'history' && 'Rekap Loker yang Sudah Dilamar'}
+              {activeTab === 'jobs' && 'Daftar Loker Terjaring'}
               {activeTab === 'talent' && 'Talent Scout & Sourcing Engine (Outsourcing & HRIS)'}
             </span>
           </div>
