@@ -44,6 +44,14 @@ next-env.d.ts
 /automation-profile/
 config.json
 
+# local runtime databases & history (user personal data)
+applied_jobs.json
+sourced_talents.json
+*.sqlite
+*.sqlite3
+*.db
+*.log
+
 # uploaded CV files (user data, do not commit)
 /uploads/
 /scratch/
