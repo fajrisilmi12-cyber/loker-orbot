@@ -429,30 +429,31 @@ export function OnboardingTour({
 
       {/* 1. MODULAR GUIDED HUB (TOPIC SELECTOR MODAL) */}
       {isHubOpen && (
-        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="card-theme border rounded-3xl p-6 md:p-7 max-w-3xl w-full shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm overflow-y-auto p-3 sm:p-4 md:p-6 flex items-start sm:items-center justify-center">
+          <div className="my-auto card-theme border rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-7 max-w-3xl w-full shadow-2xl flex flex-col max-h-[88vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-subtle-theme pb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-500">
-                  <BookOpen className="w-5 h-5" />
+            <div className="flex items-center justify-between border-b border-subtle-theme pb-3.5 sm:pb-4 shrink-0">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-500 shrink-0">
+                  <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-main-theme">Pusat Panduan &amp; Tutorial lemparjaring</h2>
-                  <p className="text-xs text-muted-theme">Pilih modul spesifik yang ingin dipelajari atau jalankan tur kilat interaktif.</p>
+                  <h2 className="text-sm sm:text-base font-bold text-main-theme">Pusat Panduan &amp; Tutorial lemparjaring</h2>
+                  <p className="text-[11px] sm:text-xs text-muted-theme">Pilih modul spesifik yang ingin dipelajari atau jalankan tur kilat interaktif.</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsHubOpen(false)}
-                className="p-2 rounded-xl hover:card-subtle-theme text-muted-theme hover:text-main-theme transition"
+                className="p-1.5 sm:p-2 rounded-xl hover:card-subtle-theme text-muted-theme hover:text-main-theme transition"
+                aria-label="Tutup Panduan"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Content List (Scrollable) */}
-            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            {/* Content List (Scrollable - with min-h-0 to prevent flex overflow clipping) */}
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1 py-3">
               {/* Featured: Full System Walkthrough */}
               <div
                 onClick={() => handleStartModuleTour(TOUR_MODULES[0])}
@@ -637,7 +638,7 @@ export function OnboardingTour({
             </div>
           ) : (
             <div
-              className={`fixed z-50 w-full max-w-[380px] p-5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700 text-slate-100 shadow-2xl transition-all duration-200 ${
+              className={`fixed z-50 w-full max-w-[calc(100vw-2rem)] sm:max-w-[380px] p-4 sm:p-5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700 text-slate-100 shadow-2xl transition-all duration-200 ${
                 !popoverPos ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : ''
               }`}
               style={popoverPos ? { top: `${popoverPos.top}px`, left: `${popoverPos.left}px` } : {}}

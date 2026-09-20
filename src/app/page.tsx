@@ -53,7 +53,8 @@ import {
   Lightbulb,
   Search,
   Copy,
-  Target
+  Target,
+  Menu,
 } from 'lucide-react';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import BatchQuestionModal from '@/components/BatchQuestionModal';
@@ -358,6 +359,7 @@ export default function Home() {
   const [themeMode, setThemeMode] = useState<'system' | 'dark' | 'light'>('system');
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
   const [isMounted, setIsMounted] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Preset history state
   const [configPresets, setConfigPresets] = useState<ConfigPreset[]>([]);
@@ -1667,8 +1669,193 @@ export default function Home() {
 
   return (
     <div className="h-screen overflow-hidden content-bg-theme text-main-theme flex flex-col md:flex-row">
-      {/* LEFT SIDEBAR (Sticky, Never scrolls off-screen) */}
-      <aside className="w-full md:w-64 h-full sidebar-theme border-r p-5 flex flex-col justify-between shrink-0 transition-colors overflow-y-auto">
+      {/* MOBILE NAVIGATION DRAWER & BACKDROP (Rendered only on < md screens) */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-150"
+            aria-hidden="true"
+          />
+
+          {/* Drawer Panel */}
+          <aside className="relative w-72 max-w-[85vw] h-full sidebar-theme border-r p-5 flex flex-col justify-between z-10 shadow-2xl overflow-y-auto animate-in slide-in-from-left duration-200">
+            <div className="space-y-6">
+              {/* Brand Header with Close Button */}
+              <div className="flex items-center justify-between pb-3 border-b border-subtle-theme">
+                <img
+                  src="/logo.png"
+                  alt="Lempar Jaring"
+                  className="h-8 w-auto max-w-[160px] object-contain select-none drop-shadow-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 rounded-xl border border-subtle-theme card-theme hover:bg-slate-200/50 dark:hover:bg-slate-800 text-muted-theme hover:text-main-theme transition"
+                  aria-label="Tutup Menu"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Navigation Links */}
+              <nav className="space-y-1">
+                <button
+                  onClick={() => { setActiveTab('wizard'); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    activeTab === 'wizard' ? 'sidebar-nav-active' : 'sidebar-nav-idle'
+                  }`}
+                >
+                  <LayoutDashboard className="w-4 h-4 text-orange-500" />
+                  <span>Setup &amp; Target</span>
+                  {activeTab === 'wizard' && <ChevronRight className="w-3.5 h-3.5 ml-auto text-orange-500" />}
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('logs'); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    activeTab === 'logs' ? 'sidebar-nav-active' : 'sidebar-nav-idle'
+                  }`}
+                >
+                  <Terminal className="w-4 h-4 text-emerald-500" />
+                  <span>Live Monitor</span>
+                  {isBotRunning && <span className="ml-auto w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('questions');
+                    fetchQuestions();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    activeTab === 'questions' ? 'sidebar-nav-active' : 'sidebar-nav-idle'
+                  }`}
+                >
+                  <Database className="w-4 h-4 text-sky-500" />
+                  <span>Pertanyaan CSV</span>
+                  <span className="ml-auto text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                    {questions.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('history');
+                    fetchAppliedHistory();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    activeTab === 'history' ? 'sidebar-nav-active' : 'sidebar-nav-idle'
+                  }`}
+                >
+                  <History className="w-4 h-4 text-purple-500" />
+                  <span>Riwayat Loker Dilamar</span>
+                  <span className="ml-auto text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                    {appliedJobs.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('jobs');
+                    fetchAppliedHistory();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    activeTab === 'jobs' ? 'sidebar-nav-active' : 'sidebar-nav-idle'
+                  }`}
+                >
+                  <Briefcase className="w-4 h-4 text-teal-500" />
+                  <span>Daftar Loker Terjaring</span>
+                  {appliedJobs.length > 0 && (
+                    <span className="ml-auto text-[10px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-950 px-2 py-0.5 rounded-md border border-teal-300 dark:border-teal-700/60 font-mono">
+                      {appliedJobs.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* MODUL OUTSOURCING & TALENT SCOUT */}
+                <div className="pt-2 pb-1 px-1">
+                  <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 my-1" />
+                  <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
+                    <span className="text-[10px] font-bold text-muted-theme uppercase tracking-wider">
+                      Outsourcing / HR
+                    </span>
+                    <span className="text-[9px] font-bold text-white dark:text-slate-900 bg-slate-900 dark:bg-white px-1.5 py-0.5 rounded font-mono shadow-xs tracking-wider">
+                      MODUL 2
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => { setActiveTab('talent'); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    activeTab === 'talent' ? 'sidebar-nav-active' : 'sidebar-nav-idle'
+                  }`}
+                >
+                  <UserCheck className="w-4 h-4 text-emerald-500" />
+                  <span>Talent Scout</span>
+                  <span className="ml-auto text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 px-2 py-0.5 rounded-md font-mono shadow-xs">
+                    OpenToWork
+                  </span>
+                </button>
+
+                {/* Preset Konfigurasi */}
+                <button
+                  onClick={() => { setIsPresetsModalOpen(true); setIsMobileMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all sidebar-nav-idle"
+                >
+                  <Bookmark className="w-4 h-4 text-amber-500" />
+                  <span>Preset Konfigurasi</span>
+                  {configPresets.length > 0 && (
+                    <span className="ml-auto text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-md border border-amber-300 dark:border-amber-700/60 font-mono">
+                      {configPresets.length}
+                    </span>
+                  )}
+                </button>
+              </nav>
+            </div>
+
+            {/* System Status Footprint Card */}
+            <div className="mt-6 p-4 rounded-2xl sidebar-card-theme border space-y-3 transition-colors shrink-0">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-muted-theme uppercase tracking-wider">Status Mesin</span>
+                <span className={`w-2 h-2 rounded-full ${isBotRunning ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
+              </div>
+              <div className="text-xs space-y-1.5">
+                <div className="flex justify-between text-muted-theme">
+                  <span>Automation Bot</span>
+                  <span className={isBotRunning ? 'text-emerald-500 font-semibold' : 'text-muted-theme'}>
+                    {isBotRunning ? 'Sedang Aktif' : 'Standby'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-muted-theme">
+                  <span>Setup Browser</span>
+                  <span className={isSetupBrowserRunning ? 'text-amber-500 font-semibold' : 'text-muted-theme'}>
+                    {isSetupBrowserRunning ? 'Terbuka' : 'Tertutup'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggleSetupBrowser()}
+                className={`w-full mt-2 py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition ${
+                  isSetupBrowserRunning
+                    ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30'
+                    : 'card-theme border text-main-theme hover:opacity-90 shadow-sm'
+                }`}
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>{isSetupBrowserRunning ? 'Tutup Browser' : 'Buka Browser Setup'}</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* LEFT SIDEBAR (Sticky on Desktop, hidden on mobile/tablet) */}
+      <aside className="hidden md:flex md:w-64 h-full sidebar-theme border-r p-5 flex-col justify-between shrink-0 transition-colors overflow-y-auto">
         <div className="space-y-6">
           {/* Brand Header */}
           <div className="px-1 py-1 flex items-center">
@@ -1723,7 +1910,7 @@ export default function Home() {
             >
               <Database className="w-4 h-4 text-sky-500" />
               <span>Pertanyaan CSV</span>
-              <span className="ml-auto text-[10px] text-muted-theme sidebar-card-theme px-2 py-0.5 rounded-md border">
+              <span className="ml-auto text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                 {questions.length}
               </span>
             </button>
@@ -1741,7 +1928,7 @@ export default function Home() {
             >
               <History className="w-4 h-4 text-purple-500" />
               <span>Riwayat Loker Dilamar</span>
-              <span className="ml-auto text-[10px] text-muted-theme sidebar-card-theme px-2 py-0.5 rounded-md border">
+              <span className="ml-auto text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                 {appliedJobs.length}
               </span>
             </button>
@@ -1760,7 +1947,7 @@ export default function Home() {
               <Briefcase className="w-4 h-4 text-teal-500" />
               <span>Daftar Loker Terjaring</span>
               {appliedJobs.length > 0 && (
-                <span className="ml-auto text-[10px] text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-md border border-teal-500/20">
+                <span className="ml-auto text-[10px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-950 px-2 py-0.5 rounded-md border border-teal-300 dark:border-teal-700/60 font-mono">
                   {appliedJobs.length}
                 </span>
               )}
@@ -1773,7 +1960,7 @@ export default function Home() {
                 <span className="text-[10px] font-bold text-muted-theme uppercase tracking-wider">
                   Outsourcing / HR
                 </span>
-                <span className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1 rounded border border-emerald-500/20">
+                <span className="text-[9px] font-bold text-white dark:text-slate-900 bg-slate-900 dark:bg-white px-1.5 py-0.5 rounded font-mono shadow-xs tracking-wider">
                   MODUL 2
                 </span>
               </div>
@@ -1789,7 +1976,7 @@ export default function Home() {
             >
               <UserCheck className="w-4 h-4 text-emerald-500" />
               <span>Talent Scout</span>
-              <span className="ml-auto text-[9px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded-md">
+              <span className="ml-auto text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 px-2 py-0.5 rounded-md font-mono shadow-xs">
                 OpenToWork
               </span>
             </button>
@@ -1802,7 +1989,7 @@ export default function Home() {
               <Bookmark className="w-4 h-4 text-amber-500" />
               <span>Preset Konfigurasi</span>
               {configPresets.length > 0 && (
-                <span className="ml-auto text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                <span className="ml-auto text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-md border border-amber-300 dark:border-amber-700/60 font-mono">
                   {configPresets.length}
                 </span>
               )}
@@ -1853,9 +2040,29 @@ export default function Home() {
       {/* RIGHT MAIN CONTENT AREA (Scrollable independently, sidebar stays locked) */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto content-bg-theme">
         {/* Top Header Bar */}
-        <header className="min-h-[4.75rem] py-3.5 px-6 md:px-8 border-b header-theme flex items-center justify-between transition-colors shrink-0 shadow-sm sticky top-0 z-20 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-main-theme">
+        <header className="min-h-[3.75rem] sm:min-h-[4.5rem] py-2 sm:py-3.5 px-3 sm:px-6 md:px-8 border-b header-theme flex items-center justify-between transition-colors shrink-0 shadow-sm sticky top-0 z-20 backdrop-blur-md">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* Mobile Hamburger Menu Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden p-2 rounded-xl card-theme border hover:bg-slate-200/50 dark:hover:bg-slate-800 text-main-theme flex items-center justify-center shrink-0 min-w-[38px] min-h-[38px] transition active:scale-95"
+              aria-label="Buka Menu Navigasi"
+            >
+              <Menu className="w-5 h-5 text-orange-500" />
+            </button>
+
+            {/* Mobile Brand Logo */}
+            <div className="flex items-center md:hidden shrink-0">
+              <img
+                src="/logo.png"
+                alt="Lempar Jaring"
+                className="h-6 sm:h-7 w-auto max-w-[125px] sm:max-w-[150px] object-contain select-none"
+              />
+            </div>
+
+            {/* Desktop Section Title */}
+            <span className="hidden md:block text-sm font-semibold text-main-theme truncate">
               {activeTab === 'wizard' && 'Setup Target Loker & Profil'}
               {activeTab === 'logs' && 'Terminal Pemantau Eksekusi Bot'}
               {activeTab === 'questions' && 'Koleksi Jawaban Kuesioner Loker'}
@@ -1866,7 +2073,7 @@ export default function Home() {
           </div>
 
           {/* Main Action Buttons + Theme Toggle */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Quick Toggle: Mode Simulasi / Live Submit */}
             <div 
               id="tour-mode-toggle"
@@ -1880,19 +2087,19 @@ export default function Home() {
                   body: JSON.stringify({ ...config, debugTest: nextVal })
                 }).catch(() => {});
               }}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer select-none transition flex items-center gap-2 shadow-sm ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer select-none transition flex items-center gap-1.5 sm:gap-2 shadow-sm ${
                 config.debugTest
                   ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'
                   : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
               }`}
               title="Klik untuk mengganti mode Simulasi (Dry-run) atau Live Kirim Lamaran Langsung"
             >
-              <div className={`w-2 h-2 rounded-full ${config.debugTest ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+              <div className={`w-2 h-2 rounded-full shrink-0 ${config.debugTest ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
               <div className="flex flex-col text-left">
-                <span className="leading-tight font-semibold">
-                  {config.debugTest ? 'Mode Simulasi' : 'Mode LIVE Submit'}
+                <span className="leading-tight font-semibold text-[11px] sm:text-xs">
+                  {config.debugTest ? 'Simulasi' : 'LIVE'}
                 </span>
-                <span className="text-[9px] opacity-75 font-normal">
+                <span className="text-[9px] opacity-75 font-normal hidden lg:inline">
                   {config.debugTest ? 'Lamaran tidak dikirim' : 'Lamaran resmi terkirim'}
                 </span>
               </div>
@@ -1926,30 +2133,31 @@ export default function Home() {
             {isBotRunning ? (
               <button
                 onClick={handleStopBot}
-                className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-medium flex items-center gap-2 transition"
+                className="px-3 sm:px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
-                <span>Hentikan Bot</span>
+                <span>Hentikan</span>
               </button>
             ) : (
-              <div id="tour-start-bot" className="flex items-center gap-2">
+              <div id="tour-start-bot" className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   onClick={() => executeStartBot('headless')}
                   disabled={isSetupBrowserRunning}
-                  className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                  className="px-2.5 sm:px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
                   title="Jalankan bot di latar belakang (tanpa jendela browser)"
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>Run (Headless)</span>
+                  <span>Run</span>
+                  <span className="hidden sm:inline">(Headless)</span>
                 </button>
                 <button
                   onClick={() => executeStartBot('headful')}
                   disabled={isSetupBrowserRunning}
-                  className="px-3.5 py-2 rounded-xl card-theme border text-muted-theme hover:text-main-theme text-xs font-medium flex items-center gap-1.5 transition disabled:opacity-50 shadow-sm"
+                  className="px-2.5 sm:px-3.5 py-2 rounded-xl card-theme border text-muted-theme hover:text-main-theme text-xs font-medium flex items-center gap-1.5 transition disabled:opacity-50 shadow-sm"
                   title="Jalankan dengan jendela browser terbuka"
                 >
                   <Globe className="w-3.5 h-3.5 text-orange-400" />
-                  <span>Run (Headful)</span>
+                  <span className="hidden sm:inline">Run (Headful)</span>
                 </button>
               </div>
             )}
@@ -1957,12 +2165,12 @@ export default function Home() {
         </header>
 
         {/* Body Container */}
-        <main className="py-8 md:py-10 px-6 md:px-8 max-w-6xl w-full mx-auto space-y-8 flex-1">
+        <main className="py-5 sm:py-8 md:py-10 px-3.5 sm:px-6 md:px-8 max-w-6xl w-full mx-auto space-y-6 sm:space-y-8 flex-1">
           {/* TAB 1: STEP-BY-STEP SETUP WIZARD */}
           {activeTab === 'wizard' && (
             <div className="space-y-6">
-              {/* Progress Summary Card (Inspired by reference UI) */}
-              <div className="p-6 rounded-3xl card-theme border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 transition-colors">
+              {/* Progress Summary Card */}
+              <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl card-theme border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 transition-colors">
                 <div className="space-y-1">
                   <div className="text-xl md:text-2xl font-semibold tracking-tight text-main-theme">
                     Persiapan Automasi
@@ -1972,8 +2180,8 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-4 card-subtle-theme px-5 py-3.5 rounded-2xl border self-start md:self-auto transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500">
+                <div className="flex items-center gap-4 card-subtle-theme px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl border self-stretch sm:self-auto transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shrink-0">
                     <ShieldCheck className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
@@ -1987,7 +2195,7 @@ export default function Home() {
 
               {/* PROVIDER LIVE HEALTH & QUICK CONTROL CENTER */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between px-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between px-1 gap-1">
                   <div className="flex items-center gap-2">
                     <Sliders className="w-4 h-4 text-orange-500" />
                     <span className="text-xs font-semibold text-main-theme">Portal Status &amp; Pengujian Mandiri</span>
@@ -1995,7 +2203,7 @@ export default function Home() {
                   <span className="text-[11px] text-muted-theme">Klik tombol untuk menguji portal secara terpisah</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {/* 1. GLINTS CARD */}
                   <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-slate-400/40 dark:hover:border-slate-600 transition">
                     <div className="flex items-start justify-between">
@@ -2008,12 +2216,12 @@ export default function Home() {
                           <p className="text-[10px] text-muted-theme">In-site Easy Apply</p>
                         </div>
                       </div>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1.5 ${
                         config.enableGlints
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableGlints ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableGlints ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-slate-400'}`} />
                         <span>{config.enableGlints ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
@@ -2025,7 +2233,7 @@ export default function Home() {
                       </div>
                       <div className="flex justify-between">
                         <span>Status Profil:</span>
-                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{config.domicile ? 'Lengkap' : 'Perlu Setup'}</span>
+                        <span className="font-medium text-emerald-700 dark:text-emerald-400">{config.domicile ? 'Lengkap' : 'Perlu Setup'}</span>
                       </div>
                     </div>
 
@@ -2075,12 +2283,12 @@ export default function Home() {
                           <p className="text-[10px] text-muted-theme">Easy Apply &amp; ATS</p>
                         </div>
                       </div>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1.5 ${
                         config.enableLinkedin
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableLinkedin ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableLinkedin ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-slate-400'}`} />
                         <span>{config.enableLinkedin ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
@@ -2092,7 +2300,7 @@ export default function Home() {
                       </div>
                       <div className="flex justify-between">
                         <span>Stealth:</span>
-                        <span className="font-medium text-emerald-600 dark:text-emerald-400">Aktif</span>
+                        <span className="font-medium text-emerald-700 dark:text-emerald-400">Aktif</span>
                       </div>
                     </div>
 
@@ -2142,12 +2350,12 @@ export default function Home() {
                           <p className="text-[10px] text-muted-theme">Seek Platform</p>
                         </div>
                       </div>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1.5 ${
                         config.enableJobstreet
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableJobstreet ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableJobstreet ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-slate-400'}`} />
                         <span>{config.enableJobstreet ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
@@ -2209,12 +2417,12 @@ export default function Home() {
                           <p className="text-[10px] text-muted-theme">Smart Apply &amp; Web</p>
                         </div>
                       </div>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1.5 ${
                         config.enableIndeed
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableIndeed ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enableIndeed ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-slate-400'}`} />
                         <span>{config.enableIndeed ? 'Aktif' : 'Nonaktif'}</span>
                       </span>
                     </div>
@@ -2226,7 +2434,7 @@ export default function Home() {
                       </div>
                       <div className="flex justify-between">
                         <span>Anti-CF Shield:</span>
-                        <span className="font-medium text-emerald-600 dark:text-emerald-400">Auto Resolve</span>
+                        <span className="font-medium text-emerald-700 dark:text-emerald-400">Auto Resolve</span>
                       </div>
                     </div>
 
@@ -2267,11 +2475,11 @@ export default function Home() {
               </div>
 
               {/* Wizard Steps Navigation Bar */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setWizardStep(1)}
-                  className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 ${
                     wizardStep === 1
                       ? 'card-subtle-theme border-orange-500 shadow-sm ring-1 ring-orange-500/20'
                       : 'card-theme hover:opacity-90'
@@ -2282,7 +2490,7 @@ export default function Home() {
                       <div
                         className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center shrink-0 ${
                           readinessMetrics.step1Complete
-                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                             : 'bg-slate-200 dark:bg-[#282E37] text-slate-700 dark:text-slate-300'
                         }`}
                       >
@@ -2307,12 +2515,12 @@ export default function Home() {
                         }
                       }}
                       title="Klik untuk loncat dan tandai input yang belum terisi di Langkah 1"
-                      className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border shrink-0 font-mono flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow ${
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 font-mono flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs ${
                         readinessMetrics.step1Percent === 100
-                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:border-emerald-500/60'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60 hover:border-emerald-400'
                           : readinessMetrics.step1Complete
-                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:border-blue-500/50'
-                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme hover:border-orange-500/50 hover:text-orange-500'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300 dark:border-blue-700/60 hover:border-blue-400'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-orange-500/50 hover:text-orange-500'
                       }`}
                     >
                       <span>{readinessMetrics.step1Filled}/{readinessMetrics.step1Total} ({readinessMetrics.step1Percent}%)</span>
@@ -2333,7 +2541,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setWizardStep(2)}
-                  className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 ${
                     wizardStep === 2
                       ? 'card-subtle-theme border-orange-500 shadow-sm ring-1 ring-orange-500/20'
                       : 'card-theme hover:opacity-90'
@@ -2344,7 +2552,7 @@ export default function Home() {
                       <div
                         className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center shrink-0 ${
                           readinessMetrics.step2Complete
-                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                             : 'bg-slate-200 dark:bg-[#282E37] text-slate-700 dark:text-slate-300'
                         }`}
                       >
@@ -2369,12 +2577,12 @@ export default function Home() {
                         }
                       }}
                       title="Klik untuk loncat dan tandai input yang belum terisi di Langkah 2"
-                      className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border shrink-0 font-mono flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow ${
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 font-mono flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs ${
                         readinessMetrics.step2Percent === 100
-                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:border-emerald-500/60'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60 hover:border-emerald-400'
                           : readinessMetrics.step2Complete
-                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:border-blue-500/50'
-                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme hover:border-orange-500/50 hover:text-orange-500'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300 dark:border-blue-700/60 hover:border-blue-400'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-orange-500/50 hover:text-orange-500'
                       }`}
                     >
                       <span>{readinessMetrics.step2Filled}/{readinessMetrics.step2Total} ({readinessMetrics.step2Percent}%)</span>
@@ -2395,7 +2603,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setWizardStep(3)}
-                  className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 ${
                     wizardStep === 3
                       ? 'card-subtle-theme border-orange-500 shadow-sm ring-1 ring-orange-500/20'
                       : 'card-theme hover:opacity-90'
@@ -2406,7 +2614,7 @@ export default function Home() {
                       <div
                         className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center shrink-0 ${
                           readinessMetrics.step3Complete
-                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                             : 'bg-slate-200 dark:bg-[#282E37] text-slate-700 dark:text-slate-300'
                         }`}
                       >
@@ -2431,12 +2639,12 @@ export default function Home() {
                         }
                       }}
                       title="Klik untuk loncat dan tandai input yang belum terisi di Langkah 3"
-                      className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border shrink-0 font-mono flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow ${
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 font-mono flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs ${
                         readinessMetrics.step3Percent === 100
-                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:border-emerald-500/60'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60 hover:border-emerald-400'
                           : readinessMetrics.step3Complete
-                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:border-blue-500/50'
-                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme hover:border-orange-500/50 hover:text-orange-500'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300 dark:border-blue-700/60 hover:border-blue-400'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-orange-500/50 hover:text-orange-500'
                       }`}
                     >
                       <span>{readinessMetrics.step3Filled}/{readinessMetrics.step3Total} ({readinessMetrics.step3Percent}%)</span>
@@ -2455,10 +2663,8 @@ export default function Home() {
                 </button>
               </div>
 
-
-
               {/* Wizard Body Card */}
-              <form onSubmit={handleSaveConfig} className="p-6 md:p-8 rounded-3xl card-theme border shadow-sm space-y-6 transition-colors">
+              <form onSubmit={handleSaveConfig} className="p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl card-theme border shadow-sm space-y-6 transition-colors">
                 {/* STEP 1: CANDIDATE PROFILE */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
@@ -2552,12 +2758,12 @@ export default function Home() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-semibold text-main-theme">Dokumen CV Pelamar (PDF / DOCX)</span>
                               {config.cvFileName ? (
-                                <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <Check className="w-3 h-3" />
+                                <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs">
+                                  <Check className="w-3 h-3 text-emerald-700 dark:text-emerald-300" />
                                   <span>CV Terpasang</span>
                                 </span>
                               ) : (
-                                <span className="text-[10px] text-muted-theme bg-slate-500/10 px-2 py-0.5 rounded border border-subtle-theme">
+                                <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                                   Opsional / Rekomendasi
                                 </span>
                               )}
