@@ -478,6 +478,7 @@
   let isInTabRunning = false;
   let isAborted = false;
 
+  // In-tab banner — light theme
   function showInTabBanner(text, showStopBtn = true) {
     let banner = document.getElementById('cv-blaster-in-tab-banner');
     if (!banner) {
@@ -489,26 +490,26 @@
         left: 50%;
         transform: translateX(-50%);
         z-index: 2147483647;
-        background: #090d16;
-        border: 1px solid #222f46;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 8px 16px;
-        color: #f8fafc;
+        color: #1e293b;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         font-size: 12px;
         font-weight: 500;
         display: flex;
         align-items: center;
         gap: 12px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.10);
       `;
       document.body.appendChild(banner);
     }
 
     banner.innerHTML = `
       <div style="width: 8px; height: 8px; border-radius: 50%; background: #ea580c; flex-shrink: 0;"></div>
-      <span id="cv-in-tab-banner-text" style="color: #f8fafc;">${text}</span>
-      ${showStopBtn ? `<button id="cv-in-tab-stop-btn" style="background: #1e293b; border: 1px solid #334155; color: #cbd5e1; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer;">Hentikan</button>` : ''}
+      <span id="cv-in-tab-banner-text" style="color: #1e293b;">${text}</span>
+      ${showStopBtn ? `<button id="cv-in-tab-stop-btn" style="background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer;">Hentikan</button>` : ''}
     `;
 
     const stopBtn = banner.querySelector('#cv-in-tab-stop-btn');
@@ -535,7 +536,6 @@
     isAborted = false;
 
     try {
-      // Check if on single job page
       const href = window.location.href;
       if (href.includes('/viewjob') || href.includes('vjk=')) {
         showInTabBanner('Melamar lowongan di tab ini...');
@@ -550,7 +550,6 @@
         return res;
       }
 
-      // If on search page or feed
       const cards = window.cvBlasterExtractIndeedJobCards();
       if (cards.length === 0) {
         showInTabBanner('Tidak ada kartu lowongan yang terdeteksi di halaman ini.', false);
@@ -575,7 +574,6 @@
         const card = targetCards[i];
         showInTabBanner(`[${i + 1}/${targetCards.length}] Memproses: ${card.title} (${card.company || 'Indeed'})...`);
 
-        // Find the card element on page and click it to trigger Indeed's right-pane view
         if (card.jk) {
           const cardEl = document.querySelector(`[data-jk="${card.jk}"], a[href*="${card.jk}"]`);
           if (cardEl) {
@@ -585,7 +583,6 @@
           }
         }
 
-        // Now search for the Apply button in right pane or modal
         const applyBtnInfo = window.cvBlasterFindIndeedApplyButton();
         if (applyBtnInfo && applyBtnInfo.isEasyApply) {
           showInTabBanner(`[${i + 1}/${targetCards.length}] Mengisi formulir: ${card.title}...`);
@@ -616,14 +613,13 @@
           showInTabBanner(`[${i + 1}/${targetCards.length}] Dilewati (bukan Lamar Cepat).`);
         }
 
-        // Respectful human-like cooldown
         await sleep(3500);
       }
 
-      showInTabBanner(`Selesai! ${successCount} dari ${targetCards.length} lowongan berhasil dilamar di tab ini.`, false);
+      showInTabBanner(`Selesai! ${successCount} dari ${targetCards.length} lowongan berhasil dilamar.`, false);
       hideInTabBanner(6000);
       isInTabRunning = false;
-      return { success: true, count: successCount };
+      return { success: true, successCount, count: successCount };
     } catch (err) {
       showInTabBanner(`Error: ${err.message}`, false);
       hideInTabBanner();
@@ -632,34 +628,73 @@
     }
   };
 
-  // Listen for messages from background script & popup
+  // Message listener — popup & background
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // ── Popup: detect active page job info ──────────────────────────────────
+    if (request.action === 'GET_PAGE_JOB_INFO') {
+      const href = window.location.href;
+      if (href.includes('/viewjob') || href.includes('vjk=')) {
+        const details = window.cvBlasterGetIndeedJobDetails();
+        sendResponse({ ...details, isMultiJob: false });
+      } else {
+        const cards = window.cvBlasterExtractIndeedJobCards();
+        if (cards.length > 0) {
+          sendResponse({ isMultiJob: true, jobs: cards });
+        } else {
+          sendResponse({ isMultiJob: false });
+        }
+      }
+      return true;
+    }
+
+    // ── Popup: apply single job in active tab ────────────────────────────────
+    if (request.action === 'EXECUTE_IN_TAB_APPLY') {
+      const userConfig = request.config || {};
+      window.cvBlasterExecuteIndeedApply(userConfig)
+        .then(res => sendResponse(res))
+        .catch(err => sendResponse({ success: false, error: err.message }));
+      return true; // async
+    }
+
+    // ── Popup: multi-apply all detected jobs in active tab ──────────────────
+    if (request.action === 'EXECUTE_IN_TAB_MULTI_APPLY') {
+      const userConfig = request.config || {};
+      window.cvBlasterStartInTabAutomation(request.quota || 10, userConfig)
+        .then(res => sendResponse(res))
+        .catch(err => sendResponse({ success: false, error: err.message }));
+      return true; // async
+    }
+
+    // ── Background queue: start task ─────────────────────────────────────────
     if (request.action === 'START_IN_TAB_APPLY') {
-      window.cvBlasterStartInTabAutomation(request.quota, request.config)
+      window.cvBlasterStartInTaskAutomation(request.quota, request.config)
         .then(res => sendResponse(res));
       return true;
     }
 
     if (request.action === 'EXECUTE_TASK' && request.task && request.task.type === 'indeed_apply') {
-      window.cvBlasterExecuteIndeedApply(request.task.data || {})
-        .then((res) => {
-          if (res.success) {
-            chrome.runtime.sendMessage({
-              action: 'TASK_COMPLETED',
-              summary: `Berhasil melamar: ${res.record?.title} di ${res.record?.company}`
-            }, () => { if (chrome.runtime.lastError) {} });
-          } else {
-            chrome.runtime.sendMessage({
-              action: 'TASK_FAILED',
-              error: res.error || 'Gagal melamar pekerjaan'
-            }, () => { if (chrome.runtime.lastError) {} });
-          }
-        });
-
+      chrome.storage.local.get(['userConfig'], (res) => {
+        const userConfig = Object.assign({}, res.userConfig || {}, request.task.data || {});
+        window.cvBlasterExecuteIndeedApply(userConfig)
+          .then((applyRes) => {
+            if (applyRes.success) {
+              chrome.runtime.sendMessage({
+                action: 'TASK_COMPLETED',
+                summary: `Berhasil melamar: ${applyRes.record?.title} di ${applyRes.record?.company}`
+              }, () => { if (chrome.runtime.lastError) {} });
+            } else {
+              chrome.runtime.sendMessage({
+                action: 'TASK_FAILED',
+                error: applyRes.error || 'Gagal melamar pekerjaan'
+              }, () => { if (chrome.runtime.lastError) {} });
+            }
+          });
+      });
       sendResponse({ received: true });
       return true;
     }
 
+    // ── Utility queries ──────────────────────────────────────────────────────
     if (request.action === 'DIRECT_APPLY') {
       window.cvBlasterExecuteIndeedApply(request.config || {})
         .then(res => sendResponse(res));
@@ -687,3 +722,4 @@
     }
   });
 })();
+

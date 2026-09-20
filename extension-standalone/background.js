@@ -8,6 +8,7 @@
  * 4. Next.js API Bridge (localhost:3000) untuk pencatatan lamaran & sourcing talent.
  */
 // Standalone Client-Side Mode (100% Serverless)
+let API_BASE = ''; // Not used in standalone — kept to prevent ReferenceError from old handler references
 // Worker Queue State
 let maxConcurrency = 4;
 let isPaused = false;
