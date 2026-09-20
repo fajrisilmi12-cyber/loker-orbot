@@ -1750,9 +1750,9 @@ export default function Home() {
                     activeTab === 'history' ? 'sidebar-nav-active' : 'sidebar-nav-idle'
                   }`}
                 >
-                  <History className="w-4 h-4 text-purple-500" />
-                  <span>Riwayat Loker Dilamar</span>
-                  <span className="ml-auto text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                  <History className="w-4 h-4 text-purple-500 shrink-0" />
+                  <span className="truncate whitespace-nowrap">Riwayat Lamaran</span>
+                  <span className="ml-auto text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 shrink-0">
                     {appliedJobs.length}
                   </span>
                 </button>
@@ -1767,10 +1767,10 @@ export default function Home() {
                     activeTab === 'jobs' ? 'sidebar-nav-active' : 'sidebar-nav-idle'
                   }`}
                 >
-                  <Briefcase className="w-4 h-4 text-teal-500" />
-                  <span>Daftar Loker Terjaring</span>
+                  <Briefcase className="w-4 h-4 text-teal-500 shrink-0" />
+                  <span className="truncate whitespace-nowrap">Kartu Lowongan</span>
                   {appliedJobs.length > 0 && (
-                    <span className="ml-auto text-[10px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-950 px-2 py-0.5 rounded-md border border-teal-300 dark:border-teal-700/60 font-mono">
+                    <span className="ml-auto text-[10px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-950 px-2 py-0.5 rounded-md border border-teal-300 dark:border-teal-700/60 font-mono shrink-0">
                       {appliedJobs.length}
                     </span>
                   )}
@@ -1919,6 +1919,7 @@ export default function Home() {
               onClick={() => {
                 setActiveTab('history');
                 fetchAppliedHistory();
+                setIsMobileMenuOpen(false);
               }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                 activeTab === 'history'
@@ -1926,9 +1927,9 @@ export default function Home() {
                   : 'sidebar-nav-idle'
               }`}
             >
-              <History className="w-4 h-4 text-purple-500" />
-              <span>Riwayat Loker Dilamar</span>
-              <span className="ml-auto text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+              <History className="w-4 h-4 text-purple-500 shrink-0" />
+              <span className="truncate whitespace-nowrap">Riwayat Lamaran</span>
+              <span className="ml-auto text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 shrink-0">
                 {appliedJobs.length}
               </span>
             </button>
@@ -1937,6 +1938,7 @@ export default function Home() {
               onClick={() => {
                 setActiveTab('jobs');
                 fetchAppliedHistory();
+                setIsMobileMenuOpen(false);
               }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                 activeTab === 'jobs'
@@ -1944,10 +1946,10 @@ export default function Home() {
                   : 'sidebar-nav-idle'
               }`}
             >
-              <Briefcase className="w-4 h-4 text-teal-500" />
-              <span>Daftar Loker Terjaring</span>
+              <Briefcase className="w-4 h-4 text-teal-500 shrink-0" />
+              <span className="truncate whitespace-nowrap">Kartu Lowongan</span>
               {appliedJobs.length > 0 && (
-                <span className="ml-auto text-[10px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-950 px-2 py-0.5 rounded-md border border-teal-300 dark:border-teal-700/60 font-mono">
+                <span className="ml-auto text-[10px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-950 px-2 py-0.5 rounded-md border border-teal-300 dark:border-teal-700/60 font-mono shrink-0">
                   {appliedJobs.length}
                 </span>
               )}
@@ -2040,16 +2042,16 @@ export default function Home() {
       {/* RIGHT MAIN CONTENT AREA (Scrollable independently, sidebar stays locked) */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto content-bg-theme">
         {/* Top Header Bar */}
-        <header className="min-h-[3.75rem] sm:min-h-[4.5rem] py-2 sm:py-3.5 px-3 sm:px-6 md:px-8 border-b header-theme flex items-center justify-between transition-colors shrink-0 shadow-sm sticky top-0 z-20 backdrop-blur-md">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <header className="min-h-[3.5rem] sm:min-h-[4.5rem] py-2 sm:py-3.5 px-2.5 sm:px-6 md:px-8 border-b header-theme flex items-center justify-between transition-colors shrink-0 shadow-sm sticky top-0 z-20 backdrop-blur-md gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
             {/* Mobile Hamburger Menu Button */}
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-xl card-theme border hover:bg-slate-200/50 dark:hover:bg-slate-800 text-main-theme flex items-center justify-center shrink-0 min-w-[38px] min-h-[38px] transition active:scale-95"
+              className="md:hidden p-1.5 sm:p-2 rounded-xl card-theme border hover:bg-slate-200/50 dark:hover:bg-slate-800 text-main-theme flex items-center justify-center shrink-0 min-w-[34px] min-h-[34px] transition active:scale-95"
               aria-label="Buka Menu Navigasi"
             >
-              <Menu className="w-5 h-5 text-orange-500" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
             </button>
 
             {/* Mobile Brand Logo */}
@@ -2057,7 +2059,7 @@ export default function Home() {
               <img
                 src="/logo.png"
                 alt="Lempar Jaring"
-                className="h-6 sm:h-7 w-auto max-w-[125px] sm:max-w-[150px] object-contain select-none"
+                className="h-5 sm:h-7 w-auto max-w-[90px] sm:max-w-[130px] object-contain select-none"
               />
             </div>
 
@@ -2073,7 +2075,7 @@ export default function Home() {
           </div>
 
           {/* Main Action Buttons + Theme Toggle */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Quick Toggle: Mode Simulasi / Live Submit */}
             <div 
               id="tour-mode-toggle"
@@ -2087,7 +2089,7 @@ export default function Home() {
                   body: JSON.stringify({ ...config, debugTest: nextVal })
                 }).catch(() => {});
               }}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer select-none transition flex items-center gap-1.5 sm:gap-2 shadow-sm ${
+              className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl border text-xs font-medium cursor-pointer select-none transition flex items-center gap-1.5 shadow-sm shrink-0 ${
                 config.debugTest
                   ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'
                   : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
@@ -2095,37 +2097,34 @@ export default function Home() {
               title="Klik untuk mengganti mode Simulasi (Dry-run) atau Live Kirim Lamaran Langsung"
             >
               <div className={`w-2 h-2 rounded-full shrink-0 ${config.debugTest ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
-              <div className="flex flex-col text-left">
-                <span className="leading-tight font-semibold text-[11px] sm:text-xs">
-                  {config.debugTest ? 'Simulasi' : 'LIVE'}
-                </span>
-                <span className="text-[9px] opacity-75 font-normal hidden lg:inline">
-                  {config.debugTest ? 'Lamaran tidak dikirim' : 'Lamaran resmi terkirim'}
-                </span>
-              </div>
+              <span className="leading-tight font-semibold text-[11px] sm:text-xs">
+                {config.debugTest ? 'Simulasi' : 'LIVE'}
+              </span>
             </div>
 
-            {/* Interactive Onboarding Tour Button & Modal */}
-            <OnboardingTour
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              wizardStep={wizardStep}
-              setWizardStep={setWizardStep}
-            />
+            {/* Interactive Onboarding Tour Button & Modal (Desktop Header, Mobile drawer) */}
+            <div className="hidden md:flex items-center">
+              <OnboardingTour
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                wizardStep={wizardStep}
+                setWizardStep={setWizardStep}
+              />
+            </div>
 
             {/* Theme Toggle Button */}
             <button
               type="button"
               onClick={handleToggleTheme}
-              className="p-2 rounded-xl border border-subtle-theme card-theme text-muted-theme hover:text-main-theme transition flex items-center gap-1.5 text-xs shadow-sm"
+              className="p-1.5 sm:p-2 rounded-xl border border-subtle-theme card-theme text-muted-theme hover:text-main-theme transition flex items-center gap-1 text-xs shadow-sm shrink-0"
               title={isMounted ? `Tema saat ini: ${themeMode === 'system' ? 'Sistem' : themeMode === 'dark' ? 'Gelap' : 'Terang'}` : 'Ganti Tema'}
             >
               {isMounted && resolvedTheme === 'dark' ? (
-                <Moon className="w-4 h-4 text-sky-400" />
+                <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400" />
               ) : (
-                <Sun className="w-4 h-4 text-amber-500" />
+                <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
               )}
-              <span className="hidden sm:inline capitalize">
+              <span className="hidden lg:inline capitalize">
                 {isMounted ? (themeMode === 'system' ? 'Auto' : themeMode) : 'Auto'}
               </span>
             </button>
@@ -2133,31 +2132,31 @@ export default function Home() {
             {isBotRunning ? (
               <button
                 onClick={handleStopBot}
-                className="px-3 sm:px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition"
+                className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-medium flex items-center gap-1.5 transition shrink-0"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
                 <span>Hentikan</span>
               </button>
             ) : (
-              <div id="tour-start-bot" className="flex items-center gap-1.5 sm:gap-2">
+              <div id="tour-start-bot" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
                   onClick={() => executeStartBot('headless')}
                   disabled={isSetupBrowserRunning}
-                  className="px-2.5 sm:px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                  className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium flex items-center gap-1.5 transition shadow-sm disabled:opacity-50 shrink-0"
                   title="Jalankan bot di latar belakang (tanpa jendela browser)"
                 >
-                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
                   <span>Run</span>
                   <span className="hidden sm:inline">(Headless)</span>
                 </button>
                 <button
                   onClick={() => executeStartBot('headful')}
                   disabled={isSetupBrowserRunning}
-                  className="px-2.5 sm:px-3.5 py-2 rounded-xl card-theme border text-muted-theme hover:text-main-theme text-xs font-medium flex items-center gap-1.5 transition disabled:opacity-50 shadow-sm"
+                  className="hidden sm:flex px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl card-theme border text-muted-theme hover:text-main-theme text-xs font-medium items-center gap-1.5 transition disabled:opacity-50 shadow-sm shrink-0"
                   title="Jalankan dengan jendela browser terbuka"
                 >
                   <Globe className="w-3.5 h-3.5 text-orange-400" />
-                  <span className="hidden sm:inline">Run (Headful)</span>
+                  <span>Run (Headful)</span>
                 </button>
               </div>
             )}
@@ -4598,13 +4597,38 @@ export default function Home() {
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <div className="flex items-center gap-1.5 sm:gap-2 self-start sm:self-auto flex-wrap">
                           <button
                             type="button"
                             onClick={() => {
+                              const geminiCount = (config.aiEndpoints || []).filter(e => e.type === 'gemini').length;
                               const newEndpoint: AiEndpointConfig = {
-                                id: `ep-${Date.now()}`,
-                                name: `Custom Router ${(config.aiEndpoints?.length || 0) + 1}`,
+                                id: `ep-gemini-${Date.now()}`,
+                                name: `Google Gemini (Akun ${geminiCount + 1})`,
+                                type: 'gemini',
+                                baseUrl: '',
+                                apiKey: '',
+                                model: 'gemini-2.5-flash',
+                                isActive: false,
+                              };
+                              const list = [...(config.aiEndpoints || []), newEndpoint];
+                              setConfig({ ...config, aiEndpoints: list });
+                              toast.success(`Akun Gemini baru ditambahkan! Silakan masukkan API Key.`);
+                            }}
+                            className="px-2.5 sm:px-3 py-1.5 rounded-xl card-subtle-theme border border-subtle-theme text-main-theme hover:opacity-90 text-xs font-medium transition flex items-center gap-1.5 shadow-sm"
+                            title="Tambah akun Google Gemini baru (dengan API Key cadangan/kedua)"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-orange-500" />
+                            <span>+ Akun Gemini</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const routerCount = (config.aiEndpoints || []).filter(e => e.type === 'openai_compatible').length;
+                              const newEndpoint: AiEndpointConfig = {
+                                id: `ep-router-${Date.now()}`,
+                                name: `OpenAI Gateway ${routerCount + 1}`,
                                 type: 'openai_compatible',
                                 baseUrl: 'https://api.9router.com/v1',
                                 apiKey: '',
@@ -4613,19 +4637,20 @@ export default function Home() {
                               };
                               const list = [...(config.aiEndpoints || []), newEndpoint];
                               setConfig({ ...config, aiEndpoints: list });
-                              toast.success('Provider AI baru ditambahkan! Silakan isi Base URL dan API Key.');
+                              toast.success('Provider Gateway (9Router/Custom) baru ditambahkan!');
                             }}
-                            className="px-3 py-1.5 rounded-xl card-subtle-theme border border-subtle-theme text-main-theme hover:opacity-90 text-xs font-medium transition flex items-center gap-1.5 shadow-sm"
+                            className="px-2.5 sm:px-3 py-1.5 rounded-xl card-subtle-theme border border-subtle-theme text-main-theme hover:opacity-90 text-xs font-medium transition flex items-center gap-1.5 shadow-sm"
+                            title="Tambah provider OpenAI-Compatible (9Router, Groq, DeepSeek, OpenRouter)"
                           >
                             <Plus className="w-3.5 h-3.5 text-orange-500" />
-                            <span>Tambah Provider AI</span>
+                            <span>+ Router / OpenAI</span>
                           </button>
 
                           <button
                             type="button"
                             disabled={isTestingAi || !readinessMetrics.hasAi}
                             onClick={handleTestAi}
-                            className="px-3.5 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 border border-orange-500/30 text-xs font-medium transition flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
+                            className="px-3 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 border border-orange-500/30 text-xs font-medium transition flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
                           >
                             <Sparkles className="w-3.5 h-3.5" />
                             <span>{isTestingAi ? 'Menguji...' : 'Uji Koneksi AI'}</span>
@@ -4647,8 +4672,8 @@ export default function Home() {
                                   : 'card-theme border-subtle-theme'
                               }`}
                             >
-                              <div className="flex items-center justify-between gap-3 border-b border-subtle-theme pb-2.5">
-                                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-3 border-b border-subtle-theme pb-2.5 flex-wrap">
+                                <div className="flex items-center gap-2.5 flex-1 min-w-0 flex-wrap">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -4656,7 +4681,13 @@ export default function Home() {
                                         ...e,
                                         isActive: e.id === endpoint.id,
                                       }));
-                                      setConfig({ ...config, aiEndpoints: updated, activeAiEndpointId: endpoint.id });
+                                      setConfig({
+                                        ...config,
+                                        aiEndpoints: updated,
+                                        activeAiEndpointId: endpoint.id,
+                                        ...(endpoint.type === 'gemini' && endpoint.apiKey ? { geminiApiKey: endpoint.apiKey } : {}),
+                                        ...(endpoint.type === 'openai_compatible' && endpoint.apiKey ? { customAiApiKey: endpoint.apiKey } : {})
+                                      });
                                       toast.info(`Provider utama diubah ke: ${endpoint.name}`);
                                     }}
                                     className={`w-4 h-4 rounded-full border flex items-center justify-center transition shrink-0 ${
@@ -4676,13 +4707,32 @@ export default function Home() {
                                       );
                                       setConfig({ ...config, aiEndpoints: updated });
                                     }}
-                                    className="text-xs font-semibold text-main-theme bg-transparent border-b border-transparent hover:border-subtle-theme focus:border-orange-500 focus:outline-none px-1 py-0.5 max-w-[200px]"
+                                    className="text-xs font-semibold text-main-theme bg-transparent border-b border-transparent hover:border-subtle-theme focus:border-orange-500 focus:outline-none px-1 py-0.5 max-w-[220px]"
                                     placeholder="Nama Provider"
                                   />
 
-                                  <span className="text-[10px] text-muted-theme bg-slate-500/10 px-2 py-0.5 rounded border border-subtle-theme shrink-0">
-                                    {endpoint.type === 'gemini' ? 'Google Gemini Native' : 'OpenAI-Compatible (9Router/Custom)'}
-                                  </span>
+                                  <select
+                                    value={endpoint.type}
+                                    onChange={(e) => {
+                                      const newType = e.target.value as 'gemini' | 'openai_compatible';
+                                      const updated = (config.aiEndpoints || []).map((item) =>
+                                        item.id === endpoint.id
+                                          ? {
+                                              ...item,
+                                              type: newType,
+                                              model: newType === 'gemini' ? 'gemini-2.5-flash' : 'google/gemini-2.5-flash',
+                                              baseUrl: newType === 'gemini' ? '' : (item.baseUrl || 'https://api.9router.com/v1')
+                                            }
+                                          : item
+                                      );
+                                      setConfig({ ...config, aiEndpoints: updated });
+                                    }}
+                                    className="text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-main-theme border border-subtle-theme rounded-md px-2 py-0.5 focus:outline-none focus:border-orange-500 cursor-pointer shrink-0"
+                                    title="Pilih jenis engine API"
+                                  >
+                                    <option value="gemini">Google Gemini Native</option>
+                                    <option value="openai_compatible">OpenAI-Compatible (9Router / Custom)</option>
+                                  </select>
 
                                   {isEndpointActive && (
                                     <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20 shrink-0">
@@ -4706,20 +4756,20 @@ export default function Home() {
                                         });
                                         const data = await res.json();
                                         if (data.success) {
-                                          toast.success(`Koneksi ${endpoint.name} Berhasil! Respon: "${data.reply || data.message}"`, { id: toastId, duration: 4000 });
+                                          toast.success(`Koneksi ke ${endpoint.name} Berhasil! (${endpoint.model})`, { id: toastId });
                                         } else {
-                                          toast.error(`Gagal: ${data.error || 'Provider tidak merespon'}`, { id: toastId, duration: 5000 });
+                                          toast.error(`${endpoint.name} Gagal: ${data.error}`, { id: toastId });
                                         }
-                                      } catch (e: any) {
-                                        toast.error(`Koneksi error: ${e?.message || e}`, { id: toastId });
+                                      } catch (err: any) {
+                                        toast.error(`Gagal menguji ${endpoint.name}: ${err?.message || err}`, { id: toastId });
                                       } finally {
                                         setIsTestingAi(false);
                                       }
                                     }}
-                                    className="px-2.5 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 border border-orange-500/30 text-[11px] font-medium transition flex items-center gap-1 disabled:opacity-40"
+                                    className="px-2.5 py-1 rounded-lg border border-subtle-theme card-theme hover:text-orange-500 text-muted-theme text-[11px] font-medium flex items-center gap-1 transition disabled:opacity-50"
                                     title="Uji koneksi khusus endpoint ini"
                                   >
-                                    <Sparkles className="w-3 h-3" />
+                                    <Sparkles className="w-3 h-3 text-orange-400" />
                                     <span>Tes Endpoint</span>
                                   </button>
 
@@ -4727,15 +4777,13 @@ export default function Home() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        if (confirm(`Hapus provider AI "${endpoint.name}"?`)) {
-                                          const filtered = (config.aiEndpoints || []).filter((e) => e.id !== endpoint.id);
-                                          const nextActiveId = isEndpointActive ? (filtered[0]?.id || '') : config.activeAiEndpointId;
-                                          setConfig({ ...config, aiEndpoints: filtered, activeAiEndpointId: nextActiveId });
-                                          toast.success('Provider AI dihapus');
-                                        }
+                                        const filtered = (config.aiEndpoints || []).filter((e) => e.id !== endpoint.id);
+                                        const nextActiveId = isEndpointActive ? (filtered[0]?.id || '') : config.activeAiEndpointId;
+                                        setConfig({ ...config, aiEndpoints: filtered, activeAiEndpointId: nextActiveId });
+                                        toast.info(`Endpoint "${endpoint.name}" dihapus`);
                                       }}
-                                      className="p-1.5 rounded-lg text-muted-theme hover:text-rose-500 hover:bg-rose-500/10 transition"
-                                      title="Hapus Provider"
+                                      className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-theme hover:text-rose-500 transition"
+                                      title="Hapus provider ini"
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -4791,7 +4839,12 @@ export default function Home() {
                                           const updated = (config.aiEndpoints || []).map((item) =>
                                             item.id === endpoint.id ? { ...item, apiKey: e.target.value } : item
                                           );
-                                          setConfig({ ...config, aiEndpoints: updated, customAiApiKey: e.target.value });
+                                          const isCurrentActive = (config.activeAiEndpointId === endpoint.id) || (!config.activeAiEndpointId && index === 0);
+                                          setConfig({
+                                            ...config,
+                                            aiEndpoints: updated,
+                                            ...(isCurrentActive ? { customAiApiKey: e.target.value } : {})
+                                          });
                                         }}
                                         className="w-full input-theme border rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-orange-500"
                                         placeholder="sk-..."
@@ -4812,7 +4865,12 @@ export default function Home() {
                                           const updated = (config.aiEndpoints || []).map((item) =>
                                             item.id === endpoint.id ? { ...item, apiKey: e.target.value } : item
                                           );
-                                          setConfig({ ...config, aiEndpoints: updated, geminiApiKey: e.target.value });
+                                          const isCurrentActive = (config.activeAiEndpointId === endpoint.id) || (!config.activeAiEndpointId && index === 0);
+                                          setConfig({
+                                            ...config,
+                                            aiEndpoints: updated,
+                                            ...(isCurrentActive ? { geminiApiKey: e.target.value } : {})
+                                          });
                                         }}
                                         className="w-full input-theme border rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-orange-500"
                                         placeholder="AIzaSy..."
@@ -5227,9 +5285,6 @@ export default function Home() {
                 <div className="flex items-center gap-2.5">
                   <Briefcase className="w-4 h-4 text-teal-500" />
                   <h2 className="text-base font-semibold text-main-theme">Kartu Lowongan</h2>
-                  <span className="text-[10px] font-medium bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 px-2 py-0.5 rounded-full">
-                    Visual Mode
-                  </span>
                 </div>
                 <p className="text-xs text-muted-theme hidden sm:block">
                   Tampilan kartu dari semua lowongan yang sudah dilamar bot.
