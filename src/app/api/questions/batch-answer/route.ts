@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const startIndex = Math.max(0, parseInt(body.startIndex ?? '0', 10));
-    const batchSize = Math.min(25, Math.max(5, parseInt(body.batchSize ?? '15', 10)));
+    const batchSize = Math.min(30, Math.max(5, parseInt(body.batchSize ?? body.chunkSize ?? '20', 10)));
 
     if (!fs.existsSync(CSV_PATH)) {
       return NextResponse.json({

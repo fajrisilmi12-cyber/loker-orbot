@@ -1391,9 +1391,20 @@ export default function Home() {
     }
   };
 
+  // Helper to check if AI API key or endpoints are actively configured
+  const isAiConfigured = () => {
+    if (config.geminiApiKey?.trim() && config.geminiApiKey.trim() !== 'your_gemini_api_key_here') return true;
+    if (config.customAiApiKey?.trim()) return true;
+    if (Array.isArray(config.aiEndpoints) && config.aiEndpoints.some(e => e.apiKey?.trim() && e.apiKey.trim() !== 'your_gemini_api_key_here')) return true;
+    return false;
+  };
+
   // Auto-update answers in the CSV database that can be derived from the user's profile
-  const handleUpdateQuestionsFromProfile = async () => {
-    if (questions.length === 0) { toast.info('Database kosong'); return; }
+  const handleUpdateQuestionsFromProfile = async (silent = false): Promise<number> => {
+    if (questions.length === 0) {
+      if (!silent) toast.info('Database kosong');
+      return 0;
+    }
     const salary = config.expectedSalary || 0;
     const exp = config.yearsOfExperience || 1;
     const name = config.fullName || '';
@@ -1469,11 +1480,38 @@ export default function Home() {
     });
 
     if (updatedCount === 0) {
-      toast.info('Tidak ada jawaban yang perlu diperbarui dari profil saat ini');
-      return;
+      if (!silent) toast.info('Tidak ada jawaban yang perlu diperbarui dari profil saat ini');
+      return 0;
     }
     await handleSaveQuestionsList(updated);
-    toast.success(`${updatedCount} jawaban berhasil diperbarui dari profil kamu!`);
+    if (!silent) toast.success(`${updatedCount} jawaban berhasil diperbarui dari profil kamu!`);
+    return updatedCount;
+  };
+
+  // Smart Unified Personalization: Syncs profile data and optionally initiates AI batch answering
+  const handleSmartPersonalize = async () => {
+    if (questions.length === 0) {
+      toast.info('Database soal masih kosong. Silakan upload CSV atau klik Reset Soal Default.');
+      return;
+    }
+
+    const hasAi = isAiConfigured();
+
+    // 1. Instant regex sync from candidate profile (0 tokens, fast)
+    const updatedCount = await handleUpdateQuestionsFromProfile(true);
+
+    if (hasAi) {
+      if (updatedCount > 0) {
+        toast.success(`${updatedCount} jawaban dasar disinkronkan dari profil. Melanjutkan ke personalisasi esai & AI...`);
+      }
+      setIsBatchAiModalOpen(true);
+    } else {
+      if (updatedCount > 0) {
+        toast.success(`${updatedCount} jawaban berhasil diperbarui otomatis dari profil!`);
+      } else {
+        toast.info('Jawaban dasar sudah sesuai profil. Tambahkan API Key AI di Pengaturan jika ingin melengkapi jawaban esai otomatis.');
+      }
+    }
   };
 
   // Hapus semua pertanyaan
@@ -4480,9 +4518,9 @@ export default function Home() {
 
                   <button
                     onClick={() => setIsNewQuestionModalOpen(true)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-medium bg-orange-600 hover:bg-orange-500 text-white transition flex items-center gap-1.5 shadow-sm"
+                    className="px-3.5 py-2 rounded-xl text-xs font-medium card-subtle-theme hover:opacity-90 text-main-theme border border-subtle-theme transition flex items-center gap-1.5"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-3.5 h-3.5 text-muted-theme" />
                     <span>Tambah Soal</span>
                   </button>
 
@@ -4495,21 +4533,19 @@ export default function Home() {
                   </button>
 
                   <button
-                    onClick={handleUpdateQuestionsFromProfile}
-                    className="px-3.5 py-2 rounded-xl text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1.5 shadow-sm"
-                    title="Update jawaban gaji, pengalaman, nama & CV dari profil kamu sekarang"
+                    onClick={handleSmartPersonalize}
+                    className="px-3.5 py-2 rounded-xl text-xs font-medium bg-orange-600 hover:bg-orange-500 text-white transition flex items-center gap-1.5 shadow-sm"
+                    title={isAiConfigured() ? "Sinkronkan jawaban dengan profil pelamar & AI" : "Sinkronkan jawaban otomatis dari profil kamu (0 token)"}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Perbarui dari Profil</span>
-                  </button>
-
-                  <button
-                    onClick={() => setIsBatchAiModalOpen(true)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition flex items-center gap-1.5 shadow-sm"
-                    title="Biarkan AI mengisi jawaban untuk seluruh 1.000 pertanyaan sesuai profil Anda"
-                  >
-                    <Bot className="w-3.5 h-3.5" />
-                    <span>Personalisasi AI</span>
+                    <span>Personalisasi Jawaban</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                      isAiConfigured() 
+                        ? 'bg-white/25 text-white' 
+                        : 'bg-black/25 text-white/90'
+                    }`}>
+                      {isAiConfigured() ? 'AI + Profil' : 'Profil'}
+                    </span>
                   </button>
 
                   <button

@@ -58,7 +58,7 @@ export default function BatchQuestionModal({ isOpen, onClose, onFinished }: Batc
         const res = await fetch('/api/questions/batch-answer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startIndex: nextIdx, chunkSize: 15 }),
+          body: JSON.stringify({ startIndex: nextIdx, chunkSize: 20 }),
         });
 
         const data = await res.json();
@@ -172,7 +172,7 @@ export default function BatchQuestionModal({ isOpen, onClose, onFinished }: Batc
           <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 space-y-2.5">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
               <span>PERTANYAAN TERAKHIR YANG DIJAWAB AI</span>
-              <span className="text-[11px] font-mono">Chunk per 15 soal</span>
+              <span className="text-[11px] font-mono">Chunk per 20 soal</span>
             </div>
 
             {lastQuestion ? (
