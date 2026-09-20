@@ -143,6 +143,17 @@ export async function launchBrowserWithFallback(
       const browser = await puppeteer.launch(chromeOptions);
       const version = await browser.version().catch(() => 'Unknown');
       log(`✅ Berhasil membuka ${targetLabel} [${version}]`);
+
+      // Ensure window is brought to the front on Windows in headful mode
+      if (!isHeadless && process.platform === 'win32') {
+        try {
+          const { exec } = require('child_process');
+          const ps = `(New-Object -ComObject WScript.Shell).AppActivate('Chrome')`;
+          const encoded = Buffer.from(ps, 'utf16le').toString('base64');
+          exec(`powershell -NoProfile -NonInteractive -EncodedCommand ${encoded}`, () => {});
+        } catch {}
+      }
+
       return {
         browser,
         browserType: isCustomPath ? 'custom-chrome' : 'google-chrome'

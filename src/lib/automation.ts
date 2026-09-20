@@ -134,6 +134,9 @@ export async function startBot(
         page = await browser.newPage();
       }
       await applyStealthToPage(page);
+      if (mode === 'headful') {
+        await page.bringToFront().catch(() => {});
+      }
       return page;
     };
 
