@@ -457,6 +457,7 @@ export async function runLinkedinBot(
 
         // Siapkan listener untuk mendeteksi pembukaan tab eksternal
         const browser = page.browser();
+        const recordedQA: Array<{ question: string; answer: string; type?: string }> = [];
         let externalTargetCreated: any = null;
         const targetListener = (target: any) => {
           if (target.type() === 'page') {
@@ -799,6 +800,11 @@ export async function runLinkedinBot(
 
             onLog(`🤖 Pertanyaan: "${qItem.question}" -> Jawaban: [${chosenAnswers.join(' | ')}]`);
             appendQuestionToCsv(qItem.question, qItem.type as any, qItem.options, chosenAnswers);
+            recordedQA.push({
+              question: qItem.question,
+              answer: chosenAnswers.join(', '),
+              type: qItem.type
+            });
 
             // Injeksi hasil jawaban ke DOM modal LinkedIn
             if (qItem.type === 'text' && chosenAnswers.length > 0) {
@@ -910,7 +916,8 @@ export async function runLinkedinBot(
                 title: activeTitle,
                 platform: 'LinkedIn',
                 jobUrl: cardInfo.url,
-                status: 'Dry-run Sim'
+                status: 'Dry-run Sim',
+                questionsAndAnswers: recordedQA
               });
 
               onLog(`📝 [Dry-run Sim] Data simulasi "${activeCompany}" (${activeTitle}) disimpan ke Google Sheets.`);
@@ -937,7 +944,8 @@ export async function runLinkedinBot(
                 title: activeTitle,
                 platform: 'LinkedIn',
                 jobUrl: cardInfo.url,
-                status: 'Applied'
+                status: 'Applied',
+                questionsAndAnswers: recordedQA
               });
 
               onLog(`🎉 Lamaran Easy Apply ke "${activeCompany}" (${activeTitle}) berhasil terkirim & disimpan ke Google Sheets!`);

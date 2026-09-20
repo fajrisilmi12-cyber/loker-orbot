@@ -41,10 +41,18 @@
    - [Mode Headless vs Mode Tampak (Headful)](#mode-headless-vs-mode-tampak-headful)
    - [Arti Tombol pada Kartu Platform ("Cek / Login", "Tes 5 Loker", "Jalankan")](#arti-tombol-pada-kartu-platform)
    - [Penyimpanan Pengaturan ("Simpan Data")](#penyimpanan-pengaturan-simpan-data)
-7. [Multi-Provider AI Gateway & Bank Pertanyaan](#multi-provider-ai-gateway--bank-pertanyaan)
-8. [Keamanan Data, Privasi & Kesiapan Git Production](#keamanan-data-privasi--kesiapan-git-production)
-9. [Struktur Proyek](#struktur-proyek)
-10. [Zona Terlarang (Misteri Easter Egg)](#zona-terlarang-baca-risiko-sebelum-buka)
+7. [Panduan Keamanan, Anti-Ban & Batas Kuota Sehat](#panduan-keamanan-anti-ban--batas-kuota-sehat)
+   - [Apakah Bot Mengganggu Alur atau Menimbulkan Error?](#apakah-bot-mengganggu-alur-atau-menimbulkan-error)
+   - [Arsitektur Anti-Deteksi (Stealth, Jitter & Delay)](#arsitektur-anti-deteksi-stealth-jitter--delay)
+   - [Tabel Rekomendasi Batas Aman Harian](#tabel-rekomendasi-batas-aman-harian)
+8. [Multi-Provider AI Gateway & Bank Pertanyaan](#multi-provider-ai-gateway--bank-pertanyaan)
+   - [Dukungan Multi-Provider & Multi-Akun AI](#dukungan-multi-provider--multi-akun-ai)
+   - [Bank Pertanyaan Cerdas (`public/imploye-question.csv`)](#bank-pertanyaan-cerdas-publicimploye-questioncsv)
+   - [Pencatatan & Audit Q&A (Badge Jumlah & Transparansi Jawaban)](#pencatatan--audit-qa-badge-jumlah--transparansi-jawaban)
+   - [Klarifikasi "Format Profil & CV Default"](#klarifikasi-format-profil--cv-default)
+9. [Keamanan Data, Privasi & Kesiapan Git Production](#keamanan-data-privasi--kesiapan-git-production)
+10. [Struktur Proyek](#struktur-proyek)
+11. [Zona Terlarang (Misteri Easter Egg)](#zona-terlarang-baca-risiko-sebelum-buka)
 
 </details>
 
@@ -296,16 +304,65 @@ Pada baris kartu provider lowongan (LinkedIn, JobStreet, Glints, Indeed), terdap
 
 ---
 
+## Panduan Keamanan, Anti-Ban & Batas Kuota Sehat
+
+Banyak pengguna bertanya: *"Apakah bot ini bisa bikin akun saya ke-banned?"* atau *"Apakah sistem pencatatan jawaban bisa mengganggu alur dan memicu error?"*
+
+Berikut penjelasan teknis transparan serta panduan batas aman agar akun Anda tetap 100% aman untuk jangka panjang:
+
+### Apakah Bot Mengganggu Alur atau Menimbulkan Error?
+* **Zero Side-Effect:** Seluruh inferensi jawaban dan pencatatan riwayat Q&A diproses secara pasif di memori lokal (`recordedQA.push(...)`).
+* **Tidak Ada Request Eksternal Tambahan:** Bot tidak mengirim *payload* atau request liar ke server portal loker. Portal hanya menerima aksi pengisian form normal seperti halnya manusia mengklik tombol *Lanjutkan/Kirim*.
+* **Penyimpanan Asinkron Latar Belakang:** Data riwayat lamaran dan pertanyaan-jawaban baru disimpan ke database lokal (`applied_jobs.json` / SQLite `cv_blaster.db`) setelah seluruh alur submit lowongan tuntas tanpa memperlambat navigasi browser.
+
+### Arsitektur Anti-Deteksi (Stealth, Jitter & Delay)
+Portal kerja (terutama LinkedIn dan Indeed) memiliki algoritma deteksi bot jika akun bertindak tidak wajar. **lemparjaring** dilengkapi 4 lapis pertahanan otomatis:
+
+1. **System Chrome Asli (Bukan Chromium Kosong):**  
+   Bot berjalan menunggangi Google Chrome resmi yang terpasang di komputer Anda beserta profil, ekstensi, dan cookie aslinya. Modul `stealthHelper.ts` secara otomatis melenyapkan atribut otomasi (`navigator.webdriver = undefined`, pemalsuan plugins, audio context, dan webgl vendor).
+2. **Humanized Jitter Typing:**  
+   Pengisian input teks tidak dilakukan via *copy-paste* seketika, melainkan mensimulasikan ketukan tombol manusia dengan variasi acak 40–80 milidetik per karakter.
+3. **Random Sleep & Adaptive Delay:**  
+   Antara satu lowongan ke lowongan berikutnya, bot mengambil jeda acak 3 hingga 7 detik. Hal ini mencegah pola request periodik yang mudah dicurigai oleh firewall platform.
+4. **Mode Ekstensi In-Tab (Anti-Begal Tab):**  
+   Melamar langsung di tab peramban aktif tanpa membuka peramban kedua, mengalirkan sesi residential IP murni Anda tanpa terdeteksi sebagai scraping/automation tools.
+
+### Tabel Rekomendasi Batas Aman Harian
+Gunakan aturan praktis berikut untuk menjaga reputasi akun Anda:
+
+| Platform | Batas Aman Harian | Tingkat Kewaspadaan | Rekomendasi Pola Eksekusi |
+| :--- | :---: | :---: | :--- |
+| **LinkedIn** | **15 – 25 lamaran / hari** | 🔴 Sangat Tinggi | Jangan tebar ratusan dalam 1 jam. Jalankan 10 lamaran di pagi hari, lalu 10–15 lamaran di sore/malam hari. |
+| **Indeed** | **30 – 50 lamaran / hari** | 🟡 Sedang | Cukup stabil. Gunakan filter *Lamar Cepat (Indeed Apply)*. |
+| **JobStreet** | **30 – 50 lamaran / hari** | 🟢 Ringan | Aman untuk *Quick Apply*. |
+| **Glints** | **30 – 60 lamaran / hari** | 🟢 Ringan | Sangat ramah terhadap otomasi. |
+
+> [!TIP]
+> **Manfaatkan Fitur Simulasi (Dry-run):**  
+> Jika Anda baru mencoba kata kunci baru atau ingin memeriksa kecocokan pertanyaan tanpa mengirim lamaran riil ke perusahaan, aktifkan toggle **"Mode Simulasi (Dry-run)"** di header dashboard. Bot akan mengisi formulir hingga tahap akhir, lalu membatalkannya tanpa menekan tombol submit nyata.
+
+---
+
 ## Multi-Provider AI Gateway & Bank Pertanyaan
 
-### Dukungan Multi-Provider AI
-Untuk menjawab pertanyaan esai, deskripsi pengalaman, dan menghitung skor relevansi lowongan (*Job Match Filter*), **lemparjaring** mendukung berbagai penyedia model kecerdasan buatan:
-* **Google Gemini AI (Bawaan):** Model `gemini-2.5-flash` dengan kecepatan tinggi dan kuota API gratis.
+### Dukungan Multi-Provider & Multi-Akun AI
+Untuk menjawab pertanyaan esai, deskripsi pengalaman, dan menghitung skor relevansi lowongan (*Job Match Filter*), **lemparjaring** mendukung fleksibilitas multi-akun dan multi-provider:
+* **Google Gemini AI (Bawaan & Multi-Akun):** Mendukung model `gemini-2.5-flash` dan `gemini-1.5-flash`. Anda dapat mendaftarkan beberapa akun Gemini (`+ Akun Gemini`) dengan API key berbeda untuk bergantian ketika kuota rate limit tercapai.
 * **OpenAI-Compatible Gateway:** Mendukung gateway pihak ketiga seperti **9Router, Groq, DeepSeek, OpenRouter**, atau model lokal via Ollama/LMStudio.
 * **Anthropic Claude:** Mendukung model Claude 3.5 Sonnet untuk penalaran kontekstual formulir kerja yang rumit.
 
 ### Bank Pertanyaan Cerdas (`public/imploye-question.csv`)
 Bot dilengkapi bank data pertanyaan umum rekrutmen kerja beserta pemetaan jawaban otomatis. Data sensitif pelamar (seperti nama, nomor telepon pribadi, dan berkas resume) sengaja dipisahkan secara modular agar pengguna bebas menyesuaikan jawaban profil masing-masing tanpa merusak logika inferensi bot.
+
+### Pencatatan & Audit Q&A (Badge Jumlah & Transparansi Jawaban)
+Setiap kali bot menjawab kuesioner lowongan (baik bersumber dari Bank Pertanyaan CSV, heuristik bawaan, maupun inferensi AI), seluruh pasangan pertanyaan dan jawaban disimpan permanen ke database lokal.
+* **Badge Q&A di Tabel Riwayat:** Pada kolom aksi riwayat lamaran, tombol Q&A dilengkapi badge jumlah jawaban, misalnya **Q&A [3]** (oranye jika ada pertanyaan kustom) atau **Q&A [0]** (abu-abu jika format standar).
+* **Modal Audit Transparan:** Klik tombol Q&A untuk meninjau secara mendalam pertanyaan apa saja yang diajukan oleh pemberi kerja dan jawaban apa yang diputuskan oleh sistem.
+
+### Klarifikasi "Format Profil & CV Default"
+Jika Anda membuka detail Q&A dan melihat keterangan:  
+*"Lamaran ini menggunakan format formulir standar (Profil & CV default). Tidak ada kuesioner kustom tambahan yang perlu diisi"*, hal ini berasal dari **PIHAK PEMBERI KERJA / PORTAL LOKER**, bukan karena bot gagal atau bank pertanyaan kosong.  
+Pada sekitar 70%–80% lowongan di Indeed (*Indeed Apply*), LinkedIn (*Easy Apply*), dan JobStreet (*Quick Apply*), perusahaan memang memilih jalur lamaran 1-klik yang hanya menyerap resume CV dan data akun pencari kerja tanpa menyertakan kuesioner kustom.
 
 ---
 

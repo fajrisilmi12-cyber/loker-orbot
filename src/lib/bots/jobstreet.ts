@@ -451,6 +451,7 @@ export async function runJobstreetBot(
           let reachedEnd = false;
           let lastStepName = '';
           let sameStepCount = 0;
+          const recordedQA: Array<{ question: string; answer: string; type?: string }> = [];
 
           while (stepCount < 5 && !reachedEnd) {
             if (!global.isBotRunning) break;
@@ -597,6 +598,11 @@ export async function runJobstreetBot(
                 const answers = await answerQuestion(item.question, item.options, item.type);
                 onLog(`[Worker ${workerId + 1}] 🤖 AI Decision for "${item.question}": [${answers.join(' | ')}]`);
                 appendQuestionToCsv(item.question, item.type, item.options, answers);
+                recordedQA.push({
+                  question: item.question,
+                  answer: answers.join(', '),
+                  type: item.type
+                });
 
                 // Apply chosen answers to the active applyPage DOM
                 await applyPage.evaluate((qItem: any, chosenAnswers: string[]) => {
@@ -767,7 +773,8 @@ export async function runJobstreetBot(
               title: jobDetails.title || 'Jobstreet Job', 
               platform: 'Jobstreet', 
               jobUrl: url, 
-              status: 'Dry-run Sim' 
+              status: 'Dry-run Sim',
+              questionsAndAnswers: recordedQA
             });
             onLog(`[Worker ${workerId + 1}] 📝 [Dry-run Sim] Data "${jobDetails.title}" dicatat ke riwayat Google Sheets.`);
           } else {
@@ -777,7 +784,8 @@ export async function runJobstreetBot(
               title: jobDetails.title || 'Jobstreet Job', 
               platform: 'Jobstreet', 
               jobUrl: url, 
-              status: 'Applied' 
+              status: 'Applied',
+              questionsAndAnswers: recordedQA
             });
           }
           

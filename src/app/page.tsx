@@ -5407,13 +5407,32 @@ export default function Home() {
                             )}
                           </td>
                           <td className="p-3.5 text-center">
-                            <button
-                              onClick={() => setSelectedJobDetail(job)}
-                              className="px-2.5 py-1 rounded-lg card-subtle-theme border border-subtle-theme text-main-theme hover:bg-orange-500/10 hover:text-orange-600 dark:hover:text-orange-400 font-medium text-[11px] transition inline-flex items-center gap-1"
-                            >
-                              <FileText className="w-3 h-3" />
-                              <span>Lihat Q&A</span>
-                            </button>
+                            {(() => {
+                              const count = job.questionsAndAnswers?.length || 0;
+                              return (
+                                <button
+                                  onClick={() => setSelectedJobDetail(job)}
+                                  className={`px-2.5 py-1 rounded-lg border font-medium text-[11px] transition inline-flex items-center gap-1.5 ${
+                                    count > 0
+                                      ? 'bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20'
+                                      : 'card-subtle-theme border-subtle-theme text-muted-theme hover:text-main-theme hover:bg-slate-500/10'
+                                  }`}
+                                  title={count > 0 ? `${count} pertanyaan & jawaban tercatat` : 'Format standar (Profil & CV default - 0 kuesioner kustom)'}
+                                >
+                                  <FileText className={`w-3 h-3 ${count > 0 ? 'text-orange-500' : 'text-slate-400'}`} />
+                                  <span>Q&A</span>
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full font-mono ${
+                                      count > 0
+                                        ? 'bg-orange-500 text-white'
+                                        : 'bg-slate-500/15 text-muted-theme'
+                                    }`}
+                                  >
+                                    {count}
+                                  </span>
+                                </button>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))

@@ -398,6 +398,7 @@ export async function runIndeedBot(
 
         // Jalankan proses Apply Form
         let applyPage: any = null;
+        const recordedQA: Array<{ question: string; answer: string; type?: string }> = [];
 
         try {
           if (detailInfo.applyHref && detailInfo.applyHref.includes('smartapply.indeed.com')) {
@@ -843,6 +844,11 @@ export async function runIndeedBot(
                   const chosenAnswers = await answerQuestion(qItem.question, qItem.options, qItem.type as any);
                   onLog(`🤖 [Indeed] Q: "${qItem.question}" -> Ans: [${chosenAnswers.join(' | ')}]`);
                   appendQuestionToCsv(qItem.question, qItem.type as any, qItem.options, chosenAnswers);
+                  recordedQA.push({
+                    question: qItem.question,
+                    answer: chosenAnswers.join(', '),
+                    type: qItem.type
+                  });
 
                   // Tulis ke DOM
                   await activeFrame.evaluate(async (targetQ: any, answers: string[]) => {
@@ -1014,7 +1020,8 @@ export async function runIndeedBot(
                   title: activeTitle,
                   platform: 'Indeed',
                   jobUrl: targetJobUrl,
-                  status: 'Dry-run Sim'
+                  status: 'Dry-run Sim',
+                  questionsAndAnswers: recordedQA
                 });
 
                 onLog(`📝 [Dry-run Sim] Data simulasi "${activeCompany}" (${activeTitle}) disimpan ke Google Sheets.`);
@@ -1040,7 +1047,8 @@ export async function runIndeedBot(
                   title: activeTitle,
                   platform: 'Indeed',
                   jobUrl: targetJobUrl,
-                  status: 'Applied'
+                  status: 'Applied',
+                  questionsAndAnswers: recordedQA
                 });
 
                 onLog(`🎉 Lamaran Indeed ke "${activeCompany}" (${activeTitle}) berhasil terkirim & disimpan ke Google Sheets!`);

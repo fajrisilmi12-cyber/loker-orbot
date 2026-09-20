@@ -177,6 +177,7 @@
 
     let maxSteps = 12;
     let stepCount = 0;
+    const recordedQA = [];
 
     while (stepCount < maxSteps) {
       stepCount++;
@@ -190,7 +191,7 @@
         pageText.includes('application submitted') ||
         pageText.includes('lamaran terkirim')
       ) {
-        return { success: true, status: 'Applied Successfully' };
+        return { success: true, status: 'Applied Successfully', questionsAndAnswers: recordedQA };
       }
 
       // Check if inside iframe
@@ -256,16 +257,26 @@
         const combined = `${nameAttr} ${labelText}`;
 
         if (!inp.value || inp.value.trim() === '') {
+          let chosenVal = '';
           if (combined.includes('name') || combined.includes('nama')) {
-            await setNativeInputValue(inp, userConfig.fullName || 'Pelamar');
+            chosenVal = userConfig.fullName || 'Pelamar';
           } else if (combined.includes('phone') || combined.includes('telepon') || combined.includes('hp') || combined.includes('whatsapp')) {
-            await setNativeInputValue(inp, userConfig.phoneNumber || '08123456789');
+            chosenVal = userConfig.phoneNumber || '08123456789';
           } else if (combined.includes('gaji') || combined.includes('salary') || combined.includes('ekspektasi')) {
-            await setNativeInputValue(inp, userConfig.expectedSalary || '4500000');
+            chosenVal = userConfig.expectedSalary || '4500000';
           } else if (combined.includes('tahun') || combined.includes('year') || combined.includes('pengalaman') || combined.includes('experience')) {
-            await setNativeInputValue(inp, userConfig.experienceYears ? String(userConfig.experienceYears) : '3');
+            chosenVal = userConfig.experienceYears ? String(userConfig.experienceYears) : '3';
           } else if (combined.includes('lokasi') || combined.includes('kota') || combined.includes('city')) {
-            await setNativeInputValue(inp, userConfig.location || 'Indonesia');
+            chosenVal = userConfig.location || 'Indonesia';
+          }
+
+          if (chosenVal) {
+            await setNativeInputValue(inp, chosenVal);
+            recordedQA.push({
+              question: (labelEl?.innerText || inp.getAttribute('aria-label') || inp.placeholder || inp.name || 'Input').trim(),
+              answer: chosenVal,
+              type: inp.type || 'text'
+            });
           }
         }
       }
@@ -278,21 +289,28 @@
           for (let i = 1; i < sel.options.length; i++) {
             const opt = sel.options[i];
             const optText = (opt.innerText || opt.value || '').toLowerCase();
+            let selectedOpt: any = null;
             if (selText.includes('pengalaman') || selText.includes('experience') || selText.includes('tahun')) {
               if (optText.includes('1') || optText.includes('2') || optText.includes('3') || optText.includes('ya') || optText.includes('yes')) {
-                sel.selectedIndex = i;
-                sel.dispatchEvent(new Event('change', { bubbles: true }));
-                break;
+                selectedOpt = opt;
               }
             } else if (selText.includes('pendidikan') || selText.includes('education')) {
               if (optText.includes('sarjana') || optText.includes('bachelor') || optText.includes('diploma') || optText.includes('s1')) {
-                sel.selectedIndex = i;
-                sel.dispatchEvent(new Event('change', { bubbles: true }));
-                break;
+                selectedOpt = opt;
               }
             } else if (i === 1) {
-              sel.selectedIndex = 1;
+              selectedOpt = opt;
+            }
+
+            if (selectedOpt) {
+              sel.selectedIndex = i;
               sel.dispatchEvent(new Event('change', { bubbles: true }));
+              recordedQA.push({
+                question: (sel.closest('label')?.innerText || sel.getAttribute('aria-label') || sel.name || 'Pilihan Dropdown').trim(),
+                answer: (selectedOpt.innerText || selectedOpt.value || '').trim(),
+                type: 'dropdown'
+              });
+              break;
             }
           }
         }
@@ -315,12 +333,18 @@
             const lbl = (r.closest('label')?.innerText || r.value || '').toLowerCase();
             return lbl.includes('ya') || lbl.includes('yes');
           });
-          if (yesRadio) {
-            yesRadio.click();
-            yesRadio.dispatchEvent(new Event('change', { bubbles: true }));
-          } else if (groupRadios[0]) {
-            groupRadios[0].click();
-            groupRadios[0].dispatchEvent(new Event('change', { bubbles: true }));
+          const chosenRadio = yesRadio || groupRadios[0];
+          if (chosenRadio) {
+            chosenRadio.click();
+            chosenRadio.dispatchEvent(new Event('change', { bubbles: true }));
+            const labelText = (chosenRadio.closest('label')?.innerText || chosenRadio.value || 'Pilihan').trim();
+            const groupTitle = chosenRadio.closest('fieldset')?.querySelector('legend')?.innerText ||
+                               chosenRadio.name || 'Pertanyaan Kualifikasi';
+            recordedQA.push({
+              question: groupTitle.trim(),
+              answer: labelText,
+              type: 'radiobutton'
+            });
           }
         }
       });
@@ -350,7 +374,7 @@
           if (typeof window.cvBlasterFloatToast === 'function') {
             window.cvBlasterFloatToast('Formulir siap! Silakan tinjau dan klik Kirim.', 'info');
           }
-          return { success: true, status: 'Ready for Review (Copilot Mode)' };
+          return { success: true, status: 'Ready for Review (Copilot Mode)', questionsAndAnswers: recordedQA };
         }
 
         chrome.runtime.sendMessage({
@@ -359,7 +383,7 @@
         }).catch(() => {});
         submitBtn.click();
         await sleep(2500);
-        return { success: true, status: 'Application Submitted' };
+        return { success: true, status: 'Application Submitted', questionsAndAnswers: recordedQA };
       }
 
       if (continueBtn) {
@@ -375,7 +399,7 @@
       }
     }
 
-    return { success: true, status: 'Form completed or manual review required' };
+    return { success: true, status: 'Form completed or manual review required', questionsAndAnswers: recordedQA };
   }
 
   // Auto-apply orchestrator for single job page
@@ -432,7 +456,8 @@
         jobUrl: jobDetails.jobUrl,
         salary: jobDetails.salary,
         location: jobDetails.location,
-        status: result.status || 'Applied via Chrome Extension'
+        status: result.status || 'Applied via Chrome Extension',
+        questionsAndAnswers: result.questionsAndAnswers || []
       };
 
       chrome.runtime.sendMessage({
@@ -577,7 +602,8 @@
               jobUrl: card.url,
               salary: '',
               location: card.location || '',
-              status: 'Applied via In-Tab Automation'
+              status: 'Applied via In-Tab Automation',
+              questionsAndAnswers: formRes.questionsAndAnswers || []
             };
             chrome.runtime.sendMessage({ action: 'SAVE_APPLIED_JOB', job: record }, () => {
               if (chrome.runtime.lastError) {}
