@@ -33,9 +33,18 @@
    - [Mode 2: Production Server / Cloud VPS (Laptop Mati Tetap Jalan)](#mode-2-production-server--cloud-vps-laptop-mati-tetap-jalan)
    - [Mode 3: Home Gateway 24/7 (Mini-PC / Android Termux Nol Biaya)](#mode-3-home-gateway-247-mini-pc--android-termux-nol-biaya)
    - [Pemasangan Ekstensi Chrome (Manifest V3)](#pemasangan-ekstensi-chrome-manifest-v3)
-   - [Alur Penggunaan Harian](#alur-penggunaan-harian)
-5. [Struktur Proyek](#struktur-proyek)
-6. [Zona Terlarang (Misteri Easter Egg)](#zona-terlarang-baca-risiko-sebelum-buka)
+5. [Panduan Manajemen Sesi, Cookie & Login Portal](#panduan-manajemen-sesi-cookie--login-portal)
+   - [Metode 1: Sinkronisasi Cookie via Ekstensi (1-Klik & Paling Praktis)](#metode-1-sinkronisasi-cookie-via-ekstensi-1-klik--paling-praktis)
+   - [Metode 2: Login Manual via "Buka Browser Login"](#metode-2-login-manual-via-buka-browser-login)
+   - [Pengujian Sesi Mandiri (Tanpa Apply Loker)](#pengujian-sesi-mandiri-tanpa-apply-loker)
+6. [Panduan Kontrol Dashboard & Mode Eksekusi Bot](#panduan-kontrol-dashboard--mode-eksekusi-bot)
+   - [Mode Headless vs Mode Tampak (Headful)](#mode-headless-vs-mode-tampak-headful)
+   - [Arti Tombol pada Kartu Platform ("Cek / Login", "Tes 5 Loker", "Jalankan")](#arti-tombol-pada-kartu-platform)
+   - [Penyimpanan Pengaturan ("Simpan Data")](#penyimpanan-pengaturan-simpan-data)
+7. [Multi-Provider AI Gateway & Bank Pertanyaan](#multi-provider-ai-gateway--bank-pertanyaan)
+8. [Keamanan Data, Privasi & Kesiapan Git Production](#keamanan-data-privasi--kesiapan-git-production)
+9. [Struktur Proyek](#struktur-proyek)
+10. [Zona Terlarang (Misteri Easter Egg)](#zona-terlarang-baca-risiko-sebelum-buka)
 
 </details>
 
@@ -213,16 +222,103 @@ Ini adalah solusi canggih untuk otomasi 24 jam nonstop tanpa biaya langganan pro
 
 ### Alur Penggunaan Harian
 
-1. **Langkah 1: Lengkapi Data Diri**  
-   Buka dashboard `http://localhost:3000` (atau URL server Anda), masukkan nama, kontak, keahlian, kata kunci loker (contoh: `full stack developer`), dan kota tujuan (contoh: `Surabaya`).
-2. **Langkah 2: Buka Portal Kerja atau ATS**  
-   Buka Indeed, LinkedIn, Jobstreet, Glints, atau portal lowongan Greenhouse/Lever di browser Anda.
-3. **Langkah 3: Tebar Jaring di Tab Ini**  
-   Buka popup ekstensi atau klik tombol di panel melayang, lalu tekan **Lamar di Tab Ini**.
-4. **Langkah 4: Pantau Hasil**  
-   Duduk santai sambil melihat bilah notifikasi memproses lowongan satu per satu. Seluruh data lamaran sukses langsung tercatat otomatis di dashboard.
+1. **Langkah 1: Lengkapi Data Diri & Konfigurasi Pencarian**  
+   Buka dashboard `http://localhost:3000` (atau URL server Anda), masukkan nama, kontak, keahlian, kata kunci loker (contoh: `full stack developer`), kota tujuan (contoh: `Surabaya`), dan gaji minimal. Jangan lupa klik tombol **"Simpan Data"** agar konfigurasi tersimpan permanen.
+2. **Langkah 2: Sinkronkan Sesi Akun Portal**  
+   Pilih salah satu metode otentikasi (via ekstensi Chrome 1-klik atau "Buka Browser Login" di Langkah 3).
+3. **Langkah 3: Uji Coba & Jalankan Bot**  
+   Lakukan uji coba mandiri ("Cek Status Sesi" atau "Tes 5 Loker"), lalu klik **"Mulai Blaster"** atau tombol **"Jalankan"** di masing-masing platform.
+4. **Langkah 4: Pantau Hasil di Halaman Riwayat**  
+   Seluruh lamaran yang sukses dikirim akan otomatis tercatat ke dalam database riwayat lamaran lengkap dengan tautan lowongan dan status respons.
 
 </details>
+
+---
+
+## Panduan Manajemen Sesi, Cookie & Login Portal
+
+Agar bot dapat melamar pekerjaan atas nama akun Anda di **LinkedIn, JobStreet, Glints, dan Indeed**, browser bot memerlukan sesi otentikasi aktif. **lemparjaring** menyediakan 2 metode fleksibel:
+
+### Metode 1: Sinkronisasi Cookie via Ekstensi (1-Klik & Paling Praktis)
+Metode ini adalah cara paling nyaman karena Anda **tidak perlu memasukkan email & password di dalam browser bot**:
+1. Pastikan Anda sudah login ke portal kerja (LinkedIn, JobStreet, Glints, atau Indeed) di Google Chrome yang biasa Anda gunakan sehari-hari.
+2. Klik ikon ekstensi **lemparjaring** di bilah toolbar Chrome.
+3. Buka tab **"Sesi & Cookie Sync"**.
+4. Klik tombol **"Sinkronkan Cookie ke Backend"**.
+5. Ekstensi akan otomatis menyalin cookies otentikasi dari browser Anda dan mengirimkannya ke file konfigurasi backend.
+6. Saat bot berjalan (baik mode headless maupun headful), cookies tersebut akan langsung disuntikkan (*cookie injection*) sehingga bot otomatis dalam kondisi login.
+
+> [!TIP]
+> **Jika Muncul Notifikasi "Sesi login belum terdeteksi":**  
+> Cookie sesi web (terutama LinkedIn `JSESSIONID` dan token keamanan) memiliki masa kedaluwarsa. Jika sesi habis atau Anda berganti jaringan, cukup buka kembali tab LinkedIn di Chrome Anda, lalu klik **"Sinkronkan Cookie ke Backend"** sekali lagi di ekstensi.
+
+---
+
+### Metode 2: Login Manual via "Buka Browser Login"
+Jika Anda tidak menggunakan ekstensi atau ingin menyimpan sesi langsung di dalam profil browser bot:
+1. Di Dashboard, gulir ke **Langkah 3: Browser, AI & Storage** $\rightarrow$ cari kotak **Profil Browser & Sesi Login**.
+2. Klik tombol **"Buka Browser Login"** (tombol oranye dengan ikon kunci).
+3. Jendela Google Chrome resmi akan terbuka dan otomatis memuat 4 tab portal kerja.
+4. **Tidak ada bot yang berjalan dan tidak ada timer batas waktu.** Anda dapat santai memasukkan email, password, maupun verifikasi OTP / 2FA / CAPTCHA jika diminta.
+5. Setelah berhasil masuk ke beranda masing-masing portal, kembali ke dashboard dan klik tombol **"Tutup Login"** (atau tutup jendela Chrome tersebut).
+6. Seluruh cookies dan sesi Anda otomatis tersimpan di folder profil `automation-profile`.
+
+---
+
+### Pengujian Sesi Mandiri (Tanpa Apply Loker)
+Ingin memastikan apakah semua akun portal Anda sudah terhubung tanpa takut bot mengirim lamaran kerja?
+* Di **Langkah 3**, klik tombol **"Cek Status Sesi"** (ikon putar refresh).
+* Bot akan membuka browser di latar belakang (*headless*) selama beberapa detik untuk memeriksa ketersediaan sesi dan avatar profil di masing-masing portal.
+* Badge status portal akan langsung diperbarui: **Aktif (Hijau)** jika sudah login, atau **Belum Login / Expired** jika sesi perlu diperbarui.
+
+---
+
+## Panduan Kontrol Dashboard & Mode Eksekusi Bot
+
+### Mode Headless vs Mode Tampak (Headful)
+* **Mode Headless (Latar Belakang - Direkomendasikan untuk Pemakaian Rutin):**  
+  Bot berjalan tanpa memunculkan jendela peramban di layar. Mode ini sangat hemat memori, ringan, dan memungkinkan Anda bekerja atau bermain game di laptop tanpa terganggu jendela yang berpindah-pindah.
+* **Mode Headful (Tampak):**  
+  Membuka jendela Google Chrome resmi secara visual di layar utama Anda. Sangat ideal untuk melihat bagaimana bot berinteraksi dengan formulir lowongan, melakukan debugging, atau memantau proses secara langsung.
+
+### Arti Tombol pada Kartu Platform
+Pada baris kartu provider lowongan (LinkedIn, JobStreet, Glints, Indeed), terdapat 3 tombol dengan fungsi spesifik:
+1. **"Cek / Login":**  
+   Membuka peramban tampak (*headful*) langsung ke portal tersebut dengan batasan hanya 1 lowongan kerja. Berfungsi untuk inspeksi visual cepat dan penyelesaian tantangan verifikasi.
+2. **"Tes 5 Loker":**  
+   Menjalankan pengujian pelamaran kerja secara visual (*headful*) yang dibatasi maksimal 5 lowongan saja. Berfungsi sebagai *dry-run* untuk memastikan kelancaran alur form tanpa menghabiskan kuota harian.
+3. **"Jalankan":**  
+   Menjalankan proses pelamaran penuh di latar belakang (*headless*) sesuai batasan kuota harian yang Anda tetapkan pada portal tersebut.
+
+### Penyimpanan Pengaturan ("Simpan Data")
+> [!IMPORTANT]
+> Seluruh perubahan form pada Dashboard (kata kunci pencarian, batas gaji minimal, toggle platform aktif, hingga data diri pelamar) berada pada *state* interaktif. Selalu klik tombol **"Simpan Data"** (di Langkah 1 atau tombol aksi melayang) agar perubahan tersimpan permanen ke berkas konfigurasi lokal dan tidak ter-reset saat halaman di-refresh.
+
+---
+
+## Multi-Provider AI Gateway & Bank Pertanyaan
+
+### Dukungan Multi-Provider AI
+Untuk menjawab pertanyaan esai, deskripsi pengalaman, dan menghitung skor relevansi lowongan (*Job Match Filter*), **lemparjaring** mendukung berbagai penyedia model kecerdasan buatan:
+* **Google Gemini AI (Bawaan):** Model `gemini-2.5-flash` dengan kecepatan tinggi dan kuota API gratis.
+* **OpenAI-Compatible Gateway:** Mendukung gateway pihak ketiga seperti **9Router, Groq, DeepSeek, OpenRouter**, atau model lokal via Ollama/LMStudio.
+* **Anthropic Claude:** Mendukung model Claude 3.5 Sonnet untuk penalaran kontekstual formulir kerja yang rumit.
+
+### Bank Pertanyaan Cerdas (`public/imploye-question.csv`)
+Bot dilengkapi bank data pertanyaan umum rekrutmen kerja beserta pemetaan jawaban otomatis. Data sensitif pelamar (seperti nama, nomor telepon pribadi, dan berkas resume) sengaja dipisahkan secara modular agar pengguna bebas menyesuaikan jawaban profil masing-masing tanpa merusak logika inferensi bot.
+
+---
+
+## Keamanan Data, Privasi & Kesiapan Git Production
+
+Jika Anda ingin berkontribusi atau mem-push repositori ini ke GitHub / GitLab publik, privasi data Anda terjamin aman:
+
+1. **Berkas Privat Otomatis Diabaikan (`.gitignore`):**
+   * Riwayat lamaran kerja (`applied_jobs.json`) dan data kandidat (`sourced_talents.json`) tidak akan terunggah.
+   * Berkas konfigurasi pribadi berisi kredensial dan kunci API (`config.json`) telah dipisahkan.
+   * Berkas resume CV yang diunggah (`uploads/`) serta direktori sesi browser (`automation-profile*`) otomatis terlindungi di mesin lokal Anda.
+2. **Template Konfigurasi Publik (`config.example.json`):**
+   Repositori menyediakan berkas acuan `config.example.json`. Untuk instalasi baru atau deploy di server produksi, salin berkas tersebut menjadi `config.json` lalu sesuaikan dengan data Anda.
 
 ---
 
