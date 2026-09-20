@@ -205,6 +205,33 @@
         } catch {}
       }
 
+      // Native React/Framework value setter that bypasses _valueTracker
+      function setNativeInputValue(element, value) {
+        if (!element) return;
+        try {
+          element.focus();
+          const valueSetter = Object.getOwnPropertyDescriptor(element, 'value')?.set;
+          const prototype = Object.getPrototypeOf(element);
+          const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+
+          if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+            prototypeValueSetter.call(element, value);
+          } else if (valueSetter) {
+            valueSetter.call(element, value);
+          } else {
+            element.value = value;
+          }
+
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+          element.blur();
+        } catch {
+          element.value = value;
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+
       // 1. Fill Text Inputs (Name, Email, Phone, Expected Salary)
       const inputs = targetDoc.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"], input[type="number"], textarea');
       inputs.forEach((inp) => {
@@ -215,20 +242,43 @@
 
         if (!inp.value || inp.value.trim() === '') {
           if (combined.includes('name') || combined.includes('nama')) {
-            inp.value = userConfig.fullName || 'Pelamar';
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            setNativeInputValue(inp, userConfig.fullName || 'Pelamar');
           } else if (combined.includes('phone') || combined.includes('telepon') || combined.includes('hp') || combined.includes('whatsapp')) {
-            inp.value = userConfig.phoneNumber || '08123456789';
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            setNativeInputValue(inp, userConfig.phoneNumber || '08123456789');
           } else if (combined.includes('gaji') || combined.includes('salary') || combined.includes('ekspektasi')) {
-            inp.value = userConfig.expectedSalary || '4500000';
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            setNativeInputValue(inp, userConfig.expectedSalary || '4500000');
           } else if (combined.includes('tahun') || combined.includes('year') || combined.includes('pengalaman') || combined.includes('experience')) {
-            inp.value = userConfig.experienceYears ? String(userConfig.experienceYears) : '3';
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            setNativeInputValue(inp, userConfig.experienceYears ? String(userConfig.experienceYears) : '3');
           } else if (combined.includes('lokasi') || combined.includes('kota') || combined.includes('city')) {
-            inp.value = userConfig.location || 'Indonesia';
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            setNativeInputValue(inp, userConfig.location || 'Indonesia');
+          }
+        }
+      });
+
+      // Select Dropdowns (Pendidikan, Pengalaman, Status)
+      const selects = targetDoc.querySelectorAll('select');
+      selects.forEach((sel) => {
+        if (!sel.value || sel.selectedIndex <= 0) {
+          const selText = ((sel.name || sel.id || '') + ' ' + (sel.closest('label')?.innerText || '')).toLowerCase();
+          for (let i = 1; i < sel.options.length; i++) {
+            const opt = sel.options[i];
+            const optText = (opt.innerText || opt.value || '').toLowerCase();
+            if (selText.includes('pengalaman') || selText.includes('experience') || selText.includes('tahun')) {
+              if (optText.includes('1') || optText.includes('2') || optText.includes('3') || optText.includes('ya') || optText.includes('yes')) {
+                sel.selectedIndex = i;
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                break;
+              }
+            } else if (selText.includes('pendidikan') || selText.includes('education')) {
+              if (optText.includes('sarjana') || optText.includes('bachelor') || optText.includes('diploma') || optText.includes('s1')) {
+                sel.selectedIndex = i;
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                break;
+              }
+            } else if (i === 1) {
+              sel.selectedIndex = 1;
+              sel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
           }
         }
       });
