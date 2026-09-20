@@ -313,21 +313,22 @@ export async function runIndeedBot(
         const activeTitle = detailInfo?.officialTitle || cardInfo.title;
         const activeCompany = detailInfo?.officialCompany || cardInfo.company;
 
-        // Enterprise Filter: Job Match & Dealbreaker Check
-        if (config.enableJobMatchFilter) {
+        // Enterprise Filter: Job Match, Negative Keywords & Blacklist Check
+        if (config.enableJobMatchFilter || config.negativeKeywords || config.blacklistedCompanies) {
           const matchResult = evaluateJobMatch({
             jobTitle: activeTitle,
             company: activeCompany,
             targetKeywords: config.searchKeywords || '',
             negativeKeywords: config.negativeKeywords || '',
-            minScoreThreshold: config.minMatchScore || 60,
+            blacklistedCompanies: config.blacklistedCompanies || '',
+            minScoreThreshold: config.enableJobMatchFilter ? (config.minMatchScore || 60) : 0,
             candidateSkills: config.skills || ''
           });
 
           if (!matchResult.shouldApply) {
             onLog(`🛡️ [Indeed Filter] Melewati loker: ${matchResult.reason}`);
             continue;
-          } else {
+          } else if (config.enableJobMatchFilter) {
             onLog(`🎯 [Indeed Filter] Lolos seleksi kecocokan (Skor: ${matchResult.score}%). Melanjutkan...`);
           }
         }

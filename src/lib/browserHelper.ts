@@ -165,3 +165,161 @@ export async function launchBrowserWithFallback(
     throw new Error(`Tidak dapat meluncurkan browser: ${bundledError.message || bundledError}`);
   }
 }
+
+export interface StuckResolutionResult {
+  actionTaken: 'dismissed_popup' | 'ai_resolved' | 'skipped_captcha' | 'none';
+  shouldSkip: boolean;
+  message: string;
+}
+
+/**
+ * Universal Recovery & Anti-Stuck Handler (Watchdog):
+ * Tier 1: Heuristic Auto-Dismiss for annoying modals (0 tokens, instant)
+ * Tier 2: Check for blocking CAPTCHA / verification (graceful skip to protect account)
+ * Tier 3: AI Form Inspector (if AI active and stuck > 8s)
+ */
+export async function handleStuckFormAndPopups(
+  page: any,
+  options: {
+    onLog?: (msg: string) => void;
+    enableAiInspector?: boolean;
+    candidateContext?: string;
+    jobTitle?: string;
+    company?: string;
+  } = {}
+): Promise<StuckResolutionResult> {
+  const log = options.onLog || (() => {});
+
+  try {
+    // 1. TIER 1: HEURISTIC MODAL & POPUP DISMISSAL (0 Token, 0.1s)
+    const dismissResult = await page.evaluate(() => {
+      // Check for common close / dismiss buttons in active dialogs/modals
+      const selectors = [
+        'button[aria-label*="close" i]',
+        'button[aria-label*="tutup" i]',
+        'button[aria-label*="batal" i]',
+        'button[data-testid*="close" i]',
+        'button[data-automation*="close" i]',
+        '.modal-close',
+        '.modal__close',
+        '[data-modal-close]',
+        'button[aria-label="Dismiss"]',
+        'button[aria-label="Dismiss alert"]',
+      ];
+
+      for (const sel of selectors) {
+        const btn = document.querySelector(sel) as HTMLElement;
+        if (btn && btn.offsetParent !== null) {
+          btn.click();
+          return { clicked: true, text: btn.getAttribute('aria-label') || sel };
+        }
+      }
+
+      // Check for buttons by visible text inside modal dialogs
+      const dialogs = document.querySelectorAll('[role="dialog"], .artdeco-modal, [class*="modal"], [class*="Modal"], [class*="dialog"]');
+      if (dialogs.length > 0) {
+        const lastDialog = dialogs[dialogs.length - 1];
+        const buttons = Array.from(lastDialog.querySelectorAll('button, a[role="button"]')) as HTMLElement[];
+        
+        // Negative / Dismissive actions
+        const dismissiveRegex = /^(nanti saja|batal|lewati|tutup|not now|maybe later|skip|dismiss|cancel|close|no thanks)$/i;
+        for (const btn of buttons) {
+          const txt = (btn.textContent || '').trim();
+          if (dismissiveRegex.test(txt) && btn.offsetParent !== null) {
+            btn.click();
+            return { clicked: true, text: txt };
+          }
+        }
+
+        // Affirmative Consent / Agree actions (Terms, data privacy consent)
+        const consentRegex = /^(saya setuju|setuju & lanjutkan|i agree|agree|agree & continue|accept all|terima semua|lanjutkan)$/i;
+        for (const btn of buttons) {
+          const txt = (btn.textContent || '').trim();
+          if (consentRegex.test(txt) && btn.offsetParent !== null) {
+            btn.click();
+            return { clicked: true, text: txt };
+          }
+        }
+      }
+
+      return { clicked: false, text: '' };
+    });
+
+    if (dismissResult.clicked) {
+      log(`🧹 [Watchdog] Berhasil menutup/konfirmasi pop-up interupsi: "${dismissResult.text}"`);
+      await new Promise(r => setTimeout(r, 1000));
+      return {
+        actionTaken: 'dismissed_popup',
+        shouldSkip: false,
+        message: `Menutup modal: ${dismissResult.text}`,
+      };
+    }
+
+    // 2. TIER 2: CAPTCHA / SECURITY CHECKPOINT DETECTION
+    const hasCaptcha = await page.evaluate(() => {
+      const captchaSelectors = [
+        'iframe[src*="recaptcha"]',
+        'iframe[src*="turnstile"]',
+        'iframe[src*="hcaptcha"]',
+        '#cf-challenge-running',
+        '#challenge-stage',
+        '.g-recaptcha',
+        '[data-sitekey]'
+      ];
+      return captchaSelectors.some(sel => !!document.querySelector(sel));
+    });
+
+    if (hasCaptcha) {
+      log(`🛡️ [Watchdog] Verifikasi keamanan (CAPTCHA/Cloudflare) terdeteksi. Melewati loker ini demi keamanan akun...`);
+      return {
+        actionTaken: 'skipped_captcha',
+        shouldSkip: true,
+        message: 'CAPTCHA terdeteksi - loker dilewati untuk keamanan akun',
+      };
+    }
+
+    // 3. TIER 3: AI FORM INSPECTOR (If enabled & available)
+    if (options.enableAiInspector) {
+      try {
+        const { captureFormDomSnapshot, inspectFormWithAi, applyAiFormActions } = require('./aiFormInspector');
+        const snapshot = await captureFormDomSnapshot(page);
+        if (snapshot && snapshot.elementMap.length > 0) {
+          const plan = await inspectFormWithAi({
+            platform: 'Job Portal',
+            jobTitle: options.jobTitle || 'Job Application',
+            company: options.company || 'Target Company',
+            candidateProfileContext: options.candidateContext || '',
+            domSnippet: snapshot.htmlSnippet,
+            stepHint: 'Stuck Form Recovery',
+          });
+
+          if (plan) {
+            const applied = await applyAiFormActions(page, plan, log);
+            if (applied) {
+              return {
+                actionTaken: 'ai_resolved',
+                shouldSkip: false,
+                message: `AI memecahkan form macet: "${plan.formGoal}"`,
+              };
+            }
+          }
+        }
+      } catch (aiErr: any) {
+        log(`⚠️ [Watchdog AI] Gagal menjalankan AI Form Inspector: ${aiErr?.message || aiErr}`);
+      }
+    }
+
+    return {
+      actionTaken: 'none',
+      shouldSkip: false,
+      message: 'Tidak ada tindakan pemulihan yang diperlukan',
+    };
+  } catch (err: any) {
+    return {
+      actionTaken: 'none',
+      shouldSkip: false,
+      message: err?.message || String(err),
+    };
+  }
+}
+

@@ -23,6 +23,7 @@ export interface JobMatcherOptions {
   jobDescription?: string;
   targetKeywords?: string;
   negativeKeywords?: string;
+  blacklistedCompanies?: string;
   minScoreThreshold?: number;
   candidateSkills?: string;
 }
@@ -40,6 +41,7 @@ export function evaluateJobMatch(options: JobMatcherOptions): MatchEvaluationRes
     jobDescription = '',
     targetKeywords = '',
     negativeKeywords = '',
+    blacklistedCompanies = '',
     minScoreThreshold = 50,
     candidateSkills = ''
   } = options;
@@ -47,6 +49,27 @@ export function evaluateJobMatch(options: JobMatcherOptions): MatchEvaluationRes
   const normalizedTitle = jobTitle.toLowerCase();
   const normalizedDesc = jobDescription.toLowerCase();
   const fullText = `${normalizedTitle} ${company.toLowerCase()} ${normalizedDesc}`;
+
+  // 0. COMPANY BLACKLIST CHECK (Avoid current employer or specific agencies)
+  if (blacklistedCompanies && company) {
+    const blacklistedList = blacklistedCompanies
+      .split(/[,;\n]+/)
+      .map(c => c.trim().toLowerCase())
+      .filter(c => c.length >= 2);
+
+    const normCompany = company.toLowerCase().trim();
+    for (const badComp of blacklistedList) {
+      if (normCompany.includes(badComp) || badComp.includes(normCompany)) {
+        return {
+          shouldApply: false,
+          score: 0,
+          reason: `Perusahaan masuk daftar Blacklist: "${company}" (Cocok dengan: "${badComp}")`,
+          matchedKeywords: [],
+          rejectedKeyword: badComp,
+        };
+      }
+    }
+  }
 
   // 1. FAST DEALBREAKER / NEGATIVE KEYWORDS CHECK (Custom User Blacklist)
   if (negativeKeywords) {

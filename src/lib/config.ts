@@ -83,6 +83,8 @@ export interface AppConfig {
   enableJobMatchFilter?: boolean;
   minMatchScore?: number;
   negativeKeywords?: string;
+  blacklistedCompanies?: string;
+  autoApplyMode?: 'auto' | 'review';
   enableHumanStealth?: boolean;
   // Advanced Search Filters
   datePosted?: '24h' | 'week' | 'month' | '';
@@ -126,7 +128,9 @@ const DEFAULT_CONFIG: AppConfig = {
   enableCoverLetterGen: true,
   enableJobMatchFilter: false,
   minMatchScore: 60,
-  negativeKeywords: 'mandarin, japanese, 10+ years, sales lapangan',
+  negativeKeywords: 'magang, intern, unpaid, sales lapangan, mandarin',
+  blacklistedCompanies: '',
+  autoApplyMode: 'auto',
   enableHumanStealth: true,
   datePosted: '',
   jobType: ['full_time', 'part_time'],

@@ -133,6 +133,8 @@ interface AppConfig {
   enableJobMatchFilter?: boolean;
   minMatchScore?: number;
   negativeKeywords?: string;
+  blacklistedCompanies?: string;
+  autoApplyMode?: 'auto' | 'review';
   enableHumanStealth?: boolean;
   portalCookies?: {
     linkedin?: string;
@@ -209,6 +211,9 @@ export default function Home() {
     enableLinkedin: true,
     enableIndeed: true,
     indeedNoJobTitleFilter: false,
+    blacklistedCompanies: '',
+    negativeKeywords: 'magang, intern, unpaid, sales lapangan, mandarin',
+    autoApplyMode: 'auto',
     debugTest: true,
     concurrency: 3,
     useSystemChrome: true,
@@ -3223,53 +3228,117 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* 3. Job Matcher & Blacklist Filter */}
+                      {/* 3. Negative Keywords & Company Blacklist (Always Active & Transparent) */}
                       <div className="p-4 rounded-xl border border-subtle-theme card-theme space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="text-xs font-semibold text-main-theme">Penyaringan Kualifikasi Lowongan</span>
-                            <p className="text-[11px] text-muted-theme">
-                              Memeriksa kecocokan kualifikasi dan melewati lowongan yang tidak memenuhi kriteria minimal.
-                            </p>
-                          </div>
-                          <input
-                            type="checkbox"
-                            checked={config.enableJobMatchFilter ?? false}
-                            onChange={(e) => setConfig({ ...config, enableJobMatchFilter: e.target.checked })}
-                            className="w-4 h-4 rounded text-orange-600 cursor-pointer"
-                          />
+                        <div>
+                          <span className="text-xs font-semibold text-main-theme">Penyaringan &amp; Blacklist Loker</span>
+                          <p className="text-[11px] text-muted-theme">
+                            Mencegah bot melamar kantor sendiri, agensi yang dihindari, atau loker magang dan kata kunci yang tidak diinginkan.
+                          </p>
                         </div>
 
-                        {config.enableJobMatchFilter && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-subtle-theme">
-                            <div>
-                              <label className="block text-[11px] font-medium text-main-theme mb-1">
-                                Skor Relevansi Minimal: {config.minMatchScore || 60}%
-                              </label>
-                              <input
-                                type="range"
-                                min="40"
-                                max="90"
-                                step="5"
-                                value={config.minMatchScore || 60}
-                                onChange={(e) => setConfig({ ...config, minMatchScore: Number(e.target.value) })}
-                                className="w-full cursor-pointer accent-orange-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] font-medium text-main-theme mb-1">
-                                Blacklist Kata Kunci (Dipisahkan Koma)
-                              </label>
-                              <input
-                                type="text"
-                                value={config.negativeKeywords || ''}
-                                onChange={(e) => setConfig({ ...config, negativeKeywords: e.target.value })}
-                                placeholder="mandarin, 10+ years, sales lapangan..."
-                                className="w-full text-xs px-3 py-1.5 rounded-lg border border-subtle-theme input-theme"
-                              />
-                            </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-subtle-theme">
+                          <div>
+                            <label className="block text-[11px] font-medium text-main-theme mb-1">
+                              Blacklist Perusahaan (Dipisahkan Koma)
+                            </label>
+                            <input
+                              type="text"
+                              value={config.blacklistedCompanies || ''}
+                              onChange={(e) => setConfig({ ...config, blacklistedCompanies: e.target.value })}
+                              placeholder="Kantor Sekarang, PT ABC, Agensi XYZ..."
+                              className="w-full text-xs px-3 py-2 rounded-xl border border-subtle-theme input-theme font-sans"
+                            />
+                            <p className="text-[10px] text-muted-theme mt-1">
+                              Jika nama perusahaan cocok, bot langsung melewatinya (0 kuota).
+                            </p>
                           </div>
-                        )}
+                          <div>
+                            <label className="block text-[11px] font-medium text-main-theme mb-1">
+                              Kata Kunci Terlarang (Negative Keywords)
+                            </label>
+                            <input
+                              type="text"
+                              value={config.negativeKeywords || ''}
+                              onChange={(e) => setConfig({ ...config, negativeKeywords: e.target.value })}
+                              placeholder="magang, intern, unpaid, sales lapangan, mandarin..."
+                              className="w-full text-xs px-3 py-2 rounded-xl border border-subtle-theme input-theme font-sans"
+                            />
+                            <p className="text-[10px] text-muted-theme mt-1">
+                              Loker dengan judul/deskripsi berisi kata ini otomatis dilewati.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Optional Match Scoring Threshold */}
+                        <div className="pt-2 border-t border-subtle-theme flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="enableJobMatchFilterCheck"
+                              checked={config.enableJobMatchFilter ?? false}
+                              onChange={(e) => setConfig({ ...config, enableJobMatchFilter: e.target.checked })}
+                              className="w-4 h-4 rounded text-orange-600 cursor-pointer"
+                            />
+                            <label htmlFor="enableJobMatchFilterCheck" className="text-xs font-medium text-main-theme cursor-pointer">
+                              Aktifkan Skor Relevansi Minimal ({config.minMatchScore || 60}%)
+                            </label>
+                          </div>
+                          {config.enableJobMatchFilter && (
+                            <input
+                              type="range"
+                              min="40"
+                              max="90"
+                              step="5"
+                              value={config.minMatchScore || 60}
+                              onChange={(e) => setConfig({ ...config, minMatchScore: Number(e.target.value) })}
+                              className="w-32 cursor-pointer accent-orange-500"
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 4. Execution Mode: Full Auto vs Copilot (Review Before Submit) */}
+                      <div className="p-4 rounded-xl border border-subtle-theme card-theme space-y-2">
+                        <div>
+                          <span className="text-xs font-semibold text-main-theme">Mode Eksekusi Lamaran</span>
+                          <p className="text-[11px] text-muted-theme">
+                            Pilih apakah bot langsung mengirim lamaran atau berhenti di tombol akhir untuk Anda tinjau.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setConfig({ ...config, autoApplyMode: 'auto' })}
+                            className={`p-3 rounded-xl border text-left transition flex items-center justify-between ${
+                              (config.autoApplyMode || 'auto') === 'auto'
+                                ? 'bg-orange-500/10 border-orange-500/40 text-orange-600 dark:text-orange-400 font-semibold shadow-sm'
+                                : 'card-subtle-theme border-subtle-theme text-muted-theme hover:opacity-90'
+                            }`}
+                          >
+                            <div>
+                              <div className="text-xs font-semibold text-main-theme">Otomatis Penuh (Full Auto)</div>
+                              <div className="text-[10px] text-muted-theme mt-0.5">Langsung kirim formulir dan lanjut ke lowongan berikutnya.</div>
+                            </div>
+                            {(config.autoApplyMode || 'auto') === 'auto' && <Check className="w-4 h-4 text-orange-500 shrink-0 ml-2" />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setConfig({ ...config, autoApplyMode: 'review' })}
+                            className={`p-3 rounded-xl border text-left transition flex items-center justify-between ${
+                              config.autoApplyMode === 'review'
+                                ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400 font-semibold shadow-sm'
+                                : 'card-subtle-theme border-subtle-theme text-muted-theme hover:opacity-90'
+                            }`}
+                          >
+                            <div>
+                              <div className="text-xs font-semibold text-main-theme">Mode Copilot (Tinjau Dulu)</div>
+                              <div className="text-[10px] text-muted-theme mt-0.5">Isi semua form, lalu jeda di tombol kirim agar Anda bisa cek ulang.</div>
+                            </div>
+                            {config.autoApplyMode === 'review' && <Check className="w-4 h-4 text-blue-500 shrink-0 ml-2" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
 

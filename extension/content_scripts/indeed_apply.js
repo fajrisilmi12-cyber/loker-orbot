@@ -327,6 +327,17 @@
       }
 
       if (submitBtn) {
+        if (userConfig.autoApplyMode === 'review') {
+          chrome.runtime.sendMessage({
+            action: 'TASK_PROGRESS',
+            message: '🔔 [Copilot] Formulir terisi lengkap! Silakan tinjau dan klik Kirim Lamaran.'
+          }).catch(() => {});
+          if (typeof window.cvBlasterFloatToast === 'function') {
+            window.cvBlasterFloatToast('Formulir siap! Silakan tinjau dan klik Kirim.', 'info');
+          }
+          return { success: true, status: 'Ready for Review (Copilot Mode)' };
+        }
+
         chrome.runtime.sendMessage({
           action: 'TASK_PROGRESS',
           message: 'Mengklik tombol Kirim Lamaran...'
@@ -367,6 +378,24 @@
           success: false,
           error: 'Lowongan ini mengarah ke situs eksternal perusahaan (Bukan Indeed Easy Apply).'
         };
+      }
+
+      // 0. Check Company Blacklist & Negative Keywords
+      if (userConfig.blacklistedCompanies && jobDetails.company) {
+        const blacklist = userConfig.blacklistedCompanies.split(/[,;\n]+/).map(c => c.trim().toLowerCase()).filter(c => c.length >= 2);
+        const comp = jobDetails.company.toLowerCase();
+        if (blacklist.some(b => comp.includes(b) || b.includes(comp))) {
+          return { success: false, error: `Perusahaan "${jobDetails.company}" masuk daftar blacklist.` };
+        }
+      }
+
+      if (userConfig.negativeKeywords) {
+        const negKeywords = userConfig.negativeKeywords.split(/[,;\n]+/).map(k => k.trim().toLowerCase()).filter(k => k.length >= 2);
+        const fullText = `${(jobDetails.title || '').toLowerCase()} ${(jobDetails.company || '').toLowerCase()}`;
+        const matched = negKeywords.find(k => fullText.includes(k));
+        if (matched) {
+          return { success: false, error: `Loker mengandung kata terlarang: "${matched}".` };
+        }
       }
 
       chrome.runtime.sendMessage({

@@ -346,21 +346,22 @@ export async function runGlintsBot(
               }
             }
 
-            // Enterprise Filter: Job Match & Dealbreaker Check
-            if (config.enableJobMatchFilter) {
+            // Enterprise Filter: Job Match, Negative Keywords & Blacklist Check
+            if (config.enableJobMatchFilter || config.negativeKeywords || config.blacklistedCompanies) {
               const matchResult = evaluateJobMatch({
                 jobTitle: activeJobTitle,
                 company: activeCompanyName,
                 targetKeywords: config.searchKeywords || '',
                 negativeKeywords: config.negativeKeywords || '',
-                minScoreThreshold: config.minMatchScore || 60,
+                blacklistedCompanies: config.blacklistedCompanies || '',
+                minScoreThreshold: config.enableJobMatchFilter ? (config.minMatchScore || 60) : 0,
                 candidateSkills: config.skills || ''
               });
 
               if (!matchResult.shouldApply) {
                 workerLog(`🛡️ [Job Filter] Melewati loker: ${matchResult.reason}`);
                 continue;
-              } else {
+              } else if (config.enableJobMatchFilter) {
                 workerLog(`🎯 [Job Filter] Lolos seleksi kecocokan (Skor: ${matchResult.score}%). Melanjutkan...`);
               }
             }
