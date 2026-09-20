@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     // Launch Google Chrome (with automatic Chromium fallback) in headful mode
     try {
-      const { browser } = await launchBrowserWithFallback(
+      const { browser, browserType } = await launchBrowserWithFallback(
         'headful', 
         (msg: string) => console.log(`[SetupLogin] ${msg}`),
         profileFolderOverride
@@ -61,11 +61,27 @@ export async function POST(request: Request) {
       await applyStealthToPage(page4);
       page4.goto('https://id.indeed.com', { waitUntil: 'domcontentloaded' }).catch(() => {});
 
+      // Bring tab 1 to front to ensure Chrome window focuses on the user's screen
+      await page1.bringToFront().catch(() => {});
+
+      if (process.platform === 'win32') {
+        try {
+          const { exec } = require('child_process');
+          const ps = `(New-Object -ComObject WScript.Shell).AppActivate('Google Chrome')`;
+          const encoded = Buffer.from(ps, 'utf16le').toString('base64');
+          exec(`powershell -NoProfile -NonInteractive -EncodedCommand ${encoded}`, () => {});
+        } catch {}
+      }
+
       browser.on('disconnected', () => {
         global.activeSetupBrowser = null;
       });
 
-      return NextResponse.json({ success: true, message: 'Browser launched successfully.' });
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Browser launched successfully.',
+        browserType
+      });
     } catch (error: any) {
       console.error('Error running setup browser:', error);
       global.activeSetupBrowser = null;

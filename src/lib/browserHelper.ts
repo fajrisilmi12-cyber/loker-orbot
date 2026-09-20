@@ -18,16 +18,12 @@ export function cleanupStaleProfileLocks(profilePath: string) {
   // 1. On Windows, if Chrome crashed or was left orphan, terminate orphan processes holding the folder
   if (process.platform === 'win32') {
     try {
-      // Find and kill processes matching this automation profile directory using PowerShell
       const safeDir = profilePath.replace(/'/g, "''");
-      const psCommand = `powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_Process -Filter \\"name = 'chrome.exe' or name = 'chromium.exe'\\" | Where-Object { $_.CommandLine -like '*${safeDir}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"`;
-      execSync(psCommand, { stdio: 'ignore', timeout: 4000 });
+      const psScript = `Get-CimInstance Win32_Process -Filter "Name = 'chrome.exe' or Name = 'chromium.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*${safeDir}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`;
+      const encoded = Buffer.from(psScript, 'utf16le').toString('base64');
+      execSync(`powershell -NoProfile -NonInteractive -EncodedCommand ${encoded}`, { stdio: 'ignore', timeout: 3000 });
     } catch {
-      try {
-        const normalizedPath = profilePath.replace(/\\/g, '\\\\');
-        const cmd = `wmic process where "(name='chrome.exe' or name='chromium.exe') and commandline like '%${normalizedPath}%'" call terminate`;
-        execSync(cmd, { stdio: 'ignore', timeout: 3000 });
-      } catch {}
+      // Non-blocking fallback
     }
   }
 
@@ -97,8 +93,19 @@ export async function launchBrowserWithFallback(
     '--no-first-run',
     '--disable-infobars',
     '--disable-blink-features=AutomationControlled',
-    '--window-size=1280,800',
   ];
+
+  if (!isHeadless) {
+    // Headful mode flags to ensure a visible, focused window on the primary screen
+    baseArgs.push(
+      '--new-window',
+      '--start-maximized',
+      '--window-position=50,50',
+      '--window-size=1280,900'
+    );
+  } else {
+    baseArgs.push('--window-size=1280,800');
+  }
 
   // Sandbox flags khusus Linux jika dijalankan di container/server Linux
   if (process.platform === 'linux') {
