@@ -1671,12 +1671,12 @@ export default function Home() {
       <aside className="w-full md:w-64 h-full sidebar-theme border-r p-5 flex flex-col justify-between shrink-0 transition-colors overflow-y-auto">
         <div className="space-y-6">
           {/* Brand Header */}
-          <div className="px-1 py-1.5 flex items-center">
+          <div className="px-1 py-1 flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo.png"
               alt="Lempar Jaring"
-              className="h-11 sm:h-12 w-auto max-w-[210px] object-contain drop-shadow-sm select-none transition-all"
+              className="h-9 sm:h-10 w-auto max-w-[200px] object-contain select-none transition-all drop-shadow-sm"
             />
           </div>
 
