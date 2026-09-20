@@ -52,7 +52,8 @@ import {
   Info,
   Lightbulb,
   Search,
-  Copy
+  Copy,
+  Target
 } from 'lucide-react';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import BatchQuestionModal from '@/components/BatchQuestionModal';
@@ -529,25 +530,25 @@ export default function Home() {
     );
 
     // Step 1 Detailed Field Progress (15 fields total)
-    const step1FieldChecks = [
-      Boolean(config.fullName?.trim()),
-      Boolean(config.phoneNumber?.trim()),
-      Boolean((config as any).email?.trim()),
-      Boolean((config as any).gender),
-      Boolean((config as any).maritalStatus),
-      Boolean((config as any).dateOfBirth?.trim()),
-      Boolean((config as any).postalCode?.trim()),
-      Boolean(config.expectedSalary && Number(config.expectedSalary) > 0),
-      Boolean(config.yearsOfExperience !== undefined && config.yearsOfExperience !== null && Number(config.yearsOfExperience) >= 0),
-      Boolean(config.educationLevel?.trim()),
-      Boolean(config.domicile?.trim()),
-      Boolean(config.portfolioUrl?.trim()),
-      Boolean(config.linkedinUrl?.trim()),
-      Boolean(config.skills?.trim()),
-      Boolean(config.cvFileName?.trim()),
+    const step1Fields = [
+      { id: 'field-profile-fullname', label: 'Nama Lengkap', isFilled: Boolean(config.fullName?.trim()) },
+      { id: 'field-profile-phone', label: 'Nomor Telepon / WhatsApp', isFilled: Boolean(config.phoneNumber?.trim()) },
+      { id: 'field-profile-email', label: 'Email Pelamar', isFilled: Boolean((config as any).email?.trim()) },
+      { id: 'field-profile-gender', label: 'Jenis Kelamin', isFilled: Boolean((config as any).gender) },
+      { id: 'field-profile-marital', label: 'Status Pernikahan', isFilled: Boolean((config as any).maritalStatus) },
+      { id: 'field-profile-dob', label: 'Tanggal Lahir', isFilled: Boolean((config as any).dateOfBirth?.trim()) },
+      { id: 'field-profile-postal', label: 'Kode Pos Domisili', isFilled: Boolean((config as any).postalCode?.trim()) },
+      { id: 'field-profile-salary', label: 'Gaji Bulanan yang Diharapkan', isFilled: Boolean(config.expectedSalary && Number(config.expectedSalary) > 0) },
+      { id: 'field-profile-experience', label: 'Pengalaman Kerja', isFilled: Boolean(config.yearsOfExperience !== undefined && config.yearsOfExperience !== null && Number(config.yearsOfExperience) >= 0) },
+      { id: 'field-profile-education', label: 'Pendidikan Terakhir', isFilled: Boolean(config.educationLevel?.trim()) },
+      { id: 'field-profile-domicile', label: 'Domisili / Kota', isFilled: Boolean(config.domicile?.trim()) },
+      { id: 'field-profile-portfolio', label: 'Link Portofolio', isFilled: Boolean(config.portfolioUrl?.trim()) },
+      { id: 'field-profile-linkedin', label: 'Link LinkedIn', isFilled: Boolean(config.linkedinUrl?.trim()) },
+      { id: 'field-profile-skills', label: 'Daftar Keahlian & Skills', isFilled: Boolean(config.skills?.trim()) },
+      { id: 'tour-cv-upload', label: 'Dokumen CV Pelamar', isFilled: Boolean(config.cvFileName?.trim()) },
     ];
-    const step1Filled = step1FieldChecks.filter(Boolean).length;
-    const step1Total = step1FieldChecks.length;
+    const step1Filled = step1Fields.filter(f => f.isFilled).length;
+    const step1Total = step1Fields.length;
     const step1Percent = Math.round((step1Filled / step1Total) * 100);
 
     // Step 2: Kriteria Target (Kata Kunci + Minimal 1 Platform)
@@ -556,18 +557,18 @@ export default function Home() {
     const step2Complete = hasKeywords && hasPlatform;
 
     // Step 2 Detailed Criteria Progress (8 items total)
-    const step2FieldChecks = [
-      hasPlatform,
-      hasKeywords,
-      Boolean(config.location?.trim()),
-      Boolean(config.minSalary?.trim()),
-      Boolean(config.limitPerDay && config.limitPerDay > 0),
-      Boolean(config.autoApplyMode),
-      Boolean((config.jobType && config.jobType.length > 0) || (config.experienceLevel && config.experienceLevel.length > 0) || (config.workMode && config.workMode.length > 0)),
-      Boolean(config.blacklistedCompanies?.trim() || config.negativeKeywords?.trim()),
+    const step2Fields = [
+      { id: 'tour-criteria-platform', label: 'Platform Loker Aktif', isFilled: hasPlatform },
+      { id: 'field-criteria-keywords', label: 'Kata Kunci Lowongan', isFilled: hasKeywords },
+      { id: 'field-criteria-location', label: 'Lokasi Kerja', isFilled: Boolean(config.location?.trim()) },
+      { id: 'field-criteria-salary', label: 'Filter Gaji Minimal', isFilled: Boolean(config.minSalary?.trim()) },
+      { id: 'field-criteria-limit', label: 'Batasan Kuota Harian', isFilled: Boolean(config.limitPerDay && config.limitPerDay > 0) },
+      { id: 'field-criteria-autoapplymode', label: 'Mode Eksekusi Lamaran', isFilled: Boolean(config.autoApplyMode) },
+      { id: 'tour-smart-features', label: 'Surat Motivasi & Ketik Alami', isFilled: Boolean(config.enableHumanStealth !== undefined || config.enableCoverLetterGen !== undefined) },
+      { id: 'field-criteria-blacklist', label: 'Penyaringan & Blacklist Loker', isFilled: Boolean(config.blacklistedCompanies?.trim() || config.negativeKeywords?.trim()) },
     ];
-    const step2Filled = step2FieldChecks.filter(Boolean).length;
-    const step2Total = step2FieldChecks.length;
+    const step2Filled = step2Fields.filter(f => f.isFilled).length;
+    const step2Total = step2Fields.length;
     const step2Percent = Math.round((step2Filled / step2Total) * 100);
 
     // Step 3: Mesin Siap (Storage Ready + AI Config Ready)
@@ -585,14 +586,14 @@ export default function Home() {
     const step3Complete = hasStorage && hasAi;
 
     // Step 3 Detailed Engine Progress (4 modules total)
-    const step3FieldChecks = [
-      hasAi,
-      hasStorage,
-      Boolean(config.activeBrowserAccountId),
-      Boolean(config.enableHumanStealth !== undefined || config.enableCoverLetterGen !== undefined),
+    const step3Fields = [
+      { id: 'field-step3-browser', label: 'Pilihan Mesin Browser', isFilled: Boolean(config.useSystemChrome !== undefined) },
+      { id: 'field-step3-storage', label: 'Media Penyimpanan Riwayat', isFilled: hasStorage },
+      { id: 'field-step3-ai', label: 'Endpoint & Model AI', isFilled: hasAi },
+      { id: 'tour-cookie-sync', label: 'Sesi & Akun Job Portal', isFilled: Boolean(config.activeBrowserAccountId || (config.browserAccounts && config.browserAccounts.length > 0)) },
     ];
-    const step3Filled = step3FieldChecks.filter(Boolean).length;
-    const step3Total = step3FieldChecks.length;
+    const step3Filled = step3Fields.filter(f => f.isFilled).length;
+    const step3Total = step3Fields.length;
     const step3Percent = Math.round((step3Filled / step3Total) * 100);
 
     if (step1Complete) completedSteps++;
@@ -607,14 +608,17 @@ export default function Home() {
       step1Filled,
       step1Total,
       step1Percent,
+      step1Fields,
       step2Complete,
       step2Filled,
       step2Total,
       step2Percent,
+      step2Fields,
       step3Complete,
       step3Filled,
       step3Total,
       step3Percent,
+      step3Fields,
       completedSteps,
       percent,
       isReady100,
@@ -624,6 +628,62 @@ export default function Home() {
       hasKeywords,
     };
   }, [config]);
+
+  // Lompat dan highlight border otomatis ke input yang belum terisi pada langkah tertentu
+  const handleJumpToUnfilledField = useCallback((stepNum: 1 | 2 | 3) => {
+    setWizardStep(stepNum);
+
+    const fields = stepNum === 1
+      ? readinessMetrics.step1Fields
+      : stepNum === 2
+      ? readinessMetrics.step2Fields
+      : readinessMetrics.step3Fields;
+
+    const firstUnfilled = fields.find(f => !f.isFilled);
+
+    if (!firstUnfilled) {
+      toast.success(`Semua input pada Langkah ${stepNum} sudah lengkap! 🎉`, {
+        description: 'Semua kolom yang dibutuhkan telah terisi.',
+      });
+      return;
+    }
+
+    toast.info(`Mengarahkan ke: ${firstUnfilled.label}`, {
+      description: 'Kolom ini belum terisi. Lengkapi untuk menyempurnakan kesiapan.',
+      icon: '🎯',
+    });
+
+    setTimeout(() => {
+      const el = document.getElementById(firstUnfilled.id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        const highlightClasses = [
+          'ring-4',
+          'ring-orange-500',
+          'border-orange-500',
+          'bg-orange-500/10',
+          'shadow-xl',
+          'shadow-orange-500/25',
+          'transition-all',
+          'duration-500',
+          'rounded-2xl',
+        ];
+        el.classList.add(...highlightClasses);
+
+        const inputEl = el.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+          'input:not([type="hidden"]), select, textarea'
+        );
+        if (inputEl) {
+          inputEl.focus({ preventScroll: true });
+        }
+
+        setTimeout(() => {
+          el.classList.remove(...highlightClasses);
+        }, 2800);
+      }
+    }, 120);
+  }, [readinessMetrics]);
 
   // Auto scroll logs
   useEffect(() => {
@@ -2233,14 +2293,30 @@ export default function Home() {
                         <div className="text-[11px] text-muted-theme truncate">Profil Pelamar &amp; Skills</div>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 font-mono ${
-                      readinessMetrics.step1Percent === 100
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                        : readinessMetrics.step1Complete
-                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                        : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
-                    }`}>
-                      {readinessMetrics.step1Filled}/{readinessMetrics.step1Total} ({readinessMetrics.step1Percent}%)
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleJumpToUnfilledField(1);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          handleJumpToUnfilledField(1);
+                        }
+                      }}
+                      title="Klik untuk loncat dan tandai input yang belum terisi di Langkah 1"
+                      className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border shrink-0 font-mono flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow ${
+                        readinessMetrics.step1Percent === 100
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:border-emerald-500/60'
+                          : readinessMetrics.step1Complete
+                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:border-blue-500/50'
+                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme hover:border-orange-500/50 hover:text-orange-500'
+                      }`}
+                    >
+                      <span>{readinessMetrics.step1Filled}/{readinessMetrics.step1Total} ({readinessMetrics.step1Percent}%)</span>
+                      <Target className="w-3 h-3 opacity-70 hover:opacity-100" />
                     </span>
                   </div>
 
@@ -2279,14 +2355,30 @@ export default function Home() {
                         <div className="text-[11px] text-muted-theme truncate">Kriteria &amp; Platform</div>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 font-mono ${
-                      readinessMetrics.step2Percent === 100
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                        : readinessMetrics.step2Complete
-                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                        : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
-                    }`}>
-                      {readinessMetrics.step2Filled}/{readinessMetrics.step2Total} ({readinessMetrics.step2Percent}%)
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleJumpToUnfilledField(2);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          handleJumpToUnfilledField(2);
+                        }
+                      }}
+                      title="Klik untuk loncat dan tandai input yang belum terisi di Langkah 2"
+                      className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border shrink-0 font-mono flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow ${
+                        readinessMetrics.step2Percent === 100
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:border-emerald-500/60'
+                          : readinessMetrics.step2Complete
+                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:border-blue-500/50'
+                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme hover:border-orange-500/50 hover:text-orange-500'
+                      }`}
+                    >
+                      <span>{readinessMetrics.step2Filled}/{readinessMetrics.step2Total} ({readinessMetrics.step2Percent}%)</span>
+                      <Target className="w-3 h-3 opacity-70 hover:opacity-100" />
                     </span>
                   </div>
 
@@ -2325,14 +2417,30 @@ export default function Home() {
                         <div className="text-[11px] text-muted-theme truncate">Browser, AI &amp; Storage</div>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 font-mono ${
-                      readinessMetrics.step3Percent === 100
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                        : readinessMetrics.step3Complete
-                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                        : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
-                    }`}>
-                      {readinessMetrics.step3Filled}/{readinessMetrics.step3Total} ({readinessMetrics.step3Percent}%)
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleJumpToUnfilledField(3);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          handleJumpToUnfilledField(3);
+                        }
+                      }}
+                      title="Klik untuk loncat dan tandai input yang belum terisi di Langkah 3"
+                      className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border shrink-0 font-mono flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow ${
+                        readinessMetrics.step3Percent === 100
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:border-emerald-500/60'
+                          : readinessMetrics.step3Complete
+                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:border-blue-500/50'
+                          : 'bg-slate-500/10 text-muted-theme border-subtle-theme hover:border-orange-500/50 hover:text-orange-500'
+                      }`}
+                    >
+                      <span>{readinessMetrics.step3Filled}/{readinessMetrics.step3Total} ({readinessMetrics.step3Percent}%)</span>
+                      <Target className="w-3 h-3 opacity-70 hover:opacity-100" />
                     </span>
                   </div>
 
@@ -2550,7 +2658,7 @@ export default function Home() {
 
                     <div id="tour-profile-fields" className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Nama Lengkap */}
-                      <div className={`p-2 rounded-xl transition-all ${
+                      <div id="field-profile-fullname" className={`p-2 rounded-xl transition-all ${
                         updatedCvFields.includes('fullName')
                           ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
                           : unchangedCvFields.includes('fullName')
@@ -2581,7 +2689,7 @@ export default function Home() {
                       </div>
 
                       {/* Nomor Telepon / WhatsApp */}
-                      <div className={`p-2 rounded-xl transition-all ${
+                      <div id="field-profile-phone" className={`p-2 rounded-xl transition-all ${
                         updatedCvFields.includes('phoneNumber')
                           ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
                           : unchangedCvFields.includes('phoneNumber')
@@ -2612,7 +2720,7 @@ export default function Home() {
                       </div>
 
                       {/* Email Pelamar */}
-                      <div className="p-2 rounded-xl">
+                      <div id="field-profile-email" className="p-2 rounded-xl transition-all">
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="block text-xs font-medium text-main-theme">Email Pelamar</label>
                           <span className="text-[10px] text-muted-theme bg-slate-500/10 px-1.5 py-0.5 rounded border border-subtle-theme">Opsional</span>
@@ -2629,7 +2737,7 @@ export default function Home() {
 
                       {/* Gender & Status Pernikahan — side by side */}
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="p-2 rounded-xl">
+                        <div id="field-profile-gender" className="p-2 rounded-xl transition-all">
                           <label className="block text-xs font-medium text-main-theme mb-1.5">Jenis Kelamin</label>
                           <select
                             value={(config as any).gender || 'Laki-laki'}
@@ -2640,7 +2748,7 @@ export default function Home() {
                             <option value="Perempuan">Perempuan</option>
                           </select>
                         </div>
-                        <div className="p-2 rounded-xl">
+                        <div id="field-profile-marital" className="p-2 rounded-xl transition-all">
                           <label className="block text-xs font-medium text-main-theme mb-1.5">Status Pernikahan</label>
                           <select
                             value={(config as any).maritalStatus || 'Single'}
@@ -2655,7 +2763,7 @@ export default function Home() {
 
                       {/* Tanggal Lahir & Kode Pos — side by side */}
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="p-2 rounded-xl">
+                        <div id="field-profile-dob" className="p-2 rounded-xl transition-all">
                           <label className="block text-xs font-medium text-main-theme mb-1.5">Tanggal Lahir</label>
                           <input
                             type="date"
@@ -2665,7 +2773,7 @@ export default function Home() {
                           />
                           <p className="text-[10px] text-muted-theme mt-1">Untuk pertanyaan umur/DOB</p>
                         </div>
-                        <div className="p-2 rounded-xl">
+                        <div id="field-profile-postal" className="p-2 rounded-xl transition-all">
                           <label className="block text-xs font-medium text-main-theme mb-1.5">Kode Pos Domisili</label>
                           <input
                             type="text"
@@ -2680,7 +2788,7 @@ export default function Home() {
                       </div>
 
                       {/* Gaji Bulanan */}
-                      <div className={`p-2 rounded-xl transition-all ${
+                      <div id="field-profile-salary" className={`p-2 rounded-xl transition-all ${
                         updatedCvFields.includes('expectedSalary')
                           ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
                           : unchangedCvFields.includes('expectedSalary')
@@ -2710,7 +2818,7 @@ export default function Home() {
                       </div>
 
                       {/* Pengalaman Kerja */}
-                      <div className={`p-2 rounded-xl transition-all ${
+                      <div id="field-profile-experience" className={`p-2 rounded-xl transition-all ${
                         updatedCvFields.includes('yearsOfExperience')
                           ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
                           : unchangedCvFields.includes('yearsOfExperience')
@@ -2739,7 +2847,7 @@ export default function Home() {
                       </div>
 
                       {/* Pendidikan Terakhir */}
-                      <div className={`p-2 rounded-xl transition-all ${
+                      <div id="field-profile-education" className={`p-2 rounded-xl transition-all ${
                         updatedCvFields.includes('educationLevel')
                           ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
                           : unchangedCvFields.includes('educationLevel')
@@ -2837,7 +2945,7 @@ export default function Home() {
                       </div>
 
                       {/* Domisili / Kota */}
-                      <div className={`p-2 rounded-xl transition-all ${
+                      <div id="field-profile-domicile" className={`p-2 rounded-xl transition-all ${
                         updatedCvFields.includes('domicile')
                           ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
                           : unchangedCvFields.includes('domicile')
@@ -2897,7 +3005,7 @@ export default function Home() {
                       </div>
 
                       {/* Link Portofolio */}
-                      <div className={`p-2 rounded-xl transition-all ${
+                      <div id="field-profile-portfolio" className={`p-2 rounded-xl transition-all ${
                         updatedCvFields.includes('portfolioUrl')
                           ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
                           : unchangedCvFields.includes('portfolioUrl')
@@ -2927,7 +3035,7 @@ export default function Home() {
                       </div>
 
                       {/* Link LinkedIn */}
-                      <div className={`p-2 rounded-xl transition-all ${
+                      <div id="field-profile-linkedin" className={`p-2 rounded-xl transition-all ${
                         updatedCvFields.includes('linkedinUrl')
                           ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
                           : unchangedCvFields.includes('linkedinUrl')
@@ -2958,7 +3066,7 @@ export default function Home() {
                     </div>
 
                     {/* Daftar Keahlian / Skills */}
-                    <div className={`p-2 rounded-xl transition-all ${
+                    <div id="field-profile-skills" className={`p-2 rounded-xl transition-all ${
                       updatedCvFields.includes('skills')
                         ? 'bg-emerald-500/5 ring-2 ring-emerald-500/40'
                         : unchangedCvFields.includes('skills')
@@ -3178,8 +3286,8 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div id="field-criteria-keywords" className="p-2 rounded-xl transition-all">
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="block text-xs font-medium text-main-theme">Kata Kunci Lowongan</label>
                           <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20">Wajib</span>
@@ -3194,7 +3302,7 @@ export default function Home() {
                         />
                       </div>
 
-                      <div>
+                      <div id="field-criteria-location" className="p-2 rounded-xl transition-all">
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="block text-xs font-medium text-main-theme">Lokasi Kerja</label>
                           <span className="text-[10px] text-muted-theme bg-slate-500/10 px-1.5 py-0.5 rounded border border-subtle-theme">Opsional</span>
@@ -3208,7 +3316,21 @@ export default function Home() {
                         />
                       </div>
 
-                      <div>
+                      <div id="field-criteria-salary" className="p-2 rounded-xl transition-all">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-medium text-main-theme">Filter Gaji Minimal</label>
+                          <span className="text-[10px] text-muted-theme bg-slate-500/10 px-1.5 py-0.5 rounded border border-subtle-theme">Opsional</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={config.minSalary || ''}
+                          onChange={(e) => setConfig({ ...config, minSalary: e.target.value })}
+                          className="w-full input-theme border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-orange-500 transition"
+                          placeholder="Misal: 8000000"
+                        />
+                      </div>
+
+                      <div id="field-criteria-concurrency" className="p-2 rounded-xl transition-all">
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="block text-xs font-medium text-main-theme">Worker Konkuren (Tab)</label>
                           <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20">Wajib</span>
@@ -3225,7 +3347,7 @@ export default function Home() {
                     </div>
 
                     {/* Limit Schema */}
-                    <div className="p-5 rounded-2xl card-subtle-theme border space-y-4">
+                    <div id="field-criteria-limit" className="p-5 rounded-2xl card-subtle-theme border space-y-4 transition-all">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-subtle-theme pb-3">
                         <div>
                           <div className="text-xs font-semibold text-main-theme">Mode Pembagian Batasan Harian</div>
@@ -3383,7 +3505,7 @@ export default function Home() {
                       </div>
 
                       {/* 3. Negative Keywords & Company Blacklist (Always Active & Transparent) */}
-                      <div className="p-4 rounded-xl border border-subtle-theme card-theme space-y-3">
+                      <div id="field-criteria-blacklist" className="p-4 rounded-xl border border-subtle-theme card-theme space-y-3 transition-all">
                         <div>
                           <span className="text-xs font-semibold text-main-theme">Penyaringan &amp; Blacklist Loker</span>
                           <p className="text-[11px] text-muted-theme">
@@ -3453,7 +3575,7 @@ export default function Home() {
                       </div>
 
                       {/* 4. Execution Mode: Full Auto vs Copilot (Review Before Submit) */}
-                      <div className="p-4 rounded-xl border border-subtle-theme card-theme space-y-2">
+                      <div id="field-criteria-autoapplymode" className="p-4 rounded-xl border border-subtle-theme card-theme space-y-2 transition-all">
                         <div>
                           <span className="text-xs font-semibold text-main-theme">Mode Eksekusi Lamaran</span>
                           <p className="text-[11px] text-muted-theme">
@@ -4003,7 +4125,7 @@ export default function Home() {
                     </div>
 
                     {/* Browser Engine Selection */}
-                    <div className="space-y-3">
+                    <div id="field-step3-browser" className="space-y-3 transition-all">
                       <div>
                         <label className="block text-xs font-semibold text-main-theme">Pilihan Mesin Browser Otomatisasi</label>
                         <p className="text-[11px] text-muted-theme mt-0.5">
@@ -4082,7 +4204,7 @@ export default function Home() {
                     </div>
 
                     {/* Storage Type Selection */}
-                    <div className="space-y-3 pt-2 border-t border-subtle-theme">
+                    <div id="field-step3-storage" className="space-y-3 pt-2 border-t border-subtle-theme transition-all">
                       <div>
                         <label className="block text-xs font-semibold text-main-theme">Media Penyimpanan Riwayat Lamaran</label>
                         <p className="text-[11px] text-muted-theme mt-0.5">
@@ -4248,7 +4370,7 @@ export default function Home() {
                     </div>
 
                     {/* AI Gateway & Multi-Provider Settings */}
-                    <div className="space-y-4 pt-4 border-t border-subtle-theme">
+                    <div id="field-step3-ai" className="space-y-4 pt-4 border-t border-subtle-theme transition-all">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
