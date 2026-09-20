@@ -1,6 +1,8 @@
 {
-  "name": "cv-blaster-tmp",
-  "version": "0.1.0",
+  "name": "lemparjaring",
+  "version": "1.0.0",
+  "description": "Bot tebar lamaran kerja otomatis & AI talent scout open-source (Glints, JobStreet, Indeed, LinkedIn)",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev",

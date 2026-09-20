@@ -57,5 +57,26 @@
   "domicile": "Jakarta",
   "address": "Jl. Contoh No. 123, Jakarta",
   "aiProvider": "gemini",
-  "geminiApiKey": ""
+  "geminiApiKey": "",
+  "aiEndpoints": [
+    {
+      "id": "gemini-primary",
+      "name": "Gemini Akun Utama",
+      "type": "gemini",
+      "baseUrl": "",
+      "apiKey": "",
+      "model": "gemini-2.5-flash",
+      "isActive": true
+    }
+  ],
+  "activeAiEndpointId": "gemini-primary",
+  "browserAccounts": [
+    {
+      "id": "default",
+      "name": "Profil Utama",
+      "profileFolder": "automation-profile",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "activeBrowserAccountId": "default"
 }
