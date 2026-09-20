@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# obfuscated build output (commercial dist — do not commit)
+/extension-standalone-dist
+
 # next.js
 /.next/
 /out/

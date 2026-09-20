@@ -512,7 +512,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const profile = request.profile || {};
       chrome.storage.local.set({ candidateProfile: profile }, () => {
         addLog(`[Profile] Profil ${profile.sourcePortal || 'portal'} berhasil disimpan: "${profile.name || 'Pelamar'}"`, 'success');
-      sendResponse({ success: true, profile });
+        sendResponse({ success: true, profile });
+      });
       return true;
     }
 

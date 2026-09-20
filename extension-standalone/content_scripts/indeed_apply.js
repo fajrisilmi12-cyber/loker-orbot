@@ -289,7 +289,7 @@
           for (let i = 1; i < sel.options.length; i++) {
             const opt = sel.options[i];
             const optText = (opt.innerText || opt.value || '').toLowerCase();
-            let selectedOpt: any = null;
+            let selectedOpt = null;
             if (selText.includes('pengalaman') || selText.includes('experience') || selText.includes('tahun')) {
               if (optText.includes('1') || optText.includes('2') || optText.includes('3') || optText.includes('ya') || optText.includes('yes')) {
                 selectedOpt = opt;
