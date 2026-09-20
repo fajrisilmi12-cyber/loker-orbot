@@ -517,7 +517,7 @@ export default function Home() {
   const eventSourceRef = useRef<EventSource | null>(null);
   const logTerminalRef = useRef<HTMLDivElement>(null);
 
-  // Calculate setup completion score (100% Sync with all required system modules)
+  // Calculate setup completion score and granular per-step input progress
   const readinessMetrics = useMemo(() => {
     let completedSteps = 0;
     
@@ -528,10 +528,47 @@ export default function Home() {
       config.phoneNumber?.trim()
     );
 
+    // Step 1 Detailed Field Progress (15 fields total)
+    const step1FieldChecks = [
+      Boolean(config.fullName?.trim()),
+      Boolean(config.phoneNumber?.trim()),
+      Boolean((config as any).email?.trim()),
+      Boolean((config as any).gender),
+      Boolean((config as any).maritalStatus),
+      Boolean((config as any).dateOfBirth?.trim()),
+      Boolean((config as any).postalCode?.trim()),
+      Boolean(config.expectedSalary && Number(config.expectedSalary) > 0),
+      Boolean(config.yearsOfExperience !== undefined && config.yearsOfExperience !== null && Number(config.yearsOfExperience) >= 0),
+      Boolean(config.educationLevel?.trim()),
+      Boolean(config.domicile?.trim()),
+      Boolean(config.portfolioUrl?.trim()),
+      Boolean(config.linkedinUrl?.trim()),
+      Boolean(config.skills?.trim()),
+      Boolean(config.cvFileName?.trim()),
+    ];
+    const step1Filled = step1FieldChecks.filter(Boolean).length;
+    const step1Total = step1FieldChecks.length;
+    const step1Percent = Math.round((step1Filled / step1Total) * 100);
+
     // Step 2: Kriteria Target (Kata Kunci + Minimal 1 Platform)
     const hasPlatform = Boolean(config.enableGlints || config.enableJobstreet || config.enableLinkedin || config.enableIndeed);
     const hasKeywords = Boolean(config.searchKeywords?.trim() || config.indeedNoJobTitleFilter);
     const step2Complete = hasKeywords && hasPlatform;
+
+    // Step 2 Detailed Criteria Progress (8 items total)
+    const step2FieldChecks = [
+      hasPlatform,
+      hasKeywords,
+      Boolean(config.location?.trim()),
+      Boolean(config.minSalary?.trim()),
+      Boolean(config.limitPerDay && config.limitPerDay > 0),
+      Boolean(config.autoApplyMode),
+      Boolean((config.jobType && config.jobType.length > 0) || (config.experienceLevel && config.experienceLevel.length > 0) || (config.workMode && config.workMode.length > 0)),
+      Boolean(config.blacklistedCompanies?.trim() || config.negativeKeywords?.trim()),
+    ];
+    const step2Filled = step2FieldChecks.filter(Boolean).length;
+    const step2Total = step2FieldChecks.length;
+    const step2Percent = Math.round((step2Filled / step2Total) * 100);
 
     // Step 3: Mesin Siap (Storage Ready + AI Config Ready)
     const hasStorage = Boolean(
@@ -547,6 +584,17 @@ export default function Home() {
     );
     const step3Complete = hasStorage && hasAi;
 
+    // Step 3 Detailed Engine Progress (4 modules total)
+    const step3FieldChecks = [
+      hasAi,
+      hasStorage,
+      Boolean(config.activeBrowserAccountId),
+      Boolean(config.enableHumanStealth !== undefined || config.enableCoverLetterGen !== undefined),
+    ];
+    const step3Filled = step3FieldChecks.filter(Boolean).length;
+    const step3Total = step3FieldChecks.length;
+    const step3Percent = Math.round((step3Filled / step3Total) * 100);
+
     if (step1Complete) completedSteps++;
     if (step2Complete) completedSteps++;
     if (step3Complete) completedSteps++;
@@ -556,8 +604,17 @@ export default function Home() {
 
     return {
       step1Complete,
+      step1Filled,
+      step1Total,
+      step1Percent,
       step2Complete,
+      step2Filled,
+      step2Total,
+      step2Percent,
       step3Complete,
+      step3Filled,
+      step3Total,
+      step3Percent,
       completedSteps,
       percent,
       isReady100,
@@ -2161,82 +2218,139 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setWizardStep(1)}
-                  className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between ${
+                  className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 ${
                     wizardStep === 1
-                      ? 'card-subtle-theme border-orange-500 shadow-sm'
+                      ? 'card-subtle-theme border-orange-500 shadow-sm ring-1 ring-orange-500/20'
                       : 'card-theme hover:opacity-90'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center ${
-                        readinessMetrics.step1Complete
-                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
-                          : 'bg-slate-200 dark:bg-[#282E37] text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {readinessMetrics.step1Complete ? <Check className="w-3.5 h-3.5" /> : '1'}
+                  <div className="flex items-center justify-between w-full gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center shrink-0 ${
+                          readinessMetrics.step1Complete
+                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                            : 'bg-slate-200 dark:bg-[#282E37] text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {readinessMetrics.step1Complete ? <Check className="w-3.5 h-3.5" /> : '1'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-main-theme truncate">Langkah 1</div>
+                        <div className="text-[11px] text-muted-theme truncate">Profil Pelamar &amp; Skills</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xs font-semibold text-main-theme">Langkah 1</div>
-                      <div className="text-[11px] text-muted-theme">Profil Pelamar &amp; Skills</div>
-                    </div>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 font-mono ${
+                      readinessMetrics.step1Percent === 100
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        : readinessMetrics.step1Complete
+                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                        : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                    }`}>
+                      {readinessMetrics.step1Filled}/{readinessMetrics.step1Total} ({readinessMetrics.step1Percent}%)
+                    </span>
                   </div>
-                  <ChevronRight className={`w-4 h-4 ${wizardStep === 1 ? 'text-orange-500' : 'text-slate-400'}`} />
+
+                  <div className="w-full bg-slate-200 dark:bg-slate-800/80 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 rounded-full ${
+                        readinessMetrics.step1Percent === 100 ? 'bg-emerald-500' : 'bg-orange-500'
+                      }`}
+                      style={{ width: `${readinessMetrics.step1Percent}%` }}
+                    />
+                  </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setWizardStep(2)}
-                  className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between ${
+                  className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 ${
                     wizardStep === 2
-                      ? 'card-subtle-theme border-orange-500 shadow-sm'
+                      ? 'card-subtle-theme border-orange-500 shadow-sm ring-1 ring-orange-500/20'
                       : 'card-theme hover:opacity-90'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center ${
-                        readinessMetrics.step2Complete
-                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
-                          : 'bg-slate-200 dark:bg-[#282E37] text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {readinessMetrics.step2Complete ? <Check className="w-3.5 h-3.5" /> : '2'}
+                  <div className="flex items-center justify-between w-full gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center shrink-0 ${
+                          readinessMetrics.step2Complete
+                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                            : 'bg-slate-200 dark:bg-[#282E37] text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {readinessMetrics.step2Complete ? <Check className="w-3.5 h-3.5" /> : '2'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-main-theme truncate">Langkah 2</div>
+                        <div className="text-[11px] text-muted-theme truncate">Kriteria &amp; Platform</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xs font-semibold text-main-theme">Langkah 2</div>
-                      <div className="text-[11px] text-muted-theme">Kriteria &amp; Platform</div>
-                    </div>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 font-mono ${
+                      readinessMetrics.step2Percent === 100
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        : readinessMetrics.step2Complete
+                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                        : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                    }`}>
+                      {readinessMetrics.step2Filled}/{readinessMetrics.step2Total} ({readinessMetrics.step2Percent}%)
+                    </span>
                   </div>
-                  <ChevronRight className={`w-4 h-4 ${wizardStep === 2 ? 'text-orange-500' : 'text-slate-400'}`} />
+
+                  <div className="w-full bg-slate-200 dark:bg-slate-800/80 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 rounded-full ${
+                        readinessMetrics.step2Percent === 100 ? 'bg-emerald-500' : 'bg-orange-500'
+                      }`}
+                      style={{ width: `${readinessMetrics.step2Percent}%` }}
+                    />
+                  </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setWizardStep(3)}
-                  className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between ${
+                  className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 ${
                     wizardStep === 3
-                      ? 'card-subtle-theme border-orange-500 shadow-sm'
+                      ? 'card-subtle-theme border-orange-500 shadow-sm ring-1 ring-orange-500/20'
                       : 'card-theme hover:opacity-90'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center ${
-                        readinessMetrics.step3Complete
-                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
-                          : 'bg-slate-200 dark:bg-[#282E37] text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {readinessMetrics.step3Complete ? <Check className="w-3.5 h-3.5" /> : '3'}
+                  <div className="flex items-center justify-between w-full gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center shrink-0 ${
+                          readinessMetrics.step3Complete
+                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                            : 'bg-slate-200 dark:bg-[#282E37] text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {readinessMetrics.step3Complete ? <Check className="w-3.5 h-3.5" /> : '3'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-main-theme truncate">Langkah 3</div>
+                        <div className="text-[11px] text-muted-theme truncate">Browser, AI &amp; Storage</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xs font-semibold text-main-theme">Langkah 3</div>
-                      <div className="text-[11px] text-muted-theme">Browser, AI &amp; Storage</div>
-                    </div>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 font-mono ${
+                      readinessMetrics.step3Percent === 100
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        : readinessMetrics.step3Complete
+                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                        : 'bg-slate-500/10 text-muted-theme border-subtle-theme'
+                    }`}>
+                      {readinessMetrics.step3Filled}/{readinessMetrics.step3Total} ({readinessMetrics.step3Percent}%)
+                    </span>
                   </div>
-                  <ChevronRight className={`w-4 h-4 ${wizardStep === 3 ? 'text-orange-500' : 'text-slate-400'}`} />
+
+                  <div className="w-full bg-slate-200 dark:bg-slate-800/80 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 rounded-full ${
+                        readinessMetrics.step3Percent === 100 ? 'bg-emerald-500' : 'bg-orange-500'
+                      }`}
+                      style={{ width: `${readinessMetrics.step3Percent}%` }}
+                    />
+                  </div>
                 </button>
               </div>
 
