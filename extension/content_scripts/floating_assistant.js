@@ -10,22 +10,131 @@
   const path = window.location.pathname;
   const href = window.location.href;
 
-  // Context detection
+  // Context detection across 4 portals
   let mode = null;
+  let detectedPortal = 'general';
+
   if (host.includes('linkedin.com')) {
-    if (path.startsWith('/in/')) mode = 'linkedin_profile';
-    else if (path.includes('/search/results/people')) mode = 'linkedin_search';
+    detectedPortal = 'linkedin';
+    if (path.includes('/in/me') || path === '/in/me/' || path === '/in/me') {
+      mode = 'my_profile';
+    } else if (path.startsWith('/in/')) {
+      mode = 'linkedin_profile';
+    } else if (path.includes('/search/results/people')) {
+      mode = 'linkedin_search';
+    } else if (path.includes('/jobs/view') || path.includes('/jobs/collections')) {
+      mode = 'job_view';
+    } else {
+      mode = 'general';
+    }
   } else if (host.includes('indeed.com')) {
-    if (href.includes('/viewjob') || href.includes('/rc/clk') || href.includes('/m/viewjob') || href.includes('vjk=')) {
+    detectedPortal = 'indeed';
+    if (host.startsWith('profile.indeed') || host.startsWith('my.indeed') || path.includes('/resume')) {
+      mode = 'my_profile';
+    } else if (href.includes('/viewjob') || href.includes('/rc/clk') || href.includes('/m/viewjob') || href.includes('vjk=')) {
       mode = 'indeed_job';
     } else {
       mode = 'indeed_search';
     }
-  } else if (host.includes('jobstreet.co') || host.includes('jobstreet.com') || host.includes('glints.com')) {
-    mode = 'general';
+  } else if (host.includes('jobstreet.co') || host.includes('jobstreet.com')) {
+    detectedPortal = 'jobstreet';
+    if (path.includes('/candidate/profile') || path.includes('/profile')) {
+      mode = 'my_profile';
+    } else if (path.includes('/job/')) {
+      mode = 'job_view';
+    } else {
+      mode = 'general';
+    }
+  } else if (host.includes('glints.com')) {
+    detectedPortal = 'glints';
+    if (path.includes('/profile')) {
+      mode = 'my_profile';
+    } else if (path.includes('/opportunities/jobs/')) {
+      mode = 'job_view';
+    } else {
+      mode = 'general';
+    }
   }
 
   if (!mode) return;
+
+  // Human Typing Simulation with keystroke jitter (40-90ms)
+  window.cvBlasterTypeHumanly = async function (element, text) {
+    if (!element || typeof text !== 'string') return;
+    element.focus();
+    element.value = '';
+    for (let i = 0; i < text.length; i++) {
+      element.value += text[i];
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      const delay = 40 + Math.floor(Math.random() * 50);
+      await new Promise(r => setTimeout(r, delay));
+    }
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    element.blur();
+  };
+
+  // Universal In-Tab Profile Scraper (0.1s instant extraction)
+  function extractActiveTabProfile(portal) {
+    const bodyText = document.body ? document.body.innerText || '' : '';
+    const phoneMatch = bodyText.match(/\+62\s*[\d\s-]+|\b08\d{8,11}\b/);
+    const emailMatch = bodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    const eduMatch = bodyText.match(/\b(S1|S2|S3|D3|D4|SMA|SMK|Sarjana|Bachelor|Master)\b/i);
+
+    let profile = {
+      sourcePortal: portal,
+      phone: phoneMatch ? phoneMatch[0].trim() : '',
+      email: emailMatch ? emailMatch[0].trim() : '',
+      education: eduMatch ? eduMatch[0] : '',
+      name: '',
+      location: '',
+      skills: '',
+      headline: '',
+      aboutMe: '',
+      hasResume: false,
+      resumeName: ''
+    };
+
+    if (portal === 'glints') {
+      const nameEl = document.querySelector('h1, h2, [class*="ProfileHeader"] h2, [class*="UserName"]');
+      profile.name = nameEl ? nameEl.textContent?.trim().replace(/\s+/g, ' ') : '';
+      const locEl = document.querySelector('[class*="Location"], [class*="lokasi"]');
+      const locationMatch = bodyText.match(/(?:Kab\.|Kota|Kabupaten)\s+[A-Za-z\s,]+/i);
+      profile.location = locEl ? locEl.textContent?.trim() : (locationMatch ? locationMatch[0].trim() : '');
+      const resumeTag = Array.from(document.querySelectorAll('*')).find(el => /\.pdf|\.docx/i.test(el.textContent || ''));
+      profile.hasResume = !!resumeTag || bodyText.includes('.pdf');
+      profile.resumeName = resumeTag ? resumeTag.textContent?.trim() : (profile.hasResume ? 'CV Terpasang di Glints' : '');
+    } else if (portal === 'indeed') {
+      const nameEl = document.querySelector('h1, [data-testid="contact-info-name"], [class*="ProfileName"]');
+      profile.name = nameEl ? nameEl.textContent?.trim() : '';
+      const resumeTag = Array.from(document.querySelectorAll('*')).find(el => /\.pdf|\.docx/i.test(el.textContent || ''));
+      profile.hasResume = !!resumeTag || bodyText.includes('.pdf');
+      profile.resumeName = resumeTag ? resumeTag.textContent?.trim() : (profile.hasResume ? 'CV Terpasang di Indeed' : '');
+    } else if (portal === 'jobstreet') {
+      const nameEl = document.querySelector('[data-automation="profile-name"], h1, h2');
+      profile.name = nameEl ? nameEl.textContent?.trim() : '';
+      const resumeEl = document.querySelector('[data-automation="profile-resume"], [data-automation*="resume"]');
+      profile.hasResume = !!resumeEl || bodyText.includes('.pdf');
+      profile.resumeName = profile.hasResume ? 'CV Terpasang di JobStreet' : '';
+    } else if (portal === 'linkedin') {
+      const nameEl = document.querySelector('h1, .text-heading-xlarge');
+      profile.name = nameEl ? nameEl.textContent?.trim() : '';
+      const headlineEl = document.querySelector('.text-body-medium, [data-generated-suggestion-target]');
+      profile.headline = headlineEl ? headlineEl.textContent?.trim() : '';
+      const locationEl = document.querySelector('.text-body-small.inline.t-black--light.break-words');
+      profile.location = locationEl ? locationEl.textContent?.trim() : '';
+      const aboutSection = document.querySelector('section#about, [data-view-name="profile-card"]:has(#about)');
+      profile.aboutMe = aboutSection ? aboutSection.textContent?.replace(/About|Tentang/i, '').trim().slice(0, 500) : '';
+    }
+
+    if (!profile.name) {
+      const titleMatch = document.title.split(/[-–|•]/)[0]?.trim();
+      if (titleMatch && titleMatch.length > 2 && !titleMatch.toLowerCase().includes('profile') && !titleMatch.toLowerCase().includes('login')) {
+        profile.name = titleMatch;
+      }
+    }
+
+    return profile;
+  }
 
   // Shared Toast Notification
   function createToast(container) {
@@ -134,7 +243,82 @@
   const floatToast = createToast(root);
 
   // Configure Pill Content Based on Context
-  if (mode === 'linkedin_profile') {
+  if (mode === 'my_profile') {
+    const portalName = (detectedPortal || 'Portal').toUpperCase();
+    titleEl.innerText = 'Profil Pelamar';
+    subEl.innerText = `${portalName} • Ekstraksi Instan`;
+    actionBtn.innerHTML = `
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>Tarik Profil Ini</span>
+    `;
+
+    actionBtn.addEventListener('click', () => {
+      actionBtn.disabled = true;
+      actionBtn.innerHTML = '<span>Mengekstrak...</span>';
+
+      try {
+        const profile = extractActiveTabProfile(detectedPortal);
+        if (!profile.name && !profile.email && !profile.phone) {
+          throw new Error('Data profil belum termuat sempurna. Coba scroll halaman sedikit lalu klik lagi.');
+        }
+
+        chrome.runtime.sendMessage({
+          action: 'SAVE_IMPORTED_PROFILE',
+          profile
+        }, (res) => {
+          if (res && res.success) {
+            actionBtn.className = 'cv-blaster-float-action-btn success';
+            actionBtn.innerHTML = '<span>Tersimpan</span>';
+            floatToast(`Profil "${profile.name || 'Pelamar'}" tersimpan ke lemparjaring!`, 'success');
+          } else {
+            throw new Error(res ? res.error : 'Gagal menyimpan profil');
+          }
+        });
+      } catch (err) {
+        actionBtn.className = 'cv-blaster-float-action-btn error';
+        actionBtn.innerHTML = '<span>Gagal</span>';
+        floatToast(err.message || 'Gagal menarik data profil', 'error');
+        setTimeout(() => {
+          actionBtn.className = 'cv-blaster-float-action-btn';
+          actionBtn.disabled = false;
+          actionBtn.innerHTML = '<span>Coba Lagi</span>';
+        }, 2500);
+      }
+    });
+
+  } else if (mode === 'job_view') {
+    const portalName = (detectedPortal || 'Portal').toUpperCase();
+    titleEl.innerText = 'Lowongan Kerja';
+    subEl.innerText = `${portalName} • Siap Dilamar`;
+
+    chrome.storage.local.get(['autoApplyMode'], (res) => {
+      const isReviewMode = res.autoApplyMode === 'review';
+      actionBtn.innerHTML = isReviewMode
+        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg><span>Review &amp; Kirim</span>`
+        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Lamar Loker Ini</span>`;
+    });
+
+    actionBtn.addEventListener('click', () => {
+      if (detectedPortal === 'indeed' && typeof window.cvBlasterExecuteIndeedApply === 'function') {
+        actionBtn.disabled = true;
+        actionBtn.innerHTML = '<span>Memproses...</span>';
+        window.cvBlasterExecuteIndeedApply().then(res => {
+          if (res && res.success) {
+            actionBtn.className = 'cv-blaster-float-action-btn success';
+            actionBtn.innerHTML = '<span>Terkirim</span>';
+            floatToast('Lamaran berhasil dikirim!', 'success');
+          } else {
+            actionBtn.className = 'cv-blaster-float-action-btn error';
+            actionBtn.innerHTML = '<span>Cek Form</span>';
+            floatToast(res?.error || 'Silakan periksa form di layar.', 'info');
+          }
+        });
+      } else {
+        window.cvBlasterOpenDraggableWindow();
+      }
+    });
+
+  } else if (mode === 'linkedin_profile') {
     titleEl.innerText = 'LinkedIn Talent';
     subEl.innerText = 'Ekstraksi profil aktif';
     actionBtn.innerHTML = `

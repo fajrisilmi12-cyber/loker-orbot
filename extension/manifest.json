@@ -82,6 +82,18 @@
     },
     {
       "matches": [
+        "*://*.glints.com/*"
+      ],
+      "js": [
+        "content_scripts/floating_assistant.js"
+      ],
+      "css": [
+        "content_scripts/floating_assistant.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
         "*://boards.greenhouse.io/*",
         "*://job-boards.greenhouse.io/*",
         "*://jobs.lever.co/*"

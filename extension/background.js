@@ -426,6 +426,48 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
       return true;
     }
+
+    // Save imported candidate profile from active browser tab
+    if (request.action === 'SAVE_IMPORTED_PROFILE') {
+      const profile = request.profile || {};
+      chrome.storage.local.set({ candidateProfile: profile }, () => {
+        addLog(`[Profile] Profil ${profile.sourcePortal || 'portal'} berhasil disimpan: "${profile.name || 'Pelamar'}"`, 'success');
+      });
+
+      // Forward to localhost Next.js app if running
+      fetch(`${API_BASE}/api/config`, { method: 'GET' })
+        .then(r => r.json())
+        .then(async (curConfig) => {
+          if (!curConfig) return;
+          const merged = { ...curConfig };
+          if (profile.name) merged.fullName = profile.name;
+          if (profile.phone) merged.phoneNumber = profile.phone;
+          if (profile.email) merged.email = profile.email;
+          if (profile.location) merged.domicile = profile.location;
+          if (profile.education) merged.educationLevel = profile.education;
+          if (profile.skills && (!merged.skills || merged.skills.length < 10)) merged.skills = profile.skills;
+
+          await fetch(`${API_BASE}/api/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(merged)
+          });
+          addLog(`[Profile] Profil ${profile.sourcePortal || ''} disinkronkan ke Web Dashboard.`, 'success');
+        })
+        .catch(() => {
+          // Web dashboard may be offline, local chrome storage is primary
+        });
+
+      sendResponse({ success: true, profile });
+      return true;
+    }
+
+    if (request.action === 'GET_IMPORTED_PROFILE') {
+      chrome.storage.local.get(['candidateProfile'], (res) => {
+        sendResponse({ success: true, profile: res.candidateProfile || null });
+      });
+      return true;
+    }
   } catch (e) {
     sendResponse({ error: e.message });
   }

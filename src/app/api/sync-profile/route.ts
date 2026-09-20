@@ -1,9 +1,12 @@
 import { NextRequest } from 'next/server';
-import { syncGlintsProfile } from '@/lib/profileSync';
+import { syncCandidateProfile } from '@/lib/profileSync';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const platform = (searchParams.get('platform') || 'glints') as 'glints' | 'indeed' | 'linkedin' | 'jobstreet';
+
   const responseStream = new TransformStream();
   const writer = responseStream.writable.getWriter();
   const encoder = new TextEncoder();
@@ -30,7 +33,8 @@ export async function GET(request: NextRequest) {
 
   (async () => {
     try {
-      await syncGlintsProfile(
+      await syncCandidateProfile(
+        platform,
         async (msg) => {
           await sendLog(msg);
         },

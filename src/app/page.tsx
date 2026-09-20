@@ -19,6 +19,7 @@ import {
   Globe,
   FileSpreadsheet,
   ChevronRight,
+  ChevronDown,
   ArrowRight,
   ShieldCheck,
   Check,
@@ -350,7 +351,8 @@ export default function Home() {
   // Web Profile Two-Way Sync Import State
   const [detectedWebProfile, setDetectedWebProfile] = useState<any>(null);
   const [isProfileImportModalOpen, setIsProfileImportModalOpen] = useState(false);
-  const [selectedWebProfileFields, setSelectedWebProfileFields] = useState<Set<string>>(new Set(['fullName', 'phoneNumber', 'email', 'domicile', 'educationLevel']));
+  const [isProfileSyncDropdownOpen, setIsProfileSyncDropdownOpen] = useState(false);
+  const [selectedWebProfileFields, setSelectedWebProfileFields] = useState<Set<string>>(new Set(['fullName', 'phoneNumber', 'email', 'domicile', 'educationLevel', 'skills']));
 
   const [themeMode, setThemeMode] = useState<'system' | 'dark' | 'light'>('system');
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
@@ -971,15 +973,23 @@ export default function Home() {
     toast.warning('Bot telah dihentikan secara manual');
   };
 
-  const handleSyncProfileGlints = () => {
+  const handleSyncProfile = (platform: 'glints' | 'indeed' | 'linkedin' | 'jobstreet' = 'glints') => {
     if (isSyncingProfile || isBotRunning) return;
 
-    setLogs([`[${new Date().toLocaleTimeString()}] 🚀 Memulai pemeriksaan & sinkronisasi profil akun Glints...`]);
+    const portalNames: Record<string, string> = {
+      glints: 'Glints',
+      indeed: 'Indeed',
+      linkedin: 'LinkedIn',
+      jobstreet: 'JobStreet',
+    };
+    const pName = portalNames[platform] || 'Portal';
+
+    setLogs([`[${new Date().toLocaleTimeString()}] 🚀 Memulai pemeriksaan & sinkronisasi profil akun ${pName}...`]);
     setIsSyncingProfile(true);
     setActiveTab('logs');
-    toast.info('Memulai sinkronisasi profil Glints secara otomatis...');
+    toast.info(`Memulai sinkronisasi profil ${pName} secara otomatis...`);
 
-    const eventSource = new EventSource('/api/sync-profile');
+    const eventSource = new EventSource(`/api/sync-profile?platform=${platform}`);
 
     eventSource.onmessage = (event) => {
       try {
@@ -996,10 +1006,10 @@ export default function Home() {
     };
 
     eventSource.onerror = () => {
-      setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Selesai sinkronisasi profil.`]);
+      setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Selesai sinkronisasi profil ${pName}.`]);
       setIsSyncingProfile(false);
       eventSource.close();
-      toast.success('Pemeriksaan profil Glints selesai!');
+      toast.success(`Pemeriksaan profil ${pName} selesai!`);
     };
   };
 
@@ -1029,10 +1039,22 @@ export default function Home() {
       updated.educationLevel = detectedWebProfile.education;
       importCount++;
     }
+    if (selectedWebProfileFields.has('skills') && detectedWebProfile.skills) {
+      updated.skills = detectedWebProfile.skills;
+      importCount++;
+    }
+
+    const portalLabels: Record<string, string> = {
+      glints: 'Glints',
+      indeed: 'Indeed',
+      linkedin: 'LinkedIn',
+      jobstreet: 'JobStreet',
+    };
+    const pLabel = portalLabels[detectedWebProfile.sourcePortal || 'glints'] || 'Portal';
 
     setConfig(updated);
     setIsProfileImportModalOpen(false);
-    toast.success(`Berhasil mengimpor ${importCount} data profil dari akun Glints ke lemparjaring!`);
+    toast.success(`Berhasil mengimpor ${importCount} data profil dari akun ${pLabel} ke lemparjaring!`);
 
     try {
       await fetch('/api/config', {
@@ -1900,7 +1922,7 @@ export default function Home() {
                     <div className="flex flex-col gap-1.5 pt-2 border-t border-subtle-theme">
                       <button
                         type="button"
-                        onClick={handleSyncProfileGlints}
+                        onClick={() => handleSyncProfile('glints')}
                         disabled={isSyncingProfile || isBotRunning}
                         className="w-full py-1.5 px-2 rounded-xl card-subtle-theme border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[11px] font-medium flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                         title="Otomatis isi form domisili, skill, dan upload CV ke akun Glints"
@@ -2265,17 +2287,75 @@ export default function Home() {
                           Data ini digunakan oleh bot dan AI saat mengisi formulir lowongan kerja secara otomatis.
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="relative">
                         <button
                           type="button"
-                          onClick={handleSyncProfileGlints}
+                          onClick={() => setIsProfileSyncDropdownOpen(!isProfileSyncDropdownOpen)}
                           disabled={isSyncingProfile || isBotRunning}
                           className="px-3.5 py-2 rounded-xl card-subtle-theme border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme font-medium text-xs flex items-center gap-2 shadow-sm transition disabled:opacity-50"
-                          title="Otomatis sinkronkan nama, domisili, skill, dan file CV ke profil akun Glints kamu"
+                          title="Tarik data profil otomatis dari akun Glints, Indeed, JobStreet, atau LinkedIn kamu"
                         >
-                          <Sparkles className={`w-3.5 h-3.5 text-muted-theme ${isSyncingProfile ? 'animate-spin' : ''}`} />
-                          <span>{isSyncingProfile ? 'Menyinkronkan ke Glints...' : 'Auto-Fill Profil Glints'}</span>
+                          <Sparkles className={`w-3.5 h-3.5 text-muted-theme ${isSyncingProfile ? 'animate-spin text-orange-500' : ''}`} />
+                          <span>{isSyncingProfile ? 'Menyinkronkan Profil...' : 'Tarik Profil dari Akun'}</span>
+                          <ChevronDown className={`w-3.5 h-3.5 text-muted-theme transition-transform ${isProfileSyncDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
+
+                        {isProfileSyncDropdownOpen && (
+                          <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl card-theme border border-subtle-theme shadow-xl py-1.5 z-30 divide-y divide-subtle-theme text-xs animate-in fade-in zoom-in-95">
+                            <div className="px-3 py-1.5 text-[10px] text-muted-theme font-semibold uppercase tracking-wider">
+                              Pilih Portal Sumber
+                            </div>
+                            <div className="py-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsProfileSyncDropdownOpen(false);
+                                  handleSyncProfile('glints');
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-slate-500/10 flex items-center justify-between transition text-main-theme"
+                              >
+                                <span className="font-medium">Glints</span>
+                                <span className="text-[10px] text-muted-theme">glints.com/id/profile</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsProfileSyncDropdownOpen(false);
+                                  handleSyncProfile('indeed');
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-slate-500/10 flex items-center justify-between transition text-main-theme"
+                              >
+                                <span className="font-medium">Indeed</span>
+                                <span className="text-[10px] text-muted-theme">profile.indeed.com</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsProfileSyncDropdownOpen(false);
+                                  handleSyncProfile('jobstreet');
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-slate-500/10 flex items-center justify-between transition text-main-theme"
+                              >
+                                <span className="font-medium">JobStreet</span>
+                                <span className="text-[10px] text-muted-theme">jobstreet.co.id</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsProfileSyncDropdownOpen(false);
+                                  handleSyncProfile('linkedin');
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-slate-500/10 flex items-center justify-between transition text-main-theme"
+                              >
+                                <span className="font-medium">LinkedIn</span>
+                                <span className="text-[10px] text-muted-theme">linkedin.com/in/me</span>
+                              </button>
+                            </div>
+                            <div className="p-2.5 bg-slate-500/5 text-[10px] text-muted-theme leading-relaxed">
+                              💡 <strong>Tips Cepat:</strong> Bila ekstensi lemparjaring aktif, kamu cukup buka tab profilmu di browser lalu klik <em>&quot;Tarik Profil Ini&quot;</em> di pojok kanan bawah (0.1 detik).
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -5864,7 +5944,16 @@ export default function Home() {
       )}
 
       {/* MODAL: TWO-WAY WEB PROFILE IMPORT & CONFLICT RESOLUTION */}
-      {isProfileImportModalOpen && detectedWebProfile && (
+      {isProfileImportModalOpen && detectedWebProfile && (() => {
+        const portalNames: Record<string, string> = {
+          glints: 'Glints',
+          indeed: 'Indeed',
+          linkedin: 'LinkedIn',
+          jobstreet: 'JobStreet',
+        };
+        const currentPortalName = portalNames[detectedWebProfile.sourcePortal || 'glints'] || 'Portal';
+
+        return (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="card-theme border rounded-3xl p-6 max-w-2xl w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between border-b border-subtle-theme pb-3 shrink-0">
@@ -5873,7 +5962,7 @@ export default function Home() {
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-main-theme">Data Profil Terdeteksi dari Akun Glints</h3>
+                  <h3 className="text-sm font-semibold text-main-theme">Data Profil Terdeteksi dari Akun {currentPortalName}</h3>
                   <p className="text-[11px] text-muted-theme">Pilih data mana saja yang ingin disinkronkan ke form lemparjaring (Non-Destruktif)</p>
                 </div>
               </div>
@@ -5889,9 +5978,9 @@ export default function Home() {
             <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2.5 shrink-0">
               <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
               <div>
-                <div className="font-semibold">Akun Glints Anda sudah memiliki data diri asli.</div>
+                <div className="font-semibold">Akun {currentPortalName} Anda sudah memiliki data diri asli.</div>
                 <p className="text-[11px] opacity-90 mt-0.5">
-                  Centang kolom di bawah jika Anda ingin mengimpor data dari akun Glints ke formulir lemparjaring, atau klik <strong>&quot;Pertahankan Data lemparjaring&quot;</strong> jika tidak ingin mengubah data formulir saat ini.
+                  Centang kolom di bawah jika Anda ingin mengimpor data dari akun {currentPortalName} ke formulir lemparjaring, atau klik <strong>&quot;Pertahankan Data lemparjaring&quot;</strong> jika tidak ingin mengubah data formulir saat ini.
                 </p>
               </div>
             </div>
@@ -5915,7 +6004,7 @@ export default function Home() {
                     <div className="font-semibold text-main-theme">Nama Lengkap</div>
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
-                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="text-muted-theme">Di Akun {currentPortalName}: </span>
                         <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.name}</span>
                       </div>
                       <div>
@@ -5945,7 +6034,7 @@ export default function Home() {
                     <div className="font-semibold text-main-theme">Nomor WhatsApp / HP</div>
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
-                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="text-muted-theme">Di Akun {currentPortalName}: </span>
                         <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.phone}</span>
                       </div>
                       <div>
@@ -5975,7 +6064,7 @@ export default function Home() {
                     <div className="font-semibold text-main-theme">Alamat Email</div>
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
-                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="text-muted-theme">Di Akun {currentPortalName}: </span>
                         <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.email}</span>
                       </div>
                       <div>
@@ -6005,7 +6094,7 @@ export default function Home() {
                     <div className="font-semibold text-main-theme">Lokasi Domisili</div>
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
-                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="text-muted-theme">Di Akun {currentPortalName}: </span>
                         <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.location}</span>
                       </div>
                       <div>
@@ -6035,12 +6124,42 @@ export default function Home() {
                     <div className="font-semibold text-main-theme">Pendidikan Terakhir</div>
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
-                        <span className="text-muted-theme">Di Akun Glints: </span>
+                        <span className="text-muted-theme">Di Akun {currentPortalName}: </span>
                         <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.education}</span>
                       </div>
                       <div>
                         <span className="text-muted-theme">Di lemparjaring: </span>
                         <span className="font-medium text-main-theme">{config.educationLevel || '(Kosong)'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              )}
+
+              {/* Field 6: Keahlian / Skills */}
+              {detectedWebProfile.skills && (
+                <label className="p-3.5 flex items-start gap-3 hover:bg-slate-500/5 cursor-pointer transition">
+                  <input
+                    type="checkbox"
+                    checked={selectedWebProfileFields.has('skills')}
+                    onChange={(e) => {
+                      const next = new Set(selectedWebProfileFields);
+                      if (e.target.checked) next.add('skills');
+                      else next.delete('skills');
+                      setSelectedWebProfileFields(next);
+                    }}
+                    className="w-4 h-4 rounded text-blue-600 mt-0.5"
+                  />
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-main-theme">Keahlian &amp; Skills</div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-muted-theme">Di Akun {currentPortalName}: </span>
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{detectedWebProfile.skills}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-theme">Di lemparjaring: </span>
+                        <span className="font-medium text-main-theme truncate block">{config.skills || '(Kosong)'}</span>
                       </div>
                     </div>
                   </div>
@@ -6069,7 +6188,8 @@ export default function Home() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
       {/* MODAL: TAMBAH PROFIL AKUN BROWSER BARU */}
       {isAddAccountModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">

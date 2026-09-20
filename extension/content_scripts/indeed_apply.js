@@ -205,36 +205,51 @@
         } catch {}
       }
 
-      // Native React/Framework value setter that bypasses _valueTracker
-      function setNativeInputValue(element, value) {
-        if (!element) return;
+      // Native React/Framework value setter with human jitter typing
+      async function setNativeInputValue(element, value) {
+        if (!element || value === undefined || value === null) return;
         try {
           element.focus();
+          const strVal = String(value);
           const valueSetter = Object.getOwnPropertyDescriptor(element, 'value')?.set;
           const prototype = Object.getPrototypeOf(element);
           const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
 
-          if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
-            prototypeValueSetter.call(element, value);
-          } else if (valueSetter) {
-            valueSetter.call(element, value);
+          const applyVal = (v) => {
+            if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+              prototypeValueSetter.call(element, v);
+            } else if (valueSetter) {
+              valueSetter.call(element, v);
+            } else {
+              element.value = v;
+            }
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+          };
+
+          // Keystroke jitter typing simulation (40-80ms per character) for natural entry
+          if (strVal.length > 0 && strVal.length <= 40) {
+            applyVal('');
+            for (let i = 0; i < strVal.length; i++) {
+              applyVal(strVal.slice(0, i + 1));
+              const delay = 40 + Math.floor(Math.random() * 45);
+              await sleep(delay);
+            }
           } else {
-            element.value = value;
+            applyVal(strVal);
           }
 
-          element.dispatchEvent(new Event('input', { bubbles: true }));
           element.dispatchEvent(new Event('change', { bubbles: true }));
           element.blur();
         } catch {
-          element.value = value;
+          element.value = String(value);
           element.dispatchEvent(new Event('input', { bubbles: true }));
           element.dispatchEvent(new Event('change', { bubbles: true }));
         }
       }
 
-      // 1. Fill Text Inputs (Name, Email, Phone, Expected Salary)
-      const inputs = targetDoc.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"], input[type="number"], textarea');
-      inputs.forEach((inp) => {
+      // 1. Fill Text Inputs (Name, Email, Phone, Expected Salary) with human typing
+      const inputs = Array.from(targetDoc.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"], input[type="number"], textarea'));
+      for (const inp of inputs) {
         const nameAttr = (inp.name || inp.id || inp.getAttribute('aria-label') || '').toLowerCase();
         const labelEl = inp.closest('label') || targetDoc.querySelector(`label[for="${inp.id}"]`);
         const labelText = (labelEl ? labelEl.innerText : '').toLowerCase();
@@ -242,18 +257,18 @@
 
         if (!inp.value || inp.value.trim() === '') {
           if (combined.includes('name') || combined.includes('nama')) {
-            setNativeInputValue(inp, userConfig.fullName || 'Pelamar');
+            await setNativeInputValue(inp, userConfig.fullName || 'Pelamar');
           } else if (combined.includes('phone') || combined.includes('telepon') || combined.includes('hp') || combined.includes('whatsapp')) {
-            setNativeInputValue(inp, userConfig.phoneNumber || '08123456789');
+            await setNativeInputValue(inp, userConfig.phoneNumber || '08123456789');
           } else if (combined.includes('gaji') || combined.includes('salary') || combined.includes('ekspektasi')) {
-            setNativeInputValue(inp, userConfig.expectedSalary || '4500000');
+            await setNativeInputValue(inp, userConfig.expectedSalary || '4500000');
           } else if (combined.includes('tahun') || combined.includes('year') || combined.includes('pengalaman') || combined.includes('experience')) {
-            setNativeInputValue(inp, userConfig.experienceYears ? String(userConfig.experienceYears) : '3');
+            await setNativeInputValue(inp, userConfig.experienceYears ? String(userConfig.experienceYears) : '3');
           } else if (combined.includes('lokasi') || combined.includes('kota') || combined.includes('city')) {
-            setNativeInputValue(inp, userConfig.location || 'Indonesia');
+            await setNativeInputValue(inp, userConfig.location || 'Indonesia');
           }
         }
-      });
+      }
 
       // Select Dropdowns (Pendidikan, Pengalaman, Status)
       const selects = targetDoc.querySelectorAll('select');

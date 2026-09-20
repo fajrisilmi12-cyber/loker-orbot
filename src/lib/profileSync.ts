@@ -279,3 +279,193 @@ export async function syncGlintsProfile(
   }
 }
 
+export interface UniversalCandidateProfile {
+  name?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  education?: string;
+  experience?: string;
+  skills?: string;
+  hasResume?: boolean;
+  resumeName?: string;
+  headline?: string;
+  aboutMe?: string;
+  sourcePortal: 'glints' | 'indeed' | 'linkedin' | 'jobstreet';
+}
+
+/**
+ * Universal Profile Sync Dispatcher for all 4 supported portals
+ */
+export async function syncCandidateProfile(
+  platform: 'glints' | 'indeed' | 'linkedin' | 'jobstreet',
+  onLog: (msg: string) => void,
+  onProfileScraped?: (profile: UniversalCandidateProfile) => void
+): Promise<{ success: boolean; data?: UniversalCandidateProfile; message: string }> {
+  if (platform === 'glints') {
+    const res = await syncGlintsProfile(onLog, (glintsData) => {
+      if (onProfileScraped) {
+        onProfileScraped({
+          ...glintsData,
+          sourcePortal: 'glints',
+        });
+      }
+    });
+    return {
+      success: res.success,
+      data: res.data ? { ...res.data, sourcePortal: 'glints' } : undefined,
+      message: res.message,
+    };
+  }
+
+  const config = getConfig();
+  const portalName = platform.toUpperCase();
+  onLog(`🚀 Membuka browser untuk pemeriksaan profil ${portalName}...`);
+
+  let browser: any = null;
+  try {
+    const launchResult = await launchBrowserWithFallback('headful', onLog);
+    browser = launchResult.browser;
+    const pages = await browser.pages();
+    const page = pages.length > 0 ? pages[0] : await browser.newPage();
+    await applyStealthToPage(page);
+
+    let targetUrl = 'https://profile.indeed.com/';
+    if (platform === 'jobstreet') targetUrl = 'https://id.jobstreet.com/candidate/profile';
+    if (platform === 'linkedin') targetUrl = 'https://www.linkedin.com/in/me';
+
+    // Inject cookies if available
+    const cookieString = config.portalCookies?.[platform as keyof typeof config.portalCookies];
+    if (cookieString) {
+      const domain = platform === 'jobstreet' ? '.jobstreet.com' : platform === 'linkedin' ? '.linkedin.com' : '.indeed.com';
+      const cookies = parseCookiesInput(cookieString, domain);
+      if (cookies.length > 0) {
+        await injectCookiesIntoPage(page, cookies);
+        onLog(`🍪 Menyuntikkan ${cookies.length} cookie sesi ${portalName}...`);
+      }
+    }
+
+    onLog(`🌐 Membuka halaman profil ${portalName} (${targetUrl})...`);
+    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await sleep(4000);
+
+    // Wait if login is required
+    const isLogin = page.url().includes('/login') || page.url().includes('/signup') || page.url().includes('/checkpoint');
+    if (isLogin) {
+      onLog(`⚠️ Sesi ${portalName} belum aktif. Silakan selesaikan login di browser (menunggu 60 detik)...`);
+      for (let i = 0; i < 12; i++) {
+        await sleep(5000);
+        if (!page.url().includes('/login') && !page.url().includes('/signup') && !page.url().includes('/checkpoint')) {
+          onLog(`✅ Sesi login ${portalName} aktif!`);
+          break;
+        }
+        onLog(`⏳ Menunggu login ${portalName}... (${(i + 1) * 5}s/60s)`);
+      }
+    }
+
+    onLog(`🔍 Membaca data profil ${portalName}...`);
+
+    let scrapedProfile: UniversalCandidateProfile = { sourcePortal: platform };
+
+    if (platform === 'indeed') {
+      scrapedProfile = await page.evaluate(() => {
+        const bodyText = document.body?.innerText || '';
+        const nameEl = document.querySelector('h1, [data-testid="contact-info-name"], [class*="ProfileName"]');
+        const name = nameEl ? nameEl.textContent?.trim() : '';
+
+        const phoneMatch = bodyText.match(/\+62\s*[\d\s-]+|\b08\d{8,11}\b/);
+        const emailMatch = bodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        const eduMatch = bodyText.match(/\b(S1|S2|S3|D3|D4|SMA|SMK|Sarjana|Bachelor|Master)\b/i);
+
+        const resumeTag = Array.from(document.querySelectorAll('*')).find(el => /\.pdf|\.docx/i.test(el.textContent || ''));
+        const resumeName = resumeTag ? resumeTag.textContent?.trim() : (bodyText.includes('.pdf') ? 'CV Terpasang di Indeed' : '');
+
+        return {
+          name: name || '',
+          phone: phoneMatch ? phoneMatch[0].trim() : '',
+          email: emailMatch ? emailMatch[0].trim() : '',
+          education: eduMatch ? eduMatch[0] : '',
+          hasResume: !!resumeName,
+          resumeName: resumeName || '',
+          sourcePortal: 'indeed' as const,
+        };
+      });
+    } else if (platform === 'jobstreet') {
+      scrapedProfile = await page.evaluate(() => {
+        const bodyText = document.body?.innerText || '';
+        const nameEl = document.querySelector('[data-automation="profile-name"], h1, h2');
+        const name = nameEl ? nameEl.textContent?.trim() : '';
+
+        const phoneMatch = bodyText.match(/\+62\s*[\d\s-]+|\b08\d{8,11}\b/);
+        const emailMatch = bodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        const eduMatch = bodyText.match(/\b(S1|S2|S3|D3|D4|SMA|SMK|Sarjana|Bachelor)\b/i);
+
+        const resumeEl = document.querySelector('[data-automation="profile-resume"], [data-automation*="resume"]');
+        const hasResume = !!resumeEl || bodyText.includes('.pdf');
+
+        return {
+          name: name || '',
+          phone: phoneMatch ? phoneMatch[0].trim() : '',
+          email: emailMatch ? emailMatch[0].trim() : '',
+          education: eduMatch ? eduMatch[0] : '',
+          hasResume,
+          resumeName: hasResume ? 'CV Terpasang di JobStreet' : '',
+          sourcePortal: 'jobstreet' as const,
+        };
+      });
+    } else if (platform === 'linkedin') {
+      scrapedProfile = await page.evaluate(() => {
+        const nameEl = document.querySelector('h1, .text-heading-xlarge');
+        const name = nameEl ? nameEl.textContent?.trim() : '';
+
+        const headlineEl = document.querySelector('.text-body-medium, [data-generated-suggestion-target]');
+        const headline = headlineEl ? headlineEl.textContent?.trim() : '';
+
+        const locationEl = document.querySelector('.text-body-small.inline.t-black--light.break-words');
+        const location = locationEl ? locationEl.textContent?.trim() : '';
+
+        const aboutSection = document.querySelector('section#about, [data-view-name="profile-card"]:has(#about)');
+        const aboutMe = aboutSection ? aboutSection.textContent?.replace(/About|Tentang/i, '').trim() : '';
+
+        return {
+          name: name || '',
+          headline: headline || '',
+          location: location || '',
+          aboutMe: (aboutMe || '').slice(0, 500),
+          sourcePortal: 'linkedin' as const,
+        };
+      });
+    }
+
+    onLog(`==================================================`);
+    onLog(`👤 Data Profil ${portalName} Terdeteksi: "${scrapedProfile.name || 'Pelamar'}"`);
+    if (scrapedProfile.email) onLog(`📧 Email: ${scrapedProfile.email}`);
+    if (scrapedProfile.phone) onLog(`📱 Telepon: ${scrapedProfile.phone}`);
+    if (scrapedProfile.location) onLog(`📍 Lokasi: ${scrapedProfile.location}`);
+    if (scrapedProfile.education) onLog(`🎓 Pendidikan: ${scrapedProfile.education}`);
+    onLog(`==================================================`);
+
+    if (onProfileScraped) {
+      onProfileScraped(scrapedProfile);
+    }
+
+    await sleep(2000);
+    return {
+      success: true,
+      data: scrapedProfile,
+      message: `Profil ${portalName} berhasil ditarik!`,
+    };
+  } catch (err: any) {
+    onLog(`❌ Gagal membaca profil ${portalName}: ${err.message || err}`);
+    return {
+      success: false,
+      message: err.message || String(err),
+    };
+  } finally {
+    if (browser) {
+      try { await browser.close(); } catch {}
+    }
+  }
+}
+
+
