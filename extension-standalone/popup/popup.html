@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>lemparjaring Standalone</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    .form-group {
+      margin-bottom: 8px;
+    }
+    .form-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-row {
+      display: flex;
+      gap: 6px;
+    }
+    .form-row .form-group {
+      flex: 1;
+    }
+    .select-field {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      outline: none;
+    }
+    .select-field:focus {
+      border-color: #ea580c;
+    }
+    .history-item {
+      padding: 8px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .history-title {
+      font-weight: 600;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+    }
+    .history-company {
+      color: #94a3b8;
+      font-size: 10px;
+    }
+    .badge-platform {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      background: rgba(234, 88, 12, 0.15);
+      color: #ea580c;
+      border: 1px solid rgba(234, 88, 12, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo-badge" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18"/>
+          <path d="M3 15h18"/>
+          <path d="M9 3v18"/>
+          <path d="M15 3v18"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">lemparjaring</h1>
+        <div class="brand-status">
+          <span class="status-dot-mini" style="background: #22c55e;"></span>
+          <span id="badge-sync-config-status" style="color: #22c55e;">Mode Standalone (Serverless)</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" id="btn-pop-drag-window" title="Buka panel melayang di halaman">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M9 3v18"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs" aria-label="Menu">
+    <button class="tab-btn active" data-target="panel-apply">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      <span>Lamar</span>
+    </button>
+    <button class="tab-btn" data-target="panel-profile">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profil & AI</span>
+    </button>
+    <button class="tab-btn" data-target="panel-history">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span>Riwayat</span>
+    </button>
+    <button class="tab-btn" data-target="panel-talent">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Talent</span>
+    </button>
+  </nav>
+
+  <!-- Status Summary Bar -->
+  <div class="status-summary-bar">
+    <div class="status-chip">
+      <span class="status-dot-mini" id="dot-cv-status"></span>
+      <span id="text-cv-status">Profil Tersimpan</span>
+    </div>
+    <div class="status-chip mode">
+      <span>100% Client-Side</span>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- TAB 1: AUTO-APPLY LOKER -->
+  <!-- ======================================================== -->
+  <div class="tab-panel active" id="panel-apply">
+    <!-- Active Tab Loker Detection Card -->
+    <section class="card" id="card-active-job">
+      <div class="card-header">
+        <span class="card-label">Halaman Aktif</span>
+        <span class="card-badge" id="badge-active-platform">Mengecek</span>
+      </div>
+      
+      <!-- Multi-Job Cards Detected View -->
+      <div id="multi-job-detected-view" style="display: none;">
+        <div class="detected-meta">
+          <span id="multi-job-count-text" class="detected-title">0 lowongan terdeteksi</span>
+          <span id="multi-job-filter-match" class="match-pill"></span>
+        </div>
+        <div id="multi-job-preview-snippets" class="job-snippets"></div>
+        <button class="btn btn-primary" id="btn-enqueue-detected-jobs" style="margin-top: 6px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span id="text-enqueue-btn">Lamar Lowongan di Tab Ini</span>
+        </button>
+      </div>
+
+      <!-- Single Job Detected View -->
+      <div id="single-job-detected-view">
+        <div id="active-job-info" class="single-job-info">
+          <span class="single-job-title" id="text-active-job-title">Buka halaman Indeed / LinkedIn</span>
+          <span class="single-job-company" id="text-active-job-company">Bot akan mendeteksi otomatis</span>
+        </div>
+        <div class="job-meta-chips" id="active-job-meta">
+          <span class="chip-mini" id="chip-active-location">-</span>
+          <span class="chip-mini" id="chip-active-salary">-</span>
+        </div>
+        <button class="btn btn-primary" id="btn-apply-active-now" disabled>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span id="text-apply-active-btn">Lamar Lowongan Ini</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Portal Quick Jump -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-label">Buka Portal Kerja</span>
+      </div>
+      <div class="grid-2">
+        <button class="btn btn-secondary btn-sm" id="btn-portal-indeed">Indeed ID</button>
+        <button class="btn btn-secondary btn-sm" id="btn-portal-linkedin">LinkedIn Jobs</button>
+        <button class="btn btn-secondary btn-sm" id="btn-portal-jobstreet">JobStreet</button>
+        <button class="btn btn-secondary btn-sm" id="btn-portal-glints">Glints</button>
+      </div>
+    </section>
+
+    <!-- Activity Log Card -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-label">Log Aktivitas</span>
+        <button class="card-action-btn" id="btn-clear-logs" title="Bersihkan log">Bersihkan</button>
+      </div>
+      <div class="log-stream" id="log-stream" role="log" aria-live="polite">
+        <div class="log-entry">Siap melamar. Buka halaman lowongan untuk memulai.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- TAB 2: PROFIL PELAMAR & AI ENGINE -->
+  <!-- ======================================================== -->
+  <div class="tab-panel" id="panel-profile">
+    <section class="card">
+      <div class="card-header">
+        <span class="card-label">Data Diri Pelamar</span>
+        <span id="status-profile-saved" class="status-saved" style="display:none;">Tersimpan</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="prof-fullname">Nama Lengkap</label>
+        <input type="text" id="prof-fullname" class="input-field" placeholder="Nama Lengkap Sesuai KTP">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="prof-phone">Nomor Telepon / WhatsApp</label>
+          <input type="text" id="prof-phone" class="input-field" placeholder="08123456789">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="prof-email">Email</label>
+          <input type="email" id="prof-email" class="input-field" placeholder="email@gmail.com">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="prof-location">Domisili / Kota</label>
+          <input type="text" id="prof-location" class="input-field" placeholder="Jakarta / Surabaya">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="prof-salary">Ekspektasi Gaji (Rp)</label>
+          <input type="number" id="prof-salary" class="input-field" placeholder="5000000">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="prof-experience">Pengalaman (Tahun)</label>
+          <input type="number" id="prof-experience" class="input-field" placeholder="2">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="prof-education">Pendidikan Terakhir</label>
+          <select id="prof-education" class="select-field">
+            <option value="Sarjana (S1)">Sarjana (S1)</option>
+            <option value="Diploma (D3)">Diploma (D3)</option>
+            <option value="SMA/SMK">SMA/SMK</option>
+            <option value="Magister (S2)">Magister (S2)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="prof-skills">Keahlian Utama (Pisahkan koma)</label>
+        <input type="text" id="prof-skills" class="input-field" placeholder="React, Node.js, TypeScript, SQL">
+      </div>
+    </section>
+
+    <!-- AI Engine Configuration -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-label">Mesin AI (Google Gemini)</span>
+      </div>
+      <p class="card-desc">
+        Kunci API gratis dari <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #ea580c; text-decoration: underline;">Google AI Studio</a> untuk auto-generate cover letter dan menjawab pertanyaan perekrut.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label" for="prof-gemini-key">Gemini API Key</label>
+        <input type="password" id="prof-gemini-key" class="input-field" placeholder="AIzaSy...">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="prof-gemini-model">Pilihan Model Gemini</label>
+        <select id="prof-gemini-model" class="select-field">
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash (Terbaru, Cepat & Cerdas)</option>
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash (Stabil)</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" id="btn-save-profile" style="margin-top: 6px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <span>Simpan Profil & Kunci AI</span>
+      </button>
+    </section>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- TAB 3: RIWAYAT LAMARAN & EKSPOR CSV -->
+  <!-- ======================================================== -->
+  <div class="tab-panel" id="panel-history">
+    <section class="card">
+      <div class="card-header">
+        <span class="card-label">Rekapitulasi Pelamaran</span>
+        <span class="card-badge" id="badge-total-applied">0 Lamaran</span>
+      </div>
+      <p class="card-desc">
+        Data tersimpan aman di memori lokal peramban Anda (zero leak). Unduh laporan sewaktu-waktu.
+      </p>
+
+      <div class="grid-2" style="margin-top: 6px;">
+        <button class="btn btn-primary btn-sm" id="btn-export-csv">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Unduh CSV (Excel)</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-clear-history" style="color: #ef4444;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span>Kosongkan</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- History List -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-label">Daftar Terkini</span>
+      </div>
+      <div id="history-container" style="max-height: 250px; overflow-y: auto;">
+        <p style="color: #64748b; text-align: center; padding: 12px 0;">Belum ada lamaran tercatat.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- TAB 4: TALENT SCOUT -->
+  <!-- ======================================================== -->
+  <div class="tab-panel" id="panel-talent">
+    <section class="card">
+      <div class="card-header">
+        <span class="card-label">X-Ray Sourcing LinkedIn</span>
+      </div>
+      <p class="card-desc">
+        Temukan kandidat #OpenToWork di LinkedIn secara legal via pencarian Google X-Ray tanpa risiko akun terkena limit.
+      </p>
+      <div class="form-group">
+        <label class="form-label" for="talent-role">Posisi / Jabatan</label>
+        <input type="text" id="talent-role" class="input-field" placeholder="Frontend Developer, Graphic Designer">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="talent-location">Lokasi</label>
+        <input type="text" id="talent-location" class="input-field" placeholder="Jakarta, Surabaya, Indonesia">
+      </div>
+      <button class="btn btn-primary" id="btn-open-xray-search" style="margin-top: 6px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Buka Google X-Ray</span>
+      </button>
+    </section>
+  </div>
+
+  <!-- Interactive Toast Notification Container -->
+  <div class="toast-pill" id="global-toast" role="status" aria-live="polite"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
