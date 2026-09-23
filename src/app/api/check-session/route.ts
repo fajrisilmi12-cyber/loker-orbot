@@ -7,6 +7,19 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 1 minute max for session checks
 
 export async function POST(request: Request) {
+  if (global.activeSetupBrowser || global.isBotRunning) {
+    return NextResponse.json({
+      success: false,
+      message: 'Browser otomasi sedang berjalan. Pengecekan sesi ditunda agar tidak bentrok.',
+      results: {
+        glints: { loggedIn: true, details: 'Sesi aktif / sedang digunakan bot' },
+        jobstreet: { loggedIn: true, details: 'Sesi aktif / sedang digunakan bot' },
+        linkedin: { loggedIn: true, details: 'Sesi aktif / sedang digunakan bot' },
+        indeed: { loggedIn: true, details: 'Sesi aktif / sedang digunakan bot' },
+      }
+    });
+  }
+
   let browser: any = null;
   try {
     const { profileFolder } = await request.json();

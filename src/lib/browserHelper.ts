@@ -4,10 +4,114 @@ import { getConfig } from './config';
 
 export interface LaunchBrowserResult {
   browser: any;
-  browserType: 'google-chrome' | 'chromium-bundled' | 'custom-chrome';
+  browserType: 'google-chrome' | 'chromium-bundled' | 'custom-chrome' | 'camoufox-stealth';
 }
 
 import { execSync } from 'child_process';
+
+/**
+ * Launches Camoufox Stealth Browser (Firefox C++ Patched Engine) with Playwright
+ * and wraps it to expose a Puppeteer-compatible API for existing bots.
+ */
+export async function launchCamoufoxBrowser(
+  mode: 'headless' | 'headful' = 'headless',
+  onLog?: (msg: string) => void,
+  profileFolderOverride?: string
+): Promise<LaunchBrowserResult> {
+  const { Camoufox } = require('camoufox-js');
+  const config = getConfig();
+  const log = onLog || console.log;
+
+  let folderName = profileFolderOverride;
+  if (!folderName) {
+    const activeAccount = config.browserAccounts?.find(a => a.id === config.activeBrowserAccountId);
+    folderName = activeAccount?.profileFolder ? `${activeAccount.profileFolder}-camoufox` : 'automation-profile-camoufox';
+  } else if (!folderName.includes('camoufox')) {
+    folderName = `${folderName}-camoufox`;
+  }
+
+  const profilePath = path.isAbsolute(folderName) ? folderName : path.join(/*turbopackIgnore: true*/ process.cwd(), folderName);
+  const isHeadless = mode !== 'headful';
+
+  if (!fs.existsSync(/*turbopackIgnore: true*/ profilePath)) {
+    try {
+      fs.mkdirSync(profilePath, { recursive: true });
+    } catch {}
+  }
+
+  log(`🛡️ Meluncurkan Camoufox Stealth Browser (Firefox C++ Anti-Bot Engine)...`);
+
+  const rawContext = await Camoufox({
+    headless: isHeadless,
+    os: 'windows',
+    humanize: true,
+    user_data_dir: profilePath,
+  });
+
+  function wrapPage(page: any) {
+    if (!page) return page;
+
+    if (!page.setCookie) {
+      page.setCookie = async (...cookies: any[]) => {
+        const formatted = cookies.map(c => {
+          let sameSite = c.sameSite;
+          if (sameSite && typeof sameSite === 'string') {
+            const lower = sameSite.toLowerCase();
+            if (lower === 'lax') sameSite = 'Lax';
+            else if (lower === 'strict') sameSite = 'Strict';
+            else if (lower === 'none') sameSite = 'None';
+            else sameSite = undefined;
+          }
+          return {
+            name: c.name,
+            value: c.value,
+            domain: c.domain,
+            path: c.path || '/',
+            expires: typeof c.expires === 'number' ? c.expires : undefined,
+            httpOnly: Boolean(c.httpOnly),
+            secure: Boolean(c.secure),
+            sameSite: sameSite
+          };
+        });
+        return rawContext.addCookies(formatted);
+      };
+    }
+
+    if (!page.setUserAgent) {
+      page.setUserAgent = async () => {};
+    }
+
+    if (!page.waitForTimeout) {
+      page.waitForTimeout = (ms: number) => new Promise(r => setTimeout(r, ms));
+    }
+
+    return page;
+  }
+
+  const browserWrapper = {
+    _raw: rawContext,
+    newPage: async () => {
+      const page = await rawContext.newPage();
+      return wrapPage(page);
+    },
+    pages: async () => {
+      const pgs = rawContext.pages();
+      return pgs.map(wrapPage);
+    },
+    close: async () => {
+      await rawContext.close();
+    },
+    version: async () => {
+      return 'Camoufox-Gecko-Stealth';
+    }
+  };
+
+  log(`✅ Berhasil membuka Camoufox Stealth Browser [Firefox C++ Gecko Engine]`);
+  return {
+    browser: browserWrapper,
+    browserType: 'camoufox-stealth'
+  };
+}
 
 /**
  * Removes stale Chromium/Chrome singleton lock symlinks and kills any orphan
@@ -67,6 +171,17 @@ export async function launchBrowserWithFallback(
   } catch (e) {}
 
   const config = getConfig();
+
+  // If user selected Camoufox Stealth Engine, launch Camoufox directly
+  if (config.browserEngine === 'camoufox') {
+    try {
+      return await launchCamoufoxBrowser(mode, onLog, profileFolderOverride);
+    } catch (camoufoxErr: any) {
+      const log = onLog || console.log;
+      log(`⚠️ Gagal membuka Camoufox Stealth: ${camoufoxErr.message || camoufoxErr}`);
+      log(`🔄 Beralih ke Google Chrome / Puppeteer fallback...`);
+    }
+  }
 
   // Resolve profile folder from override, active browser account, or default
   let folderName = profileFolderOverride;

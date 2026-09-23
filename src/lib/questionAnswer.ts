@@ -644,18 +644,32 @@ function tryRegexAnswer(
     return profile.wantDefaultResume ? [options[0]] : [];
   }
 
-  // Tools/technology/skills/languages/data analysis checklist (multi-select)
-  if (type === "checklist" && /revision control|tools|alat|technolog|skill|kemampuan|language|bahasa|program|analisis|data|software|aplikasi/i.test(q)) {
+  // Tools/technology/skills/languages/frameworks/data analysis checklist (multi-select)
+  if (type === "checklist" && /revision control|tools|alat|technolog|teknologi|skill|keahlian|kemampuan|language|bahasa|program|pemrograman|framework|library|front\s*end|back\s*end|rdbms|database|analisis|data|software|aplikasi/i.test(q)) {
     const allKnown = [...profile.knownTools, ...dynamicSkills].map(s => s.toLowerCase().trim());
+    
+    // Add common variants and aliases
+    const expandedKnown = new Set<string>();
+    for (const k of allKnown) {
+      expandedKnown.add(k);
+      expandedKnown.add(k.replace(/\.js$/i, ''));
+      expandedKnown.add(k.replace(/5$/i, '')); // HTML5 -> HTML
+      expandedKnown.add(k.replace(/3$/i, '')); // CSS3 -> CSS
+      expandedKnown.add(k.replace(/\s+css$/i, '')); // Tailwind CSS -> Tailwind
+    }
+
     const matches = options.filter((o) => {
       const optLower = o.toLowerCase().trim();
-      if (/tidak satupun|none of the above|none/i.test(optLower)) return false;
-      return allKnown.some((tool) => {
-        if (tool.length <= 2) {
-          // Exact match for short names like "C", "R", "Go"
-          return optLower === tool || optLower.split(/\s+/).includes(tool);
+      if (/tidak satupun|none of the above|none|tidak ada/i.test(optLower)) return false;
+      const optClean = optLower.replace(/\.js$/i, '').replace(/\s+css$/i, '');
+      
+      return Array.from(expandedKnown).some((tool) => {
+        const toolClean = tool.replace(/\.js$/i, '').replace(/\s+css$/i, '');
+        if (tool.length <= 2 || optLower.length <= 2) {
+          // Exact token match for short names like "C", "R", "Go", "JS", "TS"
+          return optLower === tool || optLower.split(/[\s/,-]+/).includes(tool);
         }
-        return optLower.includes(tool) || tool.includes(optLower);
+        return optLower.includes(tool) || tool.includes(optLower) || optClean === toolClean;
       });
     });
 
@@ -1028,6 +1042,11 @@ function getPreAnsweredQuestion(questionText: string, options: string[]): string
         const validAnswers = item.answers.filter(ans => 
           options.includes(ans) || options.some(o => o.toLowerCase() === ans.toLowerCase())
         );
+
+        // Guard: Jangan gunakan cache "Tidak satupun" untuk checklist skills jika kandidat memiliki keahlian
+        if (item.type === 'checklist' && validAnswers.length === 1 && /tidak satupun|none/i.test(validAnswers[0])) {
+          continue;
+        }
 
         if (validAnswers.length > 0) {
           if (isExactMatch) return validAnswers;

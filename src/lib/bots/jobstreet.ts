@@ -4,6 +4,7 @@ import { answerQuestion } from '../questionAnswer';
 import { evaluateJobMatch } from '../jobMatcher';
 import { generateDynamicCoverLetter } from '../coverLetterGenerator';
 import { parseCookiesInput, injectCookiesIntoPage } from '../cookieHelper';
+import { buildJobstreetSearchUrl } from '../searchQueryBuilder';
 
 export interface BotMetrics {
   successCount: number;
@@ -66,11 +67,8 @@ export async function runJobstreetBot(
   }
   onLog('✅ Jobstreet: Sesi login terverifikasi aktif.');
 
-  const formattedKeywords = config.searchKeywords.trim().toLowerCase().replace(/\s+/g, '-');
-  const formattedLocation = (config.location || '').trim().toLowerCase().replace(/\s+/g, '-');
-  const searchUrl = formattedLocation 
-    ? `https://id.jobstreet.com/id/${formattedKeywords}-jobs/in-${formattedLocation}`
-    : `https://id.jobstreet.com/id/${formattedKeywords}-jobs`;
+  const { url: searchUrl, displayKeywords } = buildJobstreetSearchUrl(config);
+  onLog(`🌐 URL Pencarian Jobstreet [Keywords: ${displayKeywords || 'Semua'}]: ${searchUrl}`);
 
   const baseSearchUrl = searchUrl.replace(/[?&]page=\d+/, '');
   const urlSeparator = baseSearchUrl.includes('?') ? '&' : '?';
@@ -95,35 +93,109 @@ export async function runJobstreetBot(
       break;
     }
 
-    // Get job links and active pagination page
+    // Extract job cards with title, company, location and active pagination page
     const pageData = await page.evaluate(() => {
-      const overlays = Array.from(document.querySelectorAll('a[data-automation="job-list-item-link-overlay"], a[data-automation="jobTitle"], a[href*="/job/"]'));
-      const rawUrls = overlays.map((a: any) => a.href).filter(Boolean);
-      
-      const cleanUrls: string[] = [];
-      for (const u of rawUrls) {
+      const articles = Array.from(document.querySelectorAll('article[data-automation="normalJob"], article[data-card-type="JobCard"], [data-automation="jobCard"], div[data-search-sol-meta]'));
+      const items: Array<{ url: string; title: string; company: string; location: string }> = [];
+
+      for (const card of articles) {
+        const titleAnchor = card.querySelector('a[data-automation="jobTitle"], a[data-automation="job-list-item-link-overlay"], a[href*="/job/"]') as HTMLAnchorElement;
+        if (!titleAnchor) continue;
+        const rawHref = titleAnchor.href;
+        let cleanUrl = rawHref;
         try {
-          const parsed = new URL(u);
-          const clean = `${parsed.origin}${parsed.pathname}`;
-          if (clean.includes('/job/') && !cleanUrls.includes(clean)) {
-            cleanUrls.push(clean);
-          }
+          const parsed = new URL(rawHref);
+          cleanUrl = `${parsed.origin}${parsed.pathname}`;
         } catch {}
+        if (!cleanUrl.includes('/job/') || items.some(it => it.url === cleanUrl)) continue;
+
+        const title = (titleAnchor.textContent || '').trim();
+        const companyEl = card.querySelector('[data-automation="jobCompany"], a[data-automation="jobCompany"]');
+        const company = (companyEl?.textContent || '').trim();
+        const locationEl = card.querySelector('[data-automation="jobLocation"], [data-automation="jobCardLocation"]');
+        const location = (locationEl?.textContent || '').trim();
+
+        items.push({ url: cleanUrl, title, company, location });
+      }
+
+      // Fallback if articles selector returned empty
+      if (items.length === 0) {
+        const overlays = Array.from(document.querySelectorAll('a[data-automation="job-list-item-link-overlay"], a[data-automation="jobTitle"], a[href*="/job/"]'));
+        for (const u of overlays) {
+          const href = (u as HTMLAnchorElement).href;
+          if (href && href.includes('/job/')) {
+            try {
+              const p = new URL(href);
+              const cl = `${p.origin}${p.pathname}`;
+              if (!items.some(it => it.url === cl)) {
+                items.push({ url: cl, title: (u.textContent || '').trim(), company: '', location: '' });
+              }
+            } catch {}
+          }
+        }
       }
 
       const activePageEl = document.querySelector('[aria-current="page"]');
       const pageNum = activePageEl ? activePageEl.textContent?.trim() || '1' : '1';
-      
-      return { urls: cleanUrls, currentPage: pageNum };
+
+      return { items, currentPage: pageNum };
     });
 
-    const newJobUrls = pageData.urls.filter((u: string) => !processedUrls.has(u));
-    newJobUrls.forEach((u: string) => processedUrls.add(u));
+    // Pre-Flight Instant Filter at Card Level (0ms filter)
+    const userLocations = config.location
+      ? config.location.split(/[,/|]+/).map((l: string) => l.trim().toLowerCase()).filter(Boolean)
+      : [];
 
-    onLog(`📊 Halaman ${currentPage}: Ditemukan ${pageData.urls.length} lowongan unik (${newJobUrls.length} loker baru untuk diproses).`);
+    const qualifiedUrls: string[] = [];
+    let preFilteredOut = 0;
+
+    for (const item of pageData.items) {
+      if (processedUrls.has(item.url)) continue;
+      processedUrls.add(item.url);
+
+      // 1. Fast Location Check
+      if (userLocations.length > 0 && item.location) {
+        const isRemoteOrHybrid = /remote|hybrid|wfh/i.test(item.location);
+        const matchesCity = userLocations.some((l: string) =>
+          !l.includes('remote') && !l.includes('wfh') && item.location.toLowerCase().includes(l)
+        );
+        if (!matchesCity && !isRemoteOrHybrid) {
+          preFilteredOut++;
+          continue;
+        }
+      }
+
+      // 2. Fast Match & Dealbreaker Check on Title
+      if (item.title && (config.enableJobMatchFilter || config.negativeKeywords || config.blacklistedCompanies)) {
+        const cardMatch = evaluateJobMatch({
+          jobTitle: item.title,
+          company: item.company,
+          targetKeywords: config.searchKeywords || '',
+          negativeKeywords: config.negativeKeywords || '',
+          blacklistedCompanies: config.blacklistedCompanies || '',
+          minScoreThreshold: config.enableJobMatchFilter ? (config.minMatchScore ?? 25) : 0,
+          candidateSkills: config.skills || ''
+        });
+
+        if (!cardMatch.shouldApply) {
+          preFilteredOut++;
+          continue;
+        }
+      }
+
+      qualifiedUrls.push(item.url);
+    }
+
+    if (preFilteredOut > 0) {
+      onLog(`⚡ [JobStreet Pre-Filter] Mengabaikan ${preFilteredOut} loker non-target secara instan dari listing.`);
+    }
+
+    const newJobUrls = qualifiedUrls;
+
+    onLog(`📊 Halaman ${currentPage}: Ditemukan ${pageData.items.length} lowongan (${newJobUrls.length} lolos kualifikasi untuk dilamar).`);
 
     if (newJobUrls.length === 0) {
-      onLog(`⚠️ Tidak ada loker baru yang ditemukan pada halaman ke-${currentPage}. Selesai.`);
+      onLog(`⚠️ Tidak ada loker baru yang memenuhi syarat pada halaman ke-${currentPage}. Lanjut/Selesai.`);
       break;
     }
 

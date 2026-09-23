@@ -41,6 +41,7 @@ export interface AppConfig {
   concurrency: number;
   useSystemChrome?: boolean;
   customChromePath?: string;
+  browserEngine?: 'puppeteer' | 'camoufox';
   noticePeriod: string;
   // Candidate Profile Fields
   fullName: string;
@@ -125,6 +126,7 @@ const DEFAULT_CONFIG: AppConfig = {
   concurrency: 3,
   useSystemChrome: true,
   customChromePath: '',
+  browserEngine: 'puppeteer',
   enableCoverLetterGen: true,
   enableJobMatchFilter: false,
   minMatchScore: 60,

@@ -6,6 +6,7 @@ import { generateCoverLetter } from '../coverLetterHelper';
 import { evaluateJobMatch } from '../jobMatcher';
 import { humanClick, humanType } from '../humanStealth';
 import { parseCookiesInput, injectCookiesIntoPage } from '../cookieHelper';
+import { buildIndeedSearchUrl } from '../searchQueryBuilder';
 
 export interface BotMetrics {
   successCount: number;
@@ -30,46 +31,8 @@ export async function runIndeedBot(
   let errorCount = 0;
 
   try {
-    const keyword = (config.searchKeywords || '').trim();
-    const location = (config.location || 'jakarta').trim();
-
-    // 1. Bentuk URL Pencarian Indeed (dengan / tanpa filter keyword)
-    let searchUrl = '';
-    if (config.indeedNoJobTitleFilter) {
-      const locParam = encodeURIComponent(location.toLowerCase() || 'jakarta');
-      searchUrl = `https://id.indeed.com/jobs?q=&l=${locParam}&from=searchOnHP&vjk=05e2a8ad9ed0352d`;
-      onLog(`🌐 [Indeed] Mode Tanpa Filter Job Title aktif. Membuka semua loker di "${location}": ${searchUrl}`);
-    } else {
-      const searchParams = new URLSearchParams();
-      if (keyword) searchParams.set('q', keyword);
-      if (location) searchParams.set('l', location);
-      searchParams.set('radius', '25');
-      searchParams.set('from', 'searchOnDesktopSerp');
-
-      // Filter Lanjutan
-      const datePostedMap: Record<string, string> = {
-        '24h': '1', 'week': '7', 'month': '30',
-      };
-      if (config.datePosted && datePostedMap[config.datePosted]) {
-        searchParams.set('fromage', datePostedMap[config.datePosted]);
-      }
-
-      const jobTypeMap: Record<string, string> = {
-        'full_time': 'fulltime', 'part_time': 'parttime', 'contract': 'contract',
-        'internship': 'internship', 'freelance': 'temporary',
-      };
-      const jtValues = (config.jobType || []).map((t: string) => jobTypeMap[t]).filter(Boolean);
-      if (jtValues.length > 0) {
-        searchParams.set('jt', jtValues[0]); // Indeed only supports single job type
-      }
-
-      if ((config.workMode || []).includes('remote')) {
-        searchParams.set('remotejob', '1');
-      }
-
-      searchUrl = `https://id.indeed.com/jobs?${searchParams.toString()}`;
-      onLog(`🌐 Membuka URL Pencarian Indeed: ${searchUrl}`);
-    }
+    const { url: searchUrl, displayKeywords } = buildIndeedSearchUrl(config);
+    onLog(`🌐 Membuka URL Pencarian Indeed [Keywords: ${displayKeywords || 'Semua'}]: ${searchUrl}`);
 
 
     // Injeksi cookies jika tersedia di konfigurasi
@@ -263,6 +226,40 @@ export async function runIndeedBot(
           onLog(`⏩ [${i + 1}/${jobCards.length}] Lowongan "${cardInfo.title}" - Sudah ada label 'Dilamar / Applied' pada kartu.`);
           alreadyAppliedCount++;
           continue;
+        }
+
+        // Fast Pre-Flight Location Check
+        const userLocations = config.location
+          ? config.location.split(/[,/|]+/).map((l: string) => l.trim().toLowerCase()).filter(Boolean)
+          : [];
+
+        if (userLocations.length > 0 && cardInfo.location) {
+          const isRemoteOrHybrid = /remote|hybrid|wfh/i.test(cardInfo.location);
+          const matchesCity = userLocations.some((l: string) =>
+            !l.includes('remote') && !l.includes('wfh') && cardInfo.location.toLowerCase().includes(l)
+          );
+          if (!matchesCity && !isRemoteOrHybrid) {
+            onLog(`⚡ [Indeed Pre-Filter] Melewati "${cardInfo.title}" di ${cardInfo.company} - Lokasi (${cardInfo.location}) di luar preferensi.`);
+            continue;
+          }
+        }
+
+        // Fast Pre-Flight Title & Match Check
+        if (config.enableJobMatchFilter || config.negativeKeywords || config.blacklistedCompanies) {
+          const cardMatch = evaluateJobMatch({
+            jobTitle: cardInfo.title,
+            company: cardInfo.company,
+            targetKeywords: config.searchKeywords || '',
+            negativeKeywords: config.negativeKeywords || '',
+            blacklistedCompanies: config.blacklistedCompanies || '',
+            minScoreThreshold: config.enableJobMatchFilter ? (config.minMatchScore ?? 25) : 0,
+            candidateSkills: config.skills || ''
+          });
+
+          if (!cardMatch.shouldApply) {
+            onLog(`⚡ [Indeed Pre-Filter] Melewati "${cardInfo.title}" di ${cardInfo.company} - ${cardMatch.reason}`);
+            continue;
+          }
         }
 
         onLog('==================================================');

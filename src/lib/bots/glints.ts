@@ -6,6 +6,7 @@ import { evaluateJobMatch } from '../jobMatcher';
 import { generateDynamicCoverLetter } from '../coverLetterGenerator';
 import { humanClick, humanType, randomDelay } from '../humanStealth';
 import { parseCookiesInput, injectCookiesIntoPage } from '../cookieHelper';
+import { buildGlintsSearchUrl } from '../searchQueryBuilder';
 
 export interface BotMetrics {
   successCount: number;
@@ -30,33 +31,8 @@ export async function runGlintsBot(
   let errorCount = 0;
 
   try {
-    const keyword = (config.searchKeywords || '').trim();
-    const location = (config.location || '').trim();
-    const primaryCity = location ? location.split(/[,/]/)[0].trim() : '';
-
-    const searchParams = new URLSearchParams();
-    searchParams.set('country', 'ID');
-    if (keyword) searchParams.set('keyword', keyword);
-    if (primaryCity && primaryCity.toLowerCase() !== 'all') {
-      searchParams.set('locationName', primaryCity);
-    } else {
-      searchParams.set('locationName', 'All Cities/Provinces');
-    }
-
-    if (config.jobType && config.jobType.length > 0) {
-      const glintsJobTypeMap: Record<string, string> = {
-        'full_time': 'FULL_TIME',
-        'part_time': 'PART_TIME',
-        'contract': 'CONTRACT',
-        'internship': 'INTERNSHIP',
-        'freelance': 'FREELANCE'
-      };
-      const jt = config.jobType.map((t: string) => glintsJobTypeMap[t]).filter(Boolean);
-      if (jt.length > 0) searchParams.set('jobTypes', jt.join(','));
-    }
-
-    const targetUrl = `https://glints.com/id/opportunities/jobs/explore?${searchParams.toString()}`;
-    onLog(`🌐 Membuka URL Pencarian Glints: ${targetUrl}`);
+    const { url: targetUrl, displayKeywords } = buildGlintsSearchUrl(config);
+    onLog(`🌐 Membuka URL Pencarian Glints [Keywords: ${displayKeywords || 'Semua'}]: ${targetUrl}`);
 
     // Injeksi cookies jika tersedia di konfigurasi
     if (config.portalCookies?.glints) {
@@ -195,18 +171,66 @@ export async function runGlintsBot(
         return results;
       });
 
-      // Filter loker yang belum pernah diproses di sesi ini
-      const newJobsToProcess = mappedJobs.filter((j: any) => !processedJobUrls.has(j.url));
-      newJobsToProcess.forEach((j: any) => processedJobUrls.add(j.url));
+      // Pre-Flight Instant Filter at Card Level (0ms filter to eliminate non-relevant / recommendation cards)
+      const userLocations = config.location
+        ? config.location.split(/[,/|]+/).map((l: string) => l.trim().toLowerCase()).filter(Boolean)
+        : [];
 
-      onLog(`📊 Halaman ${currentPage}: Ditemukan ${mappedJobs.length} loker (${newJobsToProcess.length} loker baru untuk diproses):`);
+      const qualifiedJobs: typeof mappedJobs = [];
+      let preFilteredOutCount = 0;
+
+      for (const job of mappedJobs) {
+        if (processedJobUrls.has(job.url)) continue;
+        processedJobUrls.add(job.url);
+
+        // 1. Fast Location Check on Card
+        if (userLocations.length > 0 && job.location) {
+          const isRemoteOrHybrid = /remote|hybrid|wfh/i.test(job.location);
+          const matchesCity = userLocations.some((l: string) =>
+            !l.includes('remote') && !l.includes('wfh') && job.location.toLowerCase().includes(l)
+          );
+          if (!matchesCity && !isRemoteOrHybrid) {
+            preFilteredOutCount++;
+            continue;
+          }
+        }
+
+        // 2. Fast Match & Dealbreaker Check on Card Title & Tags
+        if (config.enableJobMatchFilter || config.negativeKeywords || config.blacklistedCompanies) {
+          const cardMatch = evaluateJobMatch({
+            jobTitle: job.title,
+            company: job.company,
+            jobDescription: (job.tags || []).join(' '),
+            targetKeywords: config.searchKeywords || '',
+            negativeKeywords: config.negativeKeywords || '',
+            blacklistedCompanies: config.blacklistedCompanies || '',
+            minScoreThreshold: config.enableJobMatchFilter ? (config.minMatchScore ?? 25) : 0,
+            candidateSkills: config.skills || ''
+          });
+
+          if (!cardMatch.shouldApply) {
+            preFilteredOutCount++;
+            continue;
+          }
+        }
+
+        qualifiedJobs.push(job);
+      }
+
+      if (preFilteredOutCount > 0) {
+        onLog(`⚡ [Fast Pre-Filter] Mengabaikan ${preFilteredOutCount} loker non-target (Rekomendasi Umum / Luar Kota) langsung di halaman listing.`);
+      }
+
+      const newJobsToProcess = qualifiedJobs;
+
+      onLog(`📊 Halaman ${currentPage}: Ditemukan ${mappedJobs.length} loker (${newJobsToProcess.length} lolos kualifikasi untuk dilamar):`);
       newJobsToProcess.forEach((job: any, i: number) => {
         const statusIcon = job.isAlreadyApplied ? '⏩ [Sudah Dilamar]' : '🆕 [Belum Dilamar]';
-        onLog(`   📌 [${i + 1}] ${statusIcon} "${job.title}" di "${job.company}"`);
+        onLog(`   📌 [${i + 1}] ${statusIcon} "${job.title}" di "${job.company}" (${job.location})`);
       });
 
       if (newJobsToProcess.length === 0) {
-        onLog(`⚠️ Tidak ada loker baru yang ditemukan pada halaman ke-${currentPage}. Mencoba lanjut atau selesai.`);
+        onLog(`⚠️ Tidak ada loker relevan yang memenuhi syarat di halaman ke-${currentPage}. Lanjut ke pencarian berikutnya.`);
         if (mappedJobs.length === 0) break;
       }
 

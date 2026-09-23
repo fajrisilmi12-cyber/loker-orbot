@@ -101,6 +101,7 @@ interface AppConfig {
   concurrency: number;
   useSystemChrome?: boolean;
   customChromePath?: string;
+  browserEngine?: 'puppeteer' | 'camoufox';
   noticePeriod?: string;
   fullName?: string;
   email?: string;
@@ -221,6 +222,7 @@ export default function Home() {
     concurrency: 3,
     useSystemChrome: true,
     customChromePath: '',
+    browserEngine: 'puppeteer',
     noticePeriod: 'Immediately',
     fullName: '',
     email: '',
@@ -3762,16 +3764,16 @@ export default function Home() {
                               className="w-4 h-4 rounded text-orange-600 cursor-pointer"
                             />
                             <label htmlFor="enableJobMatchFilterCheck" className="text-xs font-medium text-main-theme cursor-pointer">
-                              Aktifkan Skor Relevansi Minimal ({config.minMatchScore || 60}%)
+                              Aktifkan Skor Relevansi Minimal ({config.minMatchScore ?? 50}%)
                             </label>
                           </div>
                           {config.enableJobMatchFilter && (
                             <input
                               type="range"
-                              min="40"
+                              min="5"
                               max="90"
                               step="5"
-                              value={config.minMatchScore || 60}
+                              value={config.minMatchScore ?? 5}
                               onChange={(e) => setConfig({ ...config, minMatchScore: Number(e.target.value) })}
                               className="w-32 cursor-pointer accent-orange-500"
                             />
@@ -4338,12 +4340,37 @@ export default function Home() {
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                        {/* Option 1: Camoufox Stealth (C++ Anti-Bot) */}
                         <button
                           type="button"
-                          onClick={() => setConfig({ ...config, useSystemChrome: true })}
+                          onClick={() => setConfig({ ...config, browserEngine: 'camoufox' })}
                           className={`p-4 rounded-2xl border text-left transition flex items-center justify-between ${
-                            config.useSystemChrome !== false
+                            config.browserEngine === 'camoufox'
+                              ? 'bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-white shadow-sm ring-1 ring-purple-500/30'
+                              : 'card-subtle-theme border-subtle-theme text-muted-theme hover:opacity-90'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-main-theme">🛡️ Camoufox Stealth (Firefox C++)</span>
+                              <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">
+                                Anti-Bot Level Tinggi
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-muted-theme mt-1 leading-relaxed">
+                              Engine Gecko yang ditambal di level C++ source code. Kebal deteksi CDP leak, Cloudflare Turnstile, dan DataDome pada JobStreet &amp; Indeed.
+                            </div>
+                          </div>
+                          {config.browserEngine === 'camoufox' && <Check className="w-4 h-4 text-purple-500 shrink-0 ml-2" />}
+                        </button>
+
+                        {/* Option 2: Google Chrome System (Default Puppeteer) */}
+                        <button
+                          type="button"
+                          onClick={() => setConfig({ ...config, browserEngine: 'puppeteer', useSystemChrome: true })}
+                          className={`p-4 rounded-2xl border text-left transition flex items-center justify-between ${
+                            config.browserEngine !== 'camoufox' && config.useSystemChrome !== false
                               ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-white shadow-sm ring-1 ring-emerald-500/30'
                               : 'card-subtle-theme border-subtle-theme text-muted-theme hover:opacity-90'
                           }`}
@@ -4352,41 +4379,42 @@ export default function Home() {
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-semibold text-main-theme">Google Chrome Sistem (Browser Asli)</span>
                               <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                                Sangat Direkomendasikan
+                                Standar / Default
                               </span>
                             </div>
                             <div className="text-[11px] text-muted-theme mt-1 leading-relaxed">
-                              Menggunakan instalasi resmi Google Chrome di PC Anda. Memiliki sidik jari browser asli (real browser fingerprint) sehingga terhindar dari pemblokiran Cloudflare &amp; captcha login portal.
+                              Menggunakan instalasi resmi Google Chrome di PC Anda via Puppeteer. Menggunakan data sesi Chrome standar di folder automation-profile.
                             </div>
                           </div>
-                          {config.useSystemChrome !== false && <Check className="w-4 h-4 text-emerald-500 shrink-0 ml-2" />}
+                          {config.browserEngine !== 'camoufox' && config.useSystemChrome !== false && <Check className="w-4 h-4 text-emerald-500 shrink-0 ml-2" />}
                         </button>
 
+                        {/* Option 3: Bundled Chromium (Puppeteer Fallback) */}
                         <button
                           type="button"
-                          onClick={() => setConfig({ ...config, useSystemChrome: false })}
+                          onClick={() => setConfig({ ...config, browserEngine: 'puppeteer', useSystemChrome: false })}
                           className={`p-4 rounded-2xl border text-left transition flex items-center justify-between ${
-                            config.useSystemChrome === false
+                            config.browserEngine !== 'camoufox' && config.useSystemChrome === false
                               ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-white shadow-sm ring-1 ring-amber-500/30'
                               : 'card-subtle-theme border-subtle-theme text-muted-theme hover:opacity-90'
                           }`}
                         >
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-main-theme">Chromium Bawaan (Puppeteer Bundled)</span>
+                              <span className="text-xs font-semibold text-main-theme">Chromium Bawaan (Bundled)</span>
                               <span className="text-[10px] text-muted-theme bg-slate-500/10 px-1.5 py-0.5 rounded border border-subtle-theme">
                                 Cadangan
                               </span>
                             </div>
                             <div className="text-[11px] text-muted-theme mt-1 leading-relaxed">
-                              Executable browser Chromium yang terunduh otomatis oleh Puppeteer. Praktis tanpa perlu instalasi Chrome, namun di beberapa portal seperti LinkedIn terkadang lebih mudah terdeteksi automasi.
+                              Executable browser Chromium yang terunduh otomatis oleh Puppeteer. Praktis tanpa perlu instalasi Chrome di OS.
                             </div>
                           </div>
-                          {config.useSystemChrome === false && <Check className="w-4 h-4 text-amber-500 shrink-0 ml-2" />}
+                          {config.browserEngine !== 'camoufox' && config.useSystemChrome === false && <Check className="w-4 h-4 text-amber-500 shrink-0 ml-2" />}
                         </button>
                       </div>
 
-                      {config.useSystemChrome !== false && (
+                      {config.browserEngine !== 'camoufox' && config.useSystemChrome !== false && (
                         <div className="p-3 rounded-xl card-subtle-theme border border-subtle-theme">
                           <div className="flex items-center justify-between mb-1">
                             <label className="block text-[11px] font-medium text-main-theme">

@@ -44,7 +44,8 @@ yarn-error.log*
 next-env.d.ts
 
 # local bot configurations & automation profile
-/automation-profile/
+/automation-profile*/
+automation-profile*/
 config.json
 
 # local runtime databases & history (user personal data)
@@ -58,3 +59,6 @@ sourced_talents.json
 # uploaded CV files (user data, do not commit)
 /uploads/
 /scratch/
+/asset untuk readme/
+asset untuk readme/
+

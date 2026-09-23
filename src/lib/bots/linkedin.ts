@@ -6,6 +6,7 @@ import { evaluateJobMatch } from '../jobMatcher';
 import { generateDynamicCoverLetter } from '../coverLetterGenerator';
 import { humanClick, humanType, randomDelay } from '../humanStealth';
 import { parseCookiesInput, injectCookiesIntoPage } from '../cookieHelper';
+import { buildLinkedinSearchUrl } from '../searchQueryBuilder';
 
 export interface BotMetrics {
   successCount: number;
@@ -30,51 +31,8 @@ export async function runLinkedinBot(
   let errorCount = 0;
 
   try {
-    const keyword = (config.searchKeywords || '').trim();
-    const location = (config.location || '').trim();
-
-    // 2. Bentuk URL Pencarian Langsung dengan Query Parameter
-    const searchParams = new URLSearchParams();
-    if (keyword) searchParams.set('keywords', keyword);
-    if (location) searchParams.set('location', location);
-    searchParams.set('f_AL', 'true'); // Filter Easy Apply
-    searchParams.set('origin', 'JOB_SEARCH_PAGE_SEARCH_BUTTON');
-    searchParams.set('refresh', 'true');
-
-    // Filter Pencarian Lanjutan (dari config)
-    const datePostedMap: Record<string, string> = {
-      '24h': 'r86400', 'week': 'r604800', 'month': 'r2592000',
-    };
-    if (config.datePosted && datePostedMap[config.datePosted]) {
-      searchParams.set('f_TPR', datePostedMap[config.datePosted]);
-    }
-
-    const jobTypeMap: Record<string, string> = {
-      'full_time': 'F', 'part_time': 'P', 'contract': 'C', 'internship': 'I', 'freelance': 'T',
-    };
-    const jobTypeValues = (config.jobType || []).map((t: string) => jobTypeMap[t]).filter(Boolean);
-    if (jobTypeValues.length > 0) {
-      searchParams.set('f_JT', jobTypeValues.join(','));
-    }
-
-    const workModeMap: Record<string, string> = {
-      'onsite': '1', 'remote': '2', 'hybrid': '3',
-    };
-    const workModeValues = (config.workMode || []).map((m: string) => workModeMap[m]).filter(Boolean);
-    if (workModeValues.length > 0) {
-      searchParams.set('f_WT', workModeValues.join(','));
-    }
-
-    const expLevelMap: Record<string, string> = {
-      'fresh': '1', '1-3': '2', '3-5': '3', '5+': '4',
-    };
-    const expValues = (config.experienceLevel || []).map((e: string) => expLevelMap[e]).filter(Boolean);
-    if (expValues.length > 0) {
-      searchParams.set('f_E', expValues.join(','));
-    }
-
-    const searchUrl = `https://www.linkedin.com/jobs/search/?${searchParams.toString()}`;
-    onLog(`🌐 Membuka URL Pencarian LinkedIn: ${searchUrl}`);
+    const { url: searchUrl, displayKeywords } = buildLinkedinSearchUrl(config);
+    onLog(`🌐 Membuka URL Pencarian LinkedIn [Keywords: ${displayKeywords || 'Semua'}]: ${searchUrl}`);
 
 
     // 1. Injeksi cookies jika tersedia di konfigurasi
@@ -284,6 +242,40 @@ export async function runLinkedinBot(
 
         if (!cardInfo) {
           continue;
+        }
+
+        // Fast Pre-Flight Location Check
+        const userLocations = config.location
+          ? config.location.split(/[,/|]+/).map((l: string) => l.trim().toLowerCase()).filter(Boolean)
+          : [];
+
+        if (userLocations.length > 0 && cardInfo.location) {
+          const isRemoteOrHybrid = /remote|hybrid|wfh/i.test(cardInfo.location);
+          const matchesCity = userLocations.some((l: string) =>
+            !l.includes('remote') && !l.includes('wfh') && cardInfo.location.toLowerCase().includes(l)
+          );
+          if (!matchesCity && !isRemoteOrHybrid) {
+            onLog(`⚡ [LinkedIn Pre-Filter] Melewati "${cardInfo.title}" di ${cardInfo.company} - Lokasi (${cardInfo.location}) di luar preferensi.`);
+            continue;
+          }
+        }
+
+        // Fast Pre-Flight Title & Match Check
+        if (config.enableJobMatchFilter || config.negativeKeywords || config.blacklistedCompanies) {
+          const cardMatch = evaluateJobMatch({
+            jobTitle: cardInfo.title,
+            company: cardInfo.company,
+            targetKeywords: config.searchKeywords || '',
+            negativeKeywords: config.negativeKeywords || '',
+            blacklistedCompanies: config.blacklistedCompanies || '',
+            minScoreThreshold: config.enableJobMatchFilter ? (config.minMatchScore ?? 25) : 0,
+            candidateSkills: config.skills || ''
+          });
+
+          if (!cardMatch.shouldApply) {
+            onLog(`⚡ [LinkedIn Pre-Filter] Melewati "${cardInfo.title}" di ${cardInfo.company} - ${cardMatch.reason}`);
+            continue;
+          }
         }
 
         // 4. Klik kartu untuk memicu pemuatan detail di panel kanan

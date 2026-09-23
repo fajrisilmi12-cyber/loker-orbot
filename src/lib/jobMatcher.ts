@@ -108,11 +108,15 @@ export function evaluateJobMatch(options: JobMatcherOptions): MatchEvaluationRes
     let targetTokensCount = 0;
 
     for (const phrase of targetPhrases) {
-      // Exact full phrase in title (e.g., "Full Stack Developer" in "Senior Full Stack Developer")
-      if (normalizedTitle.includes(phrase)) {
+      const cleanPhraseNoSpace = phrase.replace(/\s+/g, '');
+      const cleanTitleNoSpace = normalizedTitle.replace(/\s+/g, '');
+      const cleanDescNoSpace = normalizedDesc.replace(/\s+/g, '');
+
+      // Exact full phrase in title (e.g., "Full Stack Developer" in "Senior Full Stack Developer" or "Fullstack")
+      if (normalizedTitle.includes(phrase) || (cleanPhraseNoSpace.length >= 5 && cleanTitleNoSpace.includes(cleanPhraseNoSpace))) {
         exactTitleMatch = true;
         if (!matched.includes(phrase)) matched.push(phrase);
-      } else if (normalizedDesc.includes(phrase)) {
+      } else if (normalizedDesc.includes(phrase) || (cleanPhraseNoSpace.length >= 5 && cleanDescNoSpace.includes(cleanPhraseNoSpace))) {
         descScore += 10;
         if (!matched.includes(phrase)) matched.push(phrase);
       }
