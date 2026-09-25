@@ -32,10 +32,14 @@ export interface AppConfig {
   limitJobstreet?: number;
   limitLinkedin?: number;
   limitIndeed?: number;
+  limitPintarnya?: number;
   enableGlints: boolean;
   enableJobstreet: boolean;
   enableLinkedin: boolean;
   enableIndeed: boolean;
+  enablePintarnya: boolean;
+  pintarnyaToken?: string;
+  pintarnyaKeyword?: string;
   indeedNoJobTitleFilter?: boolean;
   debugTest: boolean;
   concurrency: number;
@@ -117,10 +121,14 @@ const DEFAULT_CONFIG: AppConfig = {
   limitJobstreet: 75,
   limitLinkedin: 50,
   limitIndeed: 50,
+  limitPintarnya: 50,
   enableGlints: true,
   enableJobstreet: true,
   enableLinkedin: true,
   enableIndeed: true,
+  enablePintarnya: false,
+  pintarnyaToken: '',
+  pintarnyaKeyword: '',
   indeedNoJobTitleFilter: false,
   debugTest: true,
   concurrency: 3,
@@ -160,13 +168,22 @@ const DEFAULT_CONFIG: AppConfig = {
   cvFilePath: '',
   cvExtractedText: '',
   cvAnalyzedAt: '',
-  aiProvider: 'gemini',
+  aiProvider: 'custom_router',
   geminiApiKey: '',
   customAiBaseUrl: 'https://api.9router.com/v1',
   customAiApiKey: '',
   customAiModel: 'google/gemini-2.5-flash',
-  activeAiEndpointId: 'ep-gemini',
+  activeAiEndpointId: 'mona-agy',
   aiEndpoints: [
+    {
+      id: 'mona-agy',
+      name: 'Mona AGY',
+      type: 'openai_compatible',
+      baseUrl: 'http://100.84.69.123:8801/v1',
+      apiKey: '',
+      model: 'AGY',
+      isActive: true,
+    },
     {
       id: 'ep-gemini',
       name: 'Google Gemini (Official)',
@@ -174,7 +191,7 @@ const DEFAULT_CONFIG: AppConfig = {
       baseUrl: '',
       apiKey: '',
       model: 'gemini-2.5-flash',
-      isActive: true,
+      isActive: false,
     },
     {
       id: 'ep-9router',

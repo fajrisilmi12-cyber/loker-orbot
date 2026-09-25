@@ -31,7 +31,7 @@ export interface TourStep {
   title: string;
   content: string;
   icon: React.ComponentType<{ className?: string }>;
-  tab?: 'wizard' | 'logs' | 'questions' | 'history' | 'jobs' | 'talent';
+  tab?: 'wizard' | 'logs' | 'questions' | 'history' | 'jobs';
   wizardStep?: 1 | 2 | 3;
   preferredPlacement?: 'bottom' | 'top' | 'center';
 }
@@ -51,7 +51,7 @@ const FULL_SYSTEM_STEPS: TourStep[] = [
   {
     targetId: 'tour-welcome',
     title: 'Selamat Datang di lemparjaring',
-    content: 'Platform lempar jaring kerja & talent scout cerdas ke LinkedIn, Glints, JobStreet, dan Indeed dengan integrasi AI, anti-bot stealth, dan database lokal.',
+    content: 'Platform lempar jaring kerja cerdas ke LinkedIn, Glints, JobStreet, Indeed, dan Pintarnya dengan integrasi AI, anti-bot stealth, dan database lokal.',
     icon: Compass,
     preferredPlacement: 'center',
   },

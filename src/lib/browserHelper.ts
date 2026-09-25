@@ -22,6 +22,13 @@ export async function launchCamoufoxBrowser(
   const config = getConfig();
   const log = onLog || console.log;
 
+  // Guard: headful tanpa display di Linux (server/VPS) pasti gagal — paksa headless.
+  let runMode = mode;
+  if (runMode === 'headful' && process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+    log('⚠️ Headful diminta tapi Linux tanpa DISPLAY/WAYLAND_DISPLAY — paksa mode headless.');
+    runMode = 'headless';
+  }
+
   let folderName = profileFolderOverride;
   if (!folderName) {
     const activeAccount = config.browserAccounts?.find(a => a.id === config.activeBrowserAccountId);
@@ -31,7 +38,7 @@ export async function launchCamoufoxBrowser(
   }
 
   const profilePath = path.isAbsolute(folderName) ? folderName : path.join(/*turbopackIgnore: true*/ process.cwd(), folderName);
-  const isHeadless = mode !== 'headful';
+  const isHeadless = runMode !== 'headful';
 
   if (!fs.existsSync(/*turbopackIgnore: true*/ profilePath)) {
     try {
@@ -172,10 +179,17 @@ export async function launchBrowserWithFallback(
 
   const config = getConfig();
 
+  // Guard: headful tanpa display di Linux (server/VPS) pasti gagal — paksa headless.
+  let runMode = mode;
+  if (runMode === 'headful' && process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+    (onLog || console.log)('⚠️ Headful diminta tapi Linux tanpa DISPLAY/WAYLAND_DISPLAY — paksa mode headless.');
+    runMode = 'headless';
+  }
+
   // If user selected Camoufox Stealth Engine, launch Camoufox directly
   if (config.browserEngine === 'camoufox') {
     try {
-      return await launchCamoufoxBrowser(mode, onLog, profileFolderOverride);
+      return await launchCamoufoxBrowser(runMode, onLog, profileFolderOverride);
     } catch (camoufoxErr: any) {
       const log = onLog || console.log;
       log(`⚠️ Gagal membuka Camoufox Stealth: ${camoufoxErr.message || camoufoxErr}`);
@@ -191,7 +205,7 @@ export async function launchBrowserWithFallback(
   }
 
   const profilePath = path.isAbsolute(folderName) ? folderName : path.join(/*turbopackIgnore: true*/ process.cwd(), folderName);
-  const isHeadless = mode !== 'headful';
+  const isHeadless = runMode !== 'headful';
 
   // Ensure directory exists
   if (!fs.existsSync(/*turbopackIgnore: true*/ profilePath)) {

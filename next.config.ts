@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth', 'googleapis'],
+  serverExternalPackages: ['puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth', 'googleapis', 'camoufox-js', 'playwright-core', 'impit', 'pdf-parse-fork', 'mammoth'],
   async headers() {
     return [
       {

@@ -32,7 +32,6 @@ import {
   FileText,
   Bot,
   Users,
-  UserCheck,
   ShieldAlert,
   FolderOpen,
   Eye,
@@ -59,7 +58,6 @@ import {
 import { OnboardingTour } from '@/components/OnboardingTour';
 import BatchQuestionModal from '@/components/BatchQuestionModal';
 import JobsTab from '@/components/JobsTab';
-import TalentScoutTab from '@/components/TalentScoutTab';
 
 export interface BrowserProfileAccount {
   id: string;
@@ -92,10 +90,14 @@ interface AppConfig {
   limitJobstreet?: number;
   limitLinkedin?: number;
   limitIndeed?: number;
+  limitPintarnya?: number;
   enableGlints: boolean;
   enableJobstreet: boolean;
   enableLinkedin?: boolean;
   enableIndeed?: boolean;
+  enablePintarnya?: boolean;
+  pintarnyaToken?: string;
+  pintarnyaKeyword?: string;
   indeedNoJobTitleFilter?: boolean;
   debugTest: boolean;
   concurrency: number;
@@ -192,7 +194,7 @@ interface ConfigPreset {
 const DRAFT_KEY = 'cv-blaster-draft';
 const PRESETS_KEY = 'cv-blaster-presets';
 
-type NavTab = 'wizard' | 'questions' | 'logs' | 'history' | 'jobs' | 'talent';
+type NavTab = 'wizard' | 'questions' | 'logs' | 'history' | 'jobs';
 type WizardStep = 1 | 2 | 3;
 
 export default function Home() {
@@ -210,10 +212,14 @@ export default function Home() {
     limitJobstreet: 75,
     limitLinkedin: 50,
     limitIndeed: 50,
+    limitPintarnya: 50,
     enableGlints: true,
     enableJobstreet: true,
     enableLinkedin: true,
     enableIndeed: true,
+    enablePintarnya: false,
+    pintarnyaToken: '',
+    pintarnyaKeyword: '',
     indeedNoJobTitleFilter: false,
     blacklistedCompanies: '',
     negativeKeywords: 'magang, intern, unpaid, sales lapangan, mandarin',
@@ -556,7 +562,7 @@ export default function Home() {
     const step1Percent = Math.round((step1Filled / step1Total) * 100);
 
     // Step 2: Kriteria Target (Kata Kunci + Minimal 1 Platform)
-    const hasPlatform = Boolean(config.enableGlints || config.enableJobstreet || config.enableLinkedin || config.enableIndeed);
+    const hasPlatform = Boolean(config.enableGlints || config.enableJobstreet || config.enableLinkedin || config.enableIndeed || config.enablePintarnya);
     const hasKeywords = Boolean(config.searchKeywords?.trim() || config.indeedNoJobTitleFilter);
     const step2Complete = hasKeywords && hasPlatform;
 
@@ -1042,7 +1048,7 @@ export default function Home() {
 
   const executeStartBot = (
     mode: 'headless' | 'headful' = 'headless',
-    platform: 'all' | 'glints' | 'linkedin' | 'jobstreet' | 'indeed' = 'all',
+    platform: 'all' | 'glints' | 'linkedin' | 'jobstreet' | 'indeed' | 'pintarnya' = 'all',
     customLimit?: number
   ) => {
     if (isBotRunning) return;
@@ -1778,32 +1784,6 @@ export default function Home() {
                   )}
                 </button>
 
-                {/* MODUL OUTSOURCING & TALENT SCOUT */}
-                <div className="pt-2 pb-1 px-1">
-                  <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 my-1" />
-                  <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
-                    <span className="text-[10px] font-bold text-muted-theme uppercase tracking-wider">
-                      Outsourcing / HR
-                    </span>
-                    <span className="text-[9px] font-bold text-white dark:text-slate-900 bg-slate-900 dark:bg-white px-1.5 py-0.5 rounded font-mono shadow-xs tracking-wider">
-                      MODUL 2
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => { setActiveTab('talent'); setIsMobileMenuOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
-                    activeTab === 'talent' ? 'sidebar-nav-active' : 'sidebar-nav-idle'
-                  }`}
-                >
-                  <UserCheck className="w-4 h-4 text-emerald-500" />
-                  <span>Talent Scout</span>
-                  <span className="ml-auto text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 px-2 py-0.5 rounded-md font-mono shadow-xs">
-                    OpenToWork
-                  </span>
-                </button>
-
                 {/* Preset Konfigurasi */}
                 <button
                   onClick={() => { setIsPresetsModalOpen(true); setIsMobileMenuOpen(false); }}
@@ -1957,34 +1937,6 @@ export default function Home() {
               )}
             </button>
 
-            {/* MODUL OUTSOURCING & TALENT SCOUT */}
-            <div className="pt-2 pb-1 px-1">
-              <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 my-1" />
-              <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
-                <span className="text-[10px] font-bold text-muted-theme uppercase tracking-wider">
-                  Outsourcing / HR
-                </span>
-                <span className="text-[9px] font-bold text-white dark:text-slate-900 bg-slate-900 dark:bg-white px-1.5 py-0.5 rounded font-mono shadow-xs tracking-wider">
-                  MODUL 2
-                </span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setActiveTab('talent')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
-                activeTab === 'talent'
-                  ? 'sidebar-nav-active'
-                  : 'sidebar-nav-idle'
-              }`}
-            >
-              <UserCheck className="w-4 h-4 text-emerald-500" />
-              <span>Talent Scout</span>
-              <span className="ml-auto text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 px-2 py-0.5 rounded-md font-mono shadow-xs">
-                OpenToWork
-              </span>
-            </button>
-
             {/* Preset Konfigurasi */}
             <button
               onClick={() => setIsPresetsModalOpen(true)}
@@ -2072,7 +2024,6 @@ export default function Home() {
               {activeTab === 'questions' && 'Koleksi Jawaban Kuesioner Loker'}
               {activeTab === 'history' && 'Rekap Loker yang Sudah Dilamar'}
               {activeTab === 'jobs' && 'Daftar Loker Terjaring'}
-              {activeTab === 'talent' && 'Talent Scout & Sourcing Engine (Outsourcing & HRIS)'}
             </span>
           </div>
 
@@ -2464,6 +2415,63 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => executeStartBot('headless', 'indeed')}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-[10px] font-semibold flex items-center justify-center gap-1 transition shadow-sm"
+                        >
+                          <span>Jalankan</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Platform Card: Pintarnya (API-Based, tanpa browser) */}
+                  <div className="p-4 rounded-2xl card-theme border shadow-sm flex flex-col justify-between space-y-3 hover:border-slate-400/40 dark:hover:border-slate-600 transition">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl card-subtle-theme border border-subtle-theme flex items-center justify-center text-main-theme font-bold text-xs">
+                          PN
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-semibold text-main-theme">Pintarnya</h3>
+                          <p className="text-[10px] text-muted-theme">API-Based &amp; Tanpa Browser</p>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1.5 ${
+                        config.enablePintarnya
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${config.enablePintarnya ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-slate-400'}`} />
+                        <span>{config.enablePintarnya ? 'Aktif' : 'Nonaktif'}</span>
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-[11px] text-muted-theme">
+                      <div className="flex justify-between">
+                        <span>Batas Kuota:</span>
+                        <span className="font-medium text-main-theme">{config.limitPintarnya || 50} loker</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Mode API:</span>
+                        <span className="font-medium text-emerald-700 dark:text-emerald-400">Token Bearer</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-subtle-theme">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headful', 'pintarnya', 5)}
+                          disabled={isBotRunning || isSetupBrowserRunning}
+                          className="py-1.5 px-1.5 rounded-xl border border-subtle-theme hover:bg-slate-100 dark:hover:bg-slate-800 text-main-theme text-[10px] font-medium flex items-center justify-center gap-1 transition"
+                          title="Uji coba Pintarnya 5 loker (API)"
+                        >
+                          <Play className="w-2.5 h-2.5 fill-current text-muted-theme" />
+                          <span>Tes 5 Loker</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeStartBot('headless', 'pintarnya')}
                           disabled={isBotRunning || isSetupBrowserRunning}
                           className="py-1.5 px-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-[10px] font-semibold flex items-center justify-center gap-1 transition shadow-sm"
                         >
@@ -3490,6 +3498,29 @@ export default function Home() {
                           </div>
                           <span className="text-xs font-medium">Indeed</span>
                         </label>
+
+                        <label
+                          className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
+                            config.enablePintarnya
+                              ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
+                              : 'card-subtle-theme border-subtle-theme text-muted-theme'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={config.enablePintarnya}
+                            onChange={(e) => setConfig({ ...config, enablePintarnya: e.target.checked })}
+                            className="hidden"
+                          />
+                          <div
+                            className={`w-4 h-4 rounded border flex items-center justify-center ${
+                              config.enablePintarnya ? 'bg-emerald-600 border-emerald-500 text-white' : 'border-subtle-theme'
+                            }`}
+                          >
+                            {config.enablePintarnya && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <span className="text-xs font-medium">Pintarnya (API)</span>
+                        </label>
                       </div>
                     </div>
 
@@ -3639,6 +3670,39 @@ export default function Home() {
                               value={config.limitIndeed || 50}
                               onChange={(e) => setConfig({ ...config, limitIndeed: parseInt(e.target.value) || 0 })}
                               className="w-full input-theme border rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-orange-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-muted-theme mb-1">Pintarnya (API)</label>
+                            <input
+                              type="number"
+                              value={config.limitPintarnya || 50}
+                              onChange={(e) => setConfig({ ...config, limitPintarnya: parseInt(e.target.value) || 0 })}
+                              className="w-full input-theme border rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-orange-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {config.enablePintarnya && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                          <div>
+                            <label className="block text-[11px] font-medium text-muted-theme mb-1">Token Pintarnya (Bearer)</label>
+                            <input
+                              type="password"
+                              value={config.pintarnyaToken || ''}
+                              onChange={(e) => setConfig({ ...config, pintarnyaToken: e.target.value })}
+                              className="w-full input-theme border rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-orange-500"
+                              placeholder="Tempel token Bearer Pintarnya"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-muted-theme mb-1">Kata Kunci Pintarnya</label>
+                            <input
+                              type="text"
+                              value={config.pintarnyaKeyword || ''}
+                              onChange={(e) => setConfig({ ...config, pintarnyaKeyword: e.target.value })}
+                              className="w-full input-theme border rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-orange-500"
+                              placeholder="Kosongkan = ikut kata kunci utama"
                             />
                           </div>
                         </div>
@@ -4308,6 +4372,48 @@ export default function Home() {
                                       className="text-orange-500 hover:underline inline-flex items-center gap-1 text-[11px]"
                                     >
                                       <span>Buka Indeed</span>
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  </td>
+                                </tr>
+
+                                {/* Pintarnya (API-based, tanpa sesi browser) */}
+                                <tr className="hover:bg-slate-500/5 transition">
+                                  <td className="py-2.5 px-3.5 font-medium text-main-theme flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                    <span>Pintarnya</span>
+                                  </td>
+                                  <td className="py-2.5 px-3.5">
+                                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                                      config.enablePintarnya
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                        : 'bg-slate-500/10 text-muted-theme'
+                                    }`}>
+                                      {config.enablePintarnya ? 'Diikutsertakan' : 'Dinonaktifkan'}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3.5">
+                                    {config.pintarnyaToken?.trim() ? (
+                                      <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                        <Check className="w-3 h-3" /> Token Terisi
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                        <ShieldAlert className="w-3 h-3" /> Token Kosong
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3.5 text-muted-theme text-[11px]">
+                                    API-based — butuh token Bearer, tanpa login browser
+                                  </td>
+                                  <td className="py-2.5 px-3.5 text-right">
+                                    <a
+                                      href="https://www.pintarnya.com"
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-orange-500 hover:underline inline-flex items-center gap-1 text-[11px]"
+                                    >
+                                      <span>Buka Pintarnya</span>
                                       <ExternalLink className="w-3 h-3" />
                                     </a>
                                   </td>
@@ -5471,10 +5577,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB 6: TALENT SCOUT & SOURCING ENGINE (OUTSOURCING / HRIS) */}
-          {activeTab === 'talent' && (
-            <TalentScoutTab />
-          )}
         </main>
       </div>
 
@@ -5935,6 +6037,7 @@ export default function Home() {
                       preset.config.enableJobstreet && 'Jobstreet',
                       preset.config.enableLinkedin && 'LinkedIn',
                       preset.config.enableIndeed && 'Indeed',
+                      preset.config.enablePintarnya && 'Pintarnya',
                     ].filter(Boolean);
                     const savedDate = new Date(preset.savedAt);
                     const relativeTime = (() => {

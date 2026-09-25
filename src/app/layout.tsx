@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "lemparjaring",
-  description: "Platform lempar jaring kerja & talent scout multi-portal",
+  description: "Platform lempar jaring kerja multi-portal",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

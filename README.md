@@ -366,4 +366,5 @@ Karena Anda sudah terlanjur melangkah sejauh ini dan rasa penasaran Anda tidak t
 <div align="center">
   <p>Dibuat dengan dedikasi penuh untuk para pejuang pencari kerja dan pemburu talenta di seluruh penjuru negeri.</p>
   <p><b>lemparjaring</b> &copy; 2026. Bebas digunakan secara bijak.</p>
+  <p>Berdasarkan <b>Bot-Lempar-Jaring-Loker</b> oleh itzluthfi, lisensi MIT.</p>
 </div>

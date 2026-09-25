@@ -4,6 +4,7 @@ import { runGlintsBot } from './bots/glints';
 import { runJobstreetBot } from './bots/jobstreet';
 import { runLinkedinBot } from './bots/linkedin';
 import { runIndeedBot } from './bots/indeed';
+import { runPintarnyaBot } from './bots/pintarnya';
 
 declare global {
   var isBotRunning: boolean;
@@ -72,7 +73,7 @@ export async function startBot(
     } else if (isSharedMode) {
       onLog(`🎯 Mode Kuota: Kuota Gabungan Aktif (Target Total: ${sharedLimitTarget} lamaran untuk semua platform).`);
     } else {
-      onLog(`🎯 Mode Kuota: Kuota Per-Platform Aktif (Glints: ${config.limitGlints || 80}, JobStreet: ${config.limitJobstreet || 75}, LinkedIn: ${config.limitLinkedin || 50}).`);
+      onLog(`🎯 Mode Kuota: Kuota Per-Platform Aktif (Glints: ${config.limitGlints || 80}, JobStreet: ${config.limitJobstreet || 75}, LinkedIn: ${config.limitLinkedin || 50}, Indeed: ${config.limitIndeed || 50}, Pintarnya: ${config.limitPintarnya || 50}).`);
     }
 
     const glintsLimiter = {
@@ -113,6 +114,17 @@ export async function startBot(
       isLimitReached: (currentIndeedSuccess: number) => {
         const target = customLimit || (isSharedMode ? sharedLimitTarget : (config.limitIndeed || config.limitPerDay || 50));
         return isSharedMode ? totalSuccess >= target : currentIndeedSuccess >= target;
+      },
+      onJobSuccess: () => {
+        totalSuccess++;
+      }
+    };
+
+    const pintarnyaLimiter = {
+      getTargetLimit: () => customLimit || (isSharedMode ? sharedLimitTarget : (config.limitPintarnya || config.limitPerDay || 50)),
+      isLimitReached: (currentPintarnyaSuccess: number) => {
+        const target = customLimit || (isSharedMode ? sharedLimitTarget : (config.limitPintarnya || config.limitPerDay || 50));
+        return isSharedMode ? totalSuccess >= target : currentPintarnyaSuccess >= target;
       },
       onJobSuccess: () => {
         totalSuccess++;
@@ -268,6 +280,30 @@ export async function startBot(
       onLog('⏩ Indeed dinonaktifkan di pengaturan.');
     }
 
+    // ----------------------------------------------------
+    // TAB 5: PINTARNYA AUTOMATION (API-based, tanpa browser)
+    // ----------------------------------------------------
+    if (shouldInclude('pintarnya', !!config.enablePintarnya)) {
+      runPlatformTasks.push({
+        name: 'Pintarnya',
+        run: async () => {
+          const pintarnyaLog = (msg: string) => onLog(`[Pintarnya] ${msg}`);
+
+          pintarnyaLog('🔍 Memulai proses bot Pintarnya (API-based, tanpa browser)...');
+          try {
+            const metrics = await runPintarnyaBot(null, config, pintarnyaLog, pintarnyaLimiter);
+            totalAlreadyApplied += metrics.alreadyAppliedCount;
+            totalErrors += metrics.errorCount;
+          } catch (err: any) {
+            pintarnyaLog(`❌ Error: ${err.message || err}`);
+            totalErrors++;
+          }
+        }
+      });
+    } else if (!isSinglePlatform) {
+      onLog('⏩ Pintarnya dinonaktifkan di pengaturan.');
+    }
+
     // Jalankan platform secara berurutan (sequential) untuk stabilitas & anti-deteksi maksimal
     if (runPlatformTasks.length > 0) {
       onLog(`🚀 Menjalankan ${runPlatformTasks.length} platform secara berurutan...`);
@@ -282,7 +318,7 @@ export async function startBot(
         onLog(`⏹️ Selesai portal: ${task.name}`);
       }
     } else {
-      onLog('⚠️ Tidak ada platform yang diaktifkan (Glints, Jobstreet, LinkedIn & Indeed semuanya nonaktif).');
+      onLog('⚠️ Tidak ada platform yang diaktifkan (Glints, Jobstreet, LinkedIn, Indeed & Pintarnya semuanya nonaktif).');
     }
 
     onLog('--------------------------------------------------');
