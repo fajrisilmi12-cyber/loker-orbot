@@ -26,6 +26,41 @@ export interface JobMatcherOptions {
   blacklistedCompanies?: string;
   minScoreThreshold?: number;
   candidateSkills?: string;
+  candidateGender?: string; // 'Laki-laki' | 'Perempuan' | '' (kosong = tidak difilter)
+}
+
+// Penanda loker yang secara eksplisit gender-spesifik (berdasarkan teks judul/deskripsi).
+// Dipakai agar kandidat laki-laki tidak melamar loker khusus perempuan & sebaliknya.
+// Kode pendek (spg/spb/dll) wajib word-boundary agar tidak false-positive.
+const FEMALE_ONLY_MARKERS: RegExp[] = [
+  /\bspg\b/i,
+  /sales\s*promotion\s*girls?\b/i,
+  /\bwaitress\b/i,
+  /\bhostess\b/i,
+  /\bpramugari\b/i,
+  /\bperagawati\b/i,
+  /\bbidan\b/i,
+  /khusus\s*(wanita|perempuan|cewek)/i,
+  /dibutuhkan\s*(wanita|perempuan|cewek)/i,
+  /dicari\s*(wanita|perempuan|cewek)/i,
+];
+
+const MALE_ONLY_MARKERS: RegExp[] = [
+  /\bspb\b/i,
+  /sales\s*promotion\s*boys?\b/i,
+  /(?<!\bwomen'?s?\s)(?<!\bfemale\s)\bwaiter\b/i,
+  /\bpramugara\b/i,
+  /khusus\s*(pria|laki[\s-]?laki|cowok)/i,
+  /dibutuhkan\s*(pria|laki[\s-]?laki|cowok)/i,
+  /dicari\s*(pria|laki[\s-]?laki|cowok)/i,
+];
+
+function normalizeGender(g: string): 'male' | 'female' | '' {
+  const t = (g || '').toLowerCase();
+  if (!t) return '';
+  if (t.includes('perempuan') || t.includes('wanita') || t.includes('cewek') || t === 'female' || t === 'f' || t === 'p') return 'female';
+  if (t.includes('laki') || t.includes('pria') || t.includes('cowok') || t === 'male' || t === 'm' || t === 'l') return 'male';
+  return '';
 }
 
 const COMMON_STOP_WORDS = new Set([
@@ -43,12 +78,39 @@ export function evaluateJobMatch(options: JobMatcherOptions): MatchEvaluationRes
     negativeKeywords = '',
     blacklistedCompanies = '',
     minScoreThreshold = 50,
-    candidateSkills = ''
+    candidateSkills = '',
+    candidateGender = ''
   } = options;
 
   const normalizedTitle = jobTitle.toLowerCase();
   const normalizedDesc = jobDescription.toLowerCase();
   const fullText = `${normalizedTitle} ${company.toLowerCase()} ${normalizedDesc}`;
+
+  // 0a. GENDER-SPECIFIC CHECK — tolak sebelum skoring bila gender tidak cocok.
+  // Hanya aktif bila kandidat mengisi gender & loker bertanda eksplisit.
+  const gender = normalizeGender(candidateGender);
+  if (gender) {
+    const isFemaleOnly = FEMALE_ONLY_MARKERS.some((re) => re.test(jobTitle) || re.test(jobDescription));
+    const isMaleOnly = MALE_ONLY_MARKERS.some((re) => re.test(jobTitle) || re.test(jobDescription));
+    if (gender === 'male' && isFemaleOnly && !isMaleOnly) {
+      return {
+        shouldApply: false,
+        score: 0,
+        reason: `Loker khusus perempuan ("${jobTitle}") — kandidat laki-laki dilewati`,
+        matchedKeywords: [],
+        rejectedKeyword: 'gender',
+      };
+    }
+    if (gender === 'female' && isMaleOnly && !isFemaleOnly) {
+      return {
+        shouldApply: false,
+        score: 0,
+        reason: `Loker khusus laki-laki ("${jobTitle}") — kandidat perempuan dilewati`,
+        matchedKeywords: [],
+        rejectedKeyword: 'gender',
+      };
+    }
+  }
 
   // 0. COMPANY BLACKLIST CHECK (Avoid current employer or specific agencies)
   if (blacklistedCompanies && company) {

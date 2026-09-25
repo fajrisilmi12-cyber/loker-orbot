@@ -269,7 +269,8 @@ export async function runLinkedinBot(
             negativeKeywords: config.negativeKeywords || '',
             blacklistedCompanies: config.blacklistedCompanies || '',
             minScoreThreshold: config.enableJobMatchFilter ? (config.minMatchScore ?? 25) : 0,
-            candidateSkills: config.skills || ''
+            candidateSkills: config.skills || '',
+            candidateGender: (config as any).gender || ''
           });
 
           if (!cardMatch.shouldApply) {
@@ -424,7 +425,8 @@ export async function runLinkedinBot(
             negativeKeywords: config.negativeKeywords || '',
             blacklistedCompanies: config.blacklistedCompanies || '',
             minScoreThreshold: config.enableJobMatchFilter ? (config.minMatchScore || 60) : 0,
-            candidateSkills: config.skills || ''
+            candidateSkills: config.skills || '',
+            candidateGender: (config as any).gender || ''
           });
 
           if (!matchResult.shouldApply) {

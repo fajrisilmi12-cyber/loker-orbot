@@ -265,6 +265,7 @@ export async function runPintarnyaBot(
               blacklistedCompanies: config.blacklistedCompanies || '',
               minScoreThreshold: config.minMatchScore ?? 60,
               candidateSkills: config.skills || '',
+              candidateGender: (config as any).gender || ''
             });
             if (!verdict.shouldApply) {
               onLog(`⏭️ Dilewati (skor ${verdict.score}): ${verdict.reason}`);
