@@ -248,7 +248,7 @@ export async function runPintarnyaBot(
 
         try {
           // 1. Dedup lokal
-          if (await isJobAlreadyApplied(`pintarnya:${job.slug}`)) {
+          if (await isJobAlreadyApplied(`https://pintarnya.com/lowongan/${job.slug}`)) {
             onLog(`⏩ Sudah dilamar sebelumnya: ${title}`);
             alreadyAppliedCount++;
             continue;
@@ -294,14 +294,16 @@ export async function runPintarnyaBot(
             onLog('  Tanpa kuis → langsung melamar.');
           }
 
-          // 4. Apply
-          const result = await submitPintarnyaApply(token, job.slug, answers);
+          // 4. Apply (debugTest=true = simulasi tanpa POST, default aman)
+          const result = config.debugTest
+            ? 'applied'
+            : await submitPintarnyaApply(token, job.slug, answers);
           if (result === 'applied') {
             await addAppliedJob({
               company,
               title,
               platform: 'Pintarnya',
-              jobUrl: `pintarnya:${job.slug}`,
+              jobUrl: `https://pintarnya.com/lowongan/${job.slug}`,
               status: config.debugTest ? 'Simulated' : 'Success',
               location: job.location || '',
               salary: job.salary || '',
@@ -314,7 +316,7 @@ export async function runPintarnyaBot(
               company,
               title,
               platform: 'Pintarnya',
-              jobUrl: `pintarnya:${job.slug}`,
+              jobUrl: `https://pintarnya.com/lowongan/${job.slug}`,
               status: 'Already Applied',
               location: job.location || '',
             });

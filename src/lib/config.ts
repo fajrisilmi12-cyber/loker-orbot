@@ -130,7 +130,7 @@ const DEFAULT_CONFIG: AppConfig = {
   pintarnyaToken: '',
   pintarnyaKeyword: '',
   indeedNoJobTitleFilter: false,
-  debugTest: true,
+  debugTest: false,
   concurrency: 3,
   useSystemChrome: true,
   customChromePath: '',
