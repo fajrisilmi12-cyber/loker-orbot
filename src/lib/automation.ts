@@ -5,6 +5,7 @@ import { runJobstreetBot } from './bots/jobstreet';
 import { runLinkedinBot } from './bots/linkedin';
 import { runIndeedBot } from './bots/indeed';
 import { runPintarnyaBot } from './bots/pintarnya';
+import { getAppliedJobs, AppliedJob } from './storage';
 
 declare global {
   var isBotRunning: boolean;
@@ -326,6 +327,20 @@ export async function startBot(
     onLog(`✅ Total Berhasil Dilamar / Disimulasikan: ${totalSuccess} pekerjaan`);
     onLog(`⏩ Total Dilewati (Sudah Dilamar): ${totalAlreadyApplied} pekerjaan`);
     onLog(`❌ Total Error: ${totalErrors} pekerjaan`);
+    // Daftar loker yang sukses di sesi ini (diambil dari storage, terbaru dulu)
+    try {
+      const recent: AppliedJob[] = (await getAppliedJobs(true)).slice(0, Math.max(totalSuccess, 0));
+      const sessionJobs = recent.filter((j) =>
+        String(j?.status || '').toLowerCase() !== 'already applied'
+      ).slice(0, Math.max(totalSuccess, 0));
+      if (sessionJobs.length > 0) {
+        onLog('📋 Daftar loker yang berhasil dilamar sesi ini:');
+        sessionJobs.reverse().forEach((j, idx) => {
+          const comp = j.company ? ` - ${j.company}` : '';
+          onLog(`   ${idx + 1}. ${j.title}${comp} [${j.platform}]`);
+        });
+      }
+    } catch {}
     onLog('--------------------------------------------------');
     onLog('🏁 Sesi CV Blaster Selesai!');
   } catch (error: any) {
